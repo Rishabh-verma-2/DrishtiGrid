@@ -27,7 +27,7 @@ body {
 
 /* ─── Gradient text helper ──────────────────────── */
 .theme-light .gradient-text {
-  background: linear-gradient(135deg, #1d4ed8, #0284c7);
+  background: linear-gradient(135deg, #1e40af, #0369a1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -41,7 +41,7 @@ body {
 }
 
 /* ═════════════════════════════════════════════════
-   ☀️ LIGHT MODE (Official Government Portal Look)
+   ☀️ LIGHT MODE (Authentic Government Portal Look)
    ═════════════════════════════════════════════════ */
 .theme-light,
 .theme-light body {
@@ -53,7 +53,7 @@ body {
 .theme-light .bg-\[\#0a0d14\],
 .theme-light .bg-\[\#050810\],
 .theme-light main {
-  background-color: #f8fafc !important;
+  background-color: #f4f6fa !important;
   color: #0f172a !important;
 }
 
@@ -61,43 +61,44 @@ body {
 .theme-light header {
   background-color: #ffffff !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Sidebar in Light Mode: Official Deep Indian Navy for high contrast & elegance */
+/* Sidebar in Light Mode: Crisp Official Government White */
 .theme-light aside {
-  background-color: #0a2240 !important;
-  border-right: 1px solid #0e2e56 !important;
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0 !important;
+  box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03) !important;
 }
 
 .theme-light aside nav a {
-  color: #cbd5e1 !important;
+  color: #334155 !important;
 }
 
 .theme-light aside nav a:hover {
-  background-color: rgba(255, 255, 255, 0.08) !important;
-  color: #ffffff !important;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
 }
 
 .theme-light aside nav a.active {
-  background-color: #ff9933 !important;
-  color: #0a2240 !important;
+  background-color: #2563eb !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 2px 8px rgba(255, 153, 51, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
 }
 
 .theme-light aside nav a.active svg {
-  color: #0a2240 !important;
+  color: #ffffff !important;
 }
 
-/* All Cards & Containers in Light Mode */
+/* All Cards, Panels & Containers in Light Mode */
 .theme-light .bg-\[\#141929\],
 .theme-light .bg-\[\#0e1220\],
 .theme-light .bg-\[\#0f1422\],
 .theme-light .bg-\[\#1e2740\] {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03) !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
 
 .theme-light .hover\:bg-\[\#1a2035\]:hover,
@@ -112,7 +113,7 @@ body {
 .theme-light .bg-white\/6,
 .theme-light .bg-white\/8,
 .theme-light .bg-white\/10 {
-  background-color: #f1f5f9 !important;
+  background-color: #f8fafc !important;
   border-color: #e2e8f0 !important;
   color: #0f172a !important;
 }
@@ -130,10 +131,10 @@ body {
 
 .theme-light .divide-white\/4 > :not([hidden]) ~ :not([hidden]),
 .theme-light .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
 }
 
-/* Text Colors in Light Mode */
+/* Text Colors in Light Mode - High Contrast Charcoal/Navy */
 .theme-light .text-slate-100,
 .theme-light .text-slate-200 {
   color: #0f172a !important;
@@ -153,6 +154,22 @@ body {
 
 .theme-light .text-slate-600 {
   color: #64748b !important;
+}
+
+.theme-light .text-blue-400 {
+  color: #1d4ed8 !important;
+}
+
+.theme-light .text-cyan-400 {
+  color: #0284c7 !important;
+}
+
+.theme-light .text-amber-400 {
+  color: #b45309 !important;
+}
+
+.theme-light .text-emerald-400 {
+  color: #047857 !important;
 }
 
 /* Inputs & Form Controls in Light Mode */
@@ -177,14 +194,18 @@ body {
   color: #94a3b8 !important;
 }
 
-/* Table in Light Mode */
+/* Tables in Light Mode */
+.theme-light table {
+  background-color: #ffffff !important;
+}
+
 .theme-light table thead {
-  background-color: #f1f5f9 !important;
+  background-color: #f8fafc !important;
   border-bottom: 2px solid #e2e8f0 !important;
 }
 
 .theme-light table thead th {
-  color: #475569 !important;
+  color: #334155 !important;
   font-weight: 700 !important;
 }
 
@@ -196,14 +217,20 @@ body {
   background-color: #f8fafc !important;
 }
 
-/* Standby card thumbnails in Light Mode */
-.theme-light .bg-\[\#080c16\] {
-  background-color: #e2e8f0 !important;
-  border-color: #cbd5e1 !important;
+/* Toolbar overlays in Light Mode */
+.theme-light .bg-\[\#0a0d14\]\/80,
+.theme-light .bg-\[\#0a0d14\]\/95,
+.theme-light .bg-\[\#0a0d14\]\/90 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.theme-light .bg-\[\#080c16\] .text-slate-500 {
-  color: #475569 !important;
+.theme-light .bg-\[\#141929\]\/90,
+.theme-light .bg-\[\#141929\]\/95,
+.theme-light .bg-\[\#141929\]\/98 {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.10) !important;
 }
 
 /* Leaflet Map in Light Mode */
@@ -237,6 +264,7 @@ body {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 /* Scrollbar in Light Mode */

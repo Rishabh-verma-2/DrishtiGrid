@@ -36,18 +36,25 @@ export default function DashboardLayout() {
   const isLight = theme === 'light';
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className={`flex flex-col h-full ${isLight ? 'bg-white text-slate-800' : 'bg-[#080c16] text-slate-200'}`}>
+      
       {/* Official Government Emblem & Logo */}
-      <div className={`flex items-center gap-3 px-4 py-4 border-b ${isLight ? 'border-white/10' : 'border-white/5'} shrink-0 ${collapsed ? 'justify-center px-2' : ''}`}>
-        <div className={`w-10 h-10 ${isLight ? 'bg-amber-500/20 border border-amber-400/40 text-amber-300' : 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.5)]'} rounded-xl flex items-center justify-center shrink-0 font-bold`}>
+      <div className={`flex items-center gap-3 px-4 py-4 border-b shrink-0 ${
+        isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080c16] border-white/5'
+      } ${collapsed ? 'justify-center px-2' : ''}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-sm ${
+          isLight
+            ? 'bg-blue-600 text-white border border-blue-700'
+            : 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.5)]'
+        }`}>
           <Shield className="w-5 h-5" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className={`font-black text-sm tracking-tight ${isLight ? 'text-white' : 'gradient-text'}`}>
+            <p className={`font-black text-sm tracking-tight ${isLight ? 'text-slate-900' : 'gradient-text'}`}>
               DrishtiGrid
             </p>
-            <p className="text-[10px] text-amber-300/90 font-medium truncate">
+            <p className={`text-[10px] font-semibold truncate ${isLight ? 'text-amber-700' : 'text-amber-300/90'}`}>
               ગુજરાત સરકાર · Gov of Gujarat
             </p>
           </div>
@@ -58,10 +65,16 @@ export default function DashboardLayout() {
       <nav className="flex-1 overflow-y-auto py-4 px-2">
         {!collapsed && (
           <div className="px-3 mb-2 flex items-center justify-between">
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isLight ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${
+              isLight ? 'text-slate-500' : 'text-slate-500'
+            }`}>
               Surveillance Grid
             </span>
-            <span className="text-[9px] font-mono text-amber-400 font-semibold">NIC-GOV</span>
+            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+              isLight ? 'bg-amber-100 text-amber-800' : 'text-amber-400 bg-amber-500/10'
+            }`}>
+              NIC-GOV
+            </span>
           </div>
         )}
         <ul className="space-y-1">
@@ -71,14 +84,14 @@ export default function DashboardLayout() {
                 to={to}
                 onClick={() => setMobileOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group relative
+                  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 group relative
                   ${collapsed ? 'justify-center' : ''}
                   ${isActive
                     ? isLight
-                      ? 'bg-amber-500 text-[#0a2240] font-bold shadow-md'
+                      ? 'bg-blue-600 text-white shadow-md'
                       : 'bg-blue-500/15 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
                     : isLight
-                      ? 'text-slate-200 hover:bg-white/10 hover:text-white'
+                      ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                   }`
                 }
@@ -88,13 +101,19 @@ export default function DashboardLayout() {
                   <>
                     <Icon className={`w-4.5 h-4.5 shrink-0 ${
                       isActive
-                        ? isLight ? 'text-[#0a2240]' : 'text-blue-400'
-                        : isLight ? 'text-slate-300 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-300'
+                        ? 'text-white'
+                        : isLight ? 'text-slate-500 group-hover:text-slate-800' : 'text-slate-500 group-hover:text-slate-300'
                     }`} />
                     {!collapsed && (
                       <div className="flex flex-col min-w-0">
                         <span className="truncate leading-tight">{label}</span>
-                        <span className={`text-[9px] ${isActive ? (isLight ? 'text-[#0a2240]/80' : 'text-blue-300/70') : 'text-slate-400'} truncate`}>{labelGu}</span>
+                        <span className={`text-[9px] ${
+                          isActive
+                            ? isLight ? 'text-blue-100' : 'text-blue-300/80'
+                            : isLight ? 'text-slate-400' : 'text-slate-500'
+                        } truncate`}>
+                          {labelGu}
+                        </span>
                       </div>
                     )}
                     {/* Active indicator */}
@@ -109,37 +128,51 @@ export default function DashboardLayout() {
         </ul>
       </nav>
 
-      {/* Status + Profile */}
-      <div className={`border-t ${isLight ? 'border-white/10' : 'border-white/5'} p-3 shrink-0 space-y-2`}>
+      {/* Status + Profile Footer */}
+      <div className={`border-t p-3 shrink-0 space-y-2 ${
+        isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080c16] border-white/5'
+      }`}>
         {/* Connection status */}
         {!collapsed && (
-          <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${isLight ? 'bg-white/5 text-slate-200' : 'bg-white/3'}`}>
+          <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg border ${
+            isLight ? 'bg-white border-slate-200 text-slate-700 shadow-sm' : 'bg-white/3 border-transparent text-slate-300'
+          }`}>
             <div className="flex items-center gap-2">
-              <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse-dot' : 'bg-red-400'}`} />
-              <span className="text-[11px] font-medium">{isConnected ? 'NIC Grid Online' : 'Disconnected'}</span>
+              <span className={`w-2 h-2 rounded-full ${
+                isConnected ? 'bg-emerald-500 shadow-[0_0_6px_#10b981] animate-pulse-dot' : 'bg-red-400'
+              }`} />
+              <span className="text-[11px] font-bold">{isConnected ? 'NIC Grid Connected' : 'Offline'}</span>
             </div>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
               <Users className="w-3 h-3" />
-              <span>{onlineUsers}</span>
+              <span className="font-semibold">{onlineUsers}</span>
             </div>
           </div>
         )}
 
         {/* User profile */}
         <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
-          <div className={`w-8 h-8 ${isLight ? 'bg-amber-500 text-[#0a2240]' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'} rounded-lg flex items-center justify-center text-xs font-bold shrink-0 shadow-sm`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 shadow-sm ${
+            isLight ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
+          }`}>
             {user?.name?.charAt(0) || 'A'}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className={`text-xs font-semibold truncate ${isLight ? 'text-white' : 'text-slate-300'}`}>{user?.name || 'Admin'}</p>
-              <p className={`text-[10px] truncate capitalize ${isLight ? 'text-amber-300' : 'text-slate-500'}`}>Gujarat Home Dept</p>
+              <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
+                {user?.name || 'Admin'}
+              </p>
+              <p className={`text-[10px] truncate font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                Gujarat Home Dept
+              </p>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={handleLogout}
-              className={`p-1.5 rounded-lg transition-all ${isLight ? 'text-slate-300 hover:text-red-300 hover:bg-red-500/20' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'}`}
+              className={`p-1.5 rounded-lg transition-all ${
+                isLight ? 'text-slate-500 hover:text-red-600 hover:bg-red-50' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'
+              }`}
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -150,7 +183,7 @@ export default function DashboardLayout() {
         {collapsed && (
           <button
             onClick={handleLogout}
-            className="w-full flex justify-center p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+            className="w-full flex justify-center p-2 text-slate-400 hover:text-red-500 rounded-lg transition-all"
             title="Logout"
           >
             <LogOut className="w-4 h-4" />
@@ -163,8 +196,8 @@ export default function DashboardLayout() {
   return (
     <div className={`flex flex-col h-screen ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'} overflow-hidden`}>
 
-      {/* 🇮🇳 National Tricolor Accent Bar */}
-      <div className="gov-tricolor-strip shrink-0" />
+      {/* 🇮🇳 National Tricolor Accent Bar (Stretches completely across the top) */}
+      <div className="gov-tricolor-strip shrink-0 w-full z-50 shadow-sm" />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -178,7 +211,9 @@ export default function DashboardLayout() {
 
         {/* Sidebar — desktop */}
         <aside
-          className={`hidden lg:flex flex-col ${isLight ? 'bg-[#0a2240] text-white border-r border-[#0e2f57]' : 'bg-[#080c16] border-r border-white/5'} transition-all duration-300 shrink-0 relative
+          className={`hidden lg:flex flex-col ${
+            isLight ? 'bg-white border-r border-slate-200 shadow-sm' : 'bg-[#080c16] border-r border-white/5'
+          } transition-all duration-300 shrink-0 relative z-20
             ${collapsed ? 'w-[70px]' : 'w-[260px]'}`}
         >
           {sidebarContent}
@@ -188,7 +223,7 @@ export default function DashboardLayout() {
             onClick={() => setCollapsed((p) => !p)}
             className={`absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10 shadow-md ${
               isLight
-                ? 'bg-[#0a2240] border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-[#0a2240]'
+                ? 'bg-white border border-slate-300 text-slate-700 hover:bg-blue-600 hover:text-white'
                 : 'bg-[#1e2740] border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-blue-500/20'
             }`}
           >
@@ -198,7 +233,9 @@ export default function DashboardLayout() {
 
         {/* Sidebar — mobile drawer */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col ${isLight ? 'bg-[#0a2240] text-white' : 'bg-[#080c16]'} border-r border-white/5 transition-transform duration-300 lg:hidden
+          className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col ${
+            isLight ? 'bg-white border-r border-slate-200 shadow-xl' : 'bg-[#080c16] border-r border-white/5'
+          } transition-transform duration-300 lg:hidden
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           {sidebarContent}
@@ -208,7 +245,7 @@ export default function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Top Header */}
-          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors ${
+          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors z-10 ${
             isLight
               ? 'bg-white border-slate-200 shadow-sm'
               : 'bg-[#0a0d14]/95 border-white/5 backdrop-blur-sm'
@@ -216,28 +253,32 @@ export default function DashboardLayout() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
+              className={`lg:hidden p-2 rounded-lg transition-all ${
+                isLight ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+              }`}
             >
               <Menu className="w-5 h-5" />
             </button>
 
             {/* Official Government Page Title */}
             <div className="hidden lg:flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isLight ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-blue-500/10 text-blue-400'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-xs ${
+                isLight ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-blue-500/10 text-blue-400'
+              }`}>
                 <Landmark className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${isLight ? 'text-[#0a2240]' : 'text-slate-200'}`}>
+                  <span className={`text-xs font-black ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
                     ગુજરાત સરકાર · Government of Gujarat
                   </span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     isLight ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-blue-500/10 text-blue-400'
                   }`}>
-                    Home Dept
+                    Home Department
                   </span>
                 </div>
-                <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                <p className={`text-[11px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                   CCTV Surveillance &amp; Geospatial GIS Command Center
                 </p>
               </div>
@@ -260,7 +301,7 @@ export default function DashboardLayout() {
                   }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     isLight
-                      ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
+                      ? 'bg-white text-blue-700 shadow-sm border border-slate-200'
                       : 'text-slate-400 hover:text-white'
                   }`}
                   title="Switch to Light Mode"
@@ -280,7 +321,7 @@ export default function DashboardLayout() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                     !isLight
                       ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-900'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                   title="Switch to Dark Mode"
                 >
@@ -290,13 +331,13 @@ export default function DashboardLayout() {
               </div>
 
               {/* Live Indicator */}
-              <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 ${
+              <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 border ${
                 isLight
-                  ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
-                  : 'bg-emerald-500/8 border border-emerald-500/15 text-emerald-400'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 shadow-xs'
+                  : 'bg-emerald-500/8 border-emerald-500/15 text-emerald-400'
               }`}>
                 <span className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_6px_#10b981] animate-pulse-dot" />
-                <span className="text-[11px] font-bold">GRID LIVE</span>
+                <span className="text-[11px] font-black tracking-wide">GRID LIVE</span>
               </div>
 
               {/* Alert Bell */}
@@ -317,13 +358,15 @@ export default function DashboardLayout() {
                   ? 'bg-white border-slate-200 shadow-sm'
                   : 'bg-white/4 border-white/7'
               }`}>
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                  isLight ? 'bg-[#0a2240] text-amber-300' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
+                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white ${
+                  isLight ? 'bg-blue-600' : 'bg-gradient-to-br from-blue-700 to-blue-500'
                 }`}>
                   {user?.name?.charAt(0) || 'A'}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{user?.name || 'Admin'}</p>
+                  <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
+                    {user?.name || 'Admin'}
+                  </p>
                 </div>
               </div>
 
