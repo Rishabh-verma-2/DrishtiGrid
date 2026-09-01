@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useThemeStore = create(
   persist(
     (set, get) => ({
-      theme: 'gov', // default to 'gov' (official Gujarat Government portal theme), or 'tactical' (dark command center)
+      theme: 'light', // 'light' | 'dark'
 
       setTheme: (theme) => {
         set({ theme });
@@ -12,7 +12,7 @@ export const useThemeStore = create(
       },
 
       toggleTheme: () => {
-        const nextTheme = get().theme === 'gov' ? 'tactical' : 'gov';
+        const nextTheme = get().theme === 'light' ? 'dark' : 'light';
         set({ theme: nextTheme });
         applyThemeClass(nextTheme);
       },
@@ -28,24 +28,30 @@ export const useThemeStore = create(
   )
 );
 
-function applyThemeClass(theme) {
+export function applyThemeClass(theme) {
+  if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  if (theme === 'gov') {
-    root.classList.add('theme-gov');
-    root.classList.remove('theme-tactical');
+
+  if (theme === 'light') {
+    root.classList.add('theme-light', 'light');
+    root.classList.remove('theme-dark', 'dark', 'theme-gov', 'theme-tactical');
     document.body.style.backgroundColor = '#f1f5f9';
     document.body.style.color = '#0f172a';
   } else {
-    root.classList.add('theme-tactical');
-    root.classList.remove('theme-gov');
+    root.classList.add('theme-dark', 'dark', 'theme-tactical');
+    root.classList.remove('theme-light', 'light', 'theme-gov');
     document.body.style.backgroundColor = '#0a0d14';
     document.body.style.color = '#f1f5f9';
   }
 }
 
-// Initial apply
+// Initial apply on load
 if (typeof window !== 'undefined') {
-  const stored = localStorage.getItem('drishtigrid-theme-pref');
-  const initialTheme = stored?.includes('"tactical"') ? 'tactical' : 'gov';
-  applyThemeClass(initialTheme);
+  try {
+    const stored = localStorage.getItem('drishtigrid-theme-pref');
+    const isDark = stored?.includes('"dark"');
+    applyThemeClass(isDark ? 'dark' : 'light');
+  } catch (_) {
+    applyThemeClass('light');
+  }
 }

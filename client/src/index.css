@@ -1,25 +1,15 @@
 @import "tailwindcss";
 
-/* ─── Base resets & fonts ───────────────────────── */
+/* ─── Base resets & typography ──────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
   font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.2s ease, color 0.2s ease;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* ─── Scrollbar ─────────────────────────────────── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-.theme-tactical ::-webkit-scrollbar-track { background: #0f1420; }
-.theme-tactical ::-webkit-scrollbar-thumb { background: #1e2740; }
-.theme-tactical ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
 /* ─── National Tricolor Ribbon ──────────────────── */
 .gov-tricolor-strip {
@@ -28,7 +18,7 @@ body {
   width: 100%;
 }
 
-/* ─── Pulse animation for online dots ───────────── */
+/* ─── Pulse Animation ───────────────────────────── */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.35; }
@@ -36,14 +26,14 @@ body {
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
 /* ─── Gradient text helper ──────────────────────── */
-.gradient-text {
+.theme-light .gradient-text {
   background: linear-gradient(135deg, #1d4ed8, #0284c7);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.theme-tactical .gradient-text {
+.theme-dark .gradient-text {
   background: linear-gradient(135deg, #60a5fa, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -51,177 +41,276 @@ body {
 }
 
 /* ═════════════════════════════════════════════════
-   🏛️ OFFICIAL GOVERNMENT OF GUJARAT / NIC PORTAL THEME
+   ☀️ LIGHT MODE (Official Government Portal Look)
    ═════════════════════════════════════════════════ */
-.theme-gov {
-  background-color: #f1f5f9;
-  color: #0f172a;
+.theme-light,
+.theme-light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }
 
-.theme-gov body {
-  background-color: #f1f5f9;
-  color: #0f172a;
-}
-
-/* Main background */
-.theme-gov .bg-\[\#0a0d14\] {
-  background-color: #f1f5f9 !important;
-}
-
-.theme-gov .bg-\[\#050810\] {
-  background-color: #edf2f7 !important;
+/* Base page backgrounds */
+.theme-light .bg-\[\#0a0d14\],
+.theme-light .bg-\[\#050810\],
+.theme-light main {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
 }
 
 /* Header */
-.theme-gov header {
+.theme-light header {
   background-color: #ffffff !important;
   border-bottom: 1px solid #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Sidebar - Deep Indian Official Navy */
-.theme-gov aside {
+/* Sidebar in Light Mode: Official Deep Indian Navy for high contrast & elegance */
+.theme-light aside {
   background-color: #0a2240 !important;
-  border-right: 1px solid #0f2e56 !important;
-  box-shadow: 2px 0 8px rgba(10, 34, 64, 0.08) !important;
+  border-right: 1px solid #0e2e56 !important;
 }
 
-.theme-gov aside nav a {
+.theme-light aside nav a {
   color: #cbd5e1 !important;
 }
 
-.theme-gov aside nav a:hover {
+.theme-light aside nav a:hover {
   background-color: rgba(255, 255, 255, 0.08) !important;
   color: #ffffff !important;
 }
 
-.theme-gov aside nav a.active {
+.theme-light aside nav a.active {
   background-color: #ff9933 !important;
   color: #0a2240 !important;
   font-weight: 700 !important;
-  box-shadow: 0 2px 8px rgba(255, 153, 51, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(255, 153, 51, 0.35) !important;
 }
 
-.theme-gov aside nav a.active svg {
+.theme-light aside nav a.active svg {
   color: #0a2240 !important;
 }
 
-/* White Government Cards */
-.theme-gov .bg-\[\#141929\],
-.theme-gov .bg-\[\#0e1220\],
-.theme-gov .bg-\[\#0f1422\] {
+/* All Cards & Containers in Light Mode */
+.theme-light .bg-\[\#141929\],
+.theme-light .bg-\[\#0e1220\],
+.theme-light .bg-\[\#0f1422\],
+.theme-light .bg-\[\#1e2740\] {
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.03) !important;
 }
 
-.theme-gov .hover\:bg-\[\#1a2035\]:hover {
+.theme-light .hover\:bg-\[\#1a2035\]:hover,
+.theme-light .hover\:bg-\[\#1e2740\]:hover {
   background-color: #f8fafc !important;
 }
 
-/* Text Overrides for Gov Theme */
-.theme-gov .text-slate-100,
-.theme-gov .text-slate-200 {
+/* Light Mode Card Sub-Containers & Insets */
+.theme-light .bg-white\/3,
+.theme-light .bg-white\/4,
+.theme-light .bg-white\/5,
+.theme-light .bg-white\/6,
+.theme-light .bg-white\/8,
+.theme-light .bg-white\/10 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
   color: #0f172a !important;
 }
 
-.theme-gov .text-slate-300 {
+/* Borders in Light Mode */
+.theme-light .border-white\/4,
+.theme-light .border-white\/5,
+.theme-light .border-white\/7,
+.theme-light .border-white\/8,
+.theme-light .border-white\/10,
+.theme-light .border-white\/15,
+.theme-light .border-white\/20 {
+  border-color: #e2e8f0 !important;
+}
+
+.theme-light .divide-white\/4 > :not([hidden]) ~ :not([hidden]),
+.theme-light .divide-white\/5 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+
+/* Text Colors in Light Mode */
+.theme-light .text-slate-100,
+.theme-light .text-slate-200 {
+  color: #0f172a !important;
+}
+
+.theme-light .text-slate-300 {
   color: #1e293b !important;
 }
 
-.theme-gov .text-slate-400 {
+.theme-light .text-slate-400 {
+  color: #334155 !important;
+}
+
+.theme-light .text-slate-500 {
   color: #475569 !important;
 }
 
-.theme-gov .text-slate-500 {
+.theme-light .text-slate-600 {
   color: #64748b !important;
 }
 
-/* Input Fields */
-.theme-gov input,
-.theme-gov select {
+/* Inputs & Form Controls in Light Mode */
+.theme-light input,
+.theme-light select,
+.theme-light textarea {
   background-color: #ffffff !important;
-  border-color: #cbd5e1 !important;
+  border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
 }
 
-.theme-gov input::placeholder {
+.theme-light input:focus,
+.theme-light select:focus,
+.theme-light textarea:focus {
+  border-color: #2563eb !important;
+  background-color: #ffffff !important;
+  outline: 2px solid rgba(37, 99, 235, 0.15) !important;
+}
+
+.theme-light input::placeholder {
   color: #94a3b8 !important;
 }
 
-/* Table styling */
-.theme-gov table thead {
-  background-color: #f8fafc !important;
+/* Table in Light Mode */
+.theme-light table thead {
+  background-color: #f1f5f9 !important;
   border-bottom: 2px solid #e2e8f0 !important;
 }
 
-.theme-gov table thead th {
+.theme-light table thead th {
   color: #475569 !important;
+  font-weight: 700 !important;
 }
 
-.theme-gov table tbody tr {
+.theme-light table tbody tr {
   border-bottom: 1px solid #f1f5f9 !important;
 }
 
-.theme-gov table tbody tr:hover {
+.theme-light table tbody tr:hover {
   background-color: #f8fafc !important;
 }
 
-/* Leaflet in Gov Portal Theme (Natural, bright, clear tiles) */
-.theme-gov .leaflet-container {
+/* Standby card thumbnails in Light Mode */
+.theme-light .bg-\[\#080c16\] {
+  background-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.theme-light .bg-\[\#080c16\] .text-slate-500 {
+  color: #475569 !important;
+}
+
+/* Leaflet Map in Light Mode */
+.theme-light .leaflet-container {
   background: #f8fafc !important;
 }
 
-.theme-gov .leaflet-tile {
+.theme-light .leaflet-tile {
   filter: none !important;
 }
 
-.theme-gov .leaflet-control-zoom a {
+.theme-light .leaflet-control-zoom a {
   background: #ffffff !important;
   color: #0f172a !important;
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.theme-gov .leaflet-popup-content-wrapper {
+.theme-light .leaflet-popup-content-wrapper {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
 }
 
-.theme-gov .leaflet-popup-tip {
+.theme-light .leaflet-popup-tip {
   background: #ffffff !important;
 }
 
-/* ═════════════════════════════════════════════════
-   🌙 TACTICAL DARK COMMAND CENTER THEME
-   ═════════════════════════════════════════════════ */
-.theme-tactical {
-  background-color: #0a0d14;
-  color: #f1f5f9;
+/* Recharts Tooltip in Light Mode */
+.theme-light .recharts-default-tooltip {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
 }
 
-.theme-tactical .leaflet-container {
+/* Scrollbar in Light Mode */
+.theme-light ::-webkit-scrollbar-track { background: transparent; }
+.theme-light ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.theme-light ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+
+/* ═════════════════════════════════════════════════
+   🌙 DARK MODE (Tactical Command Center Look)
+   ═════════════════════════════════════════════════ */
+.theme-dark,
+.theme-dark body {
+  background-color: #0a0d14 !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-dark .bg-\[\#0a0d14\],
+.theme-dark .bg-\[\#050810\],
+.theme-dark main {
+  background-color: #0a0d14 !important;
+  color: #f1f5f9 !important;
+}
+
+.theme-dark header {
+  background-color: rgba(10, 13, 20, 0.95) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-dark aside {
+  background-color: #080c16 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-dark aside nav a.active {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+}
+
+.theme-dark aside nav a.active svg {
+  color: #60a5fa !important;
+}
+
+.theme-dark .bg-\[\#141929\] {
+  background-color: #141929 !important;
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.theme-dark .leaflet-container {
   background: #0a0d14 !important;
 }
 
-.theme-tactical .leaflet-tile {
-  filter: brightness(0.8) saturate(0.85) contrast(1.05);
+.theme-dark .leaflet-tile {
+  filter: brightness(0.8) saturate(0.85) contrast(1.05) !important;
 }
 
-.theme-tactical .leaflet-control-zoom a {
+.theme-dark .leaflet-control-zoom a {
   background: #141929 !important;
   color: #f1f5f9 !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
 }
 
-.theme-tactical .leaflet-popup-content-wrapper {
+.theme-dark .leaflet-popup-content-wrapper {
   background: #141929 !important;
   border: 1px solid rgba(255, 255, 255, 0.07) !important;
   color: #f1f5f9 !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
-.theme-tactical .leaflet-popup-tip {
+.theme-dark .leaflet-popup-tip {
   background: #141929 !important;
 }
+
+.theme-dark ::-webkit-scrollbar-track { background: #0f1420; }
+.theme-dark ::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 4px; }
+.theme-dark ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }

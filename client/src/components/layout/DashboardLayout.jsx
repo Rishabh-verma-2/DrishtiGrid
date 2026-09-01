@@ -33,18 +33,18 @@ export default function DashboardLayout() {
     navigate('/login');
   };
 
-  const isGov = theme === 'gov';
+  const isLight = theme === 'light';
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Official Government Emblem & Logo */}
-      <div className={`flex items-center gap-3 px-4 py-4 border-b ${isGov ? 'border-white/10' : 'border-white/5'} shrink-0 ${collapsed ? 'justify-center px-2' : ''}`}>
-        <div className={`w-10 h-10 ${isGov ? 'bg-amber-500/20 border border-amber-400/40 text-amber-300' : 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.5)]'} rounded-xl flex items-center justify-center shrink-0 font-bold`}>
+      <div className={`flex items-center gap-3 px-4 py-4 border-b ${isLight ? 'border-white/10' : 'border-white/5'} shrink-0 ${collapsed ? 'justify-center px-2' : ''}`}>
+        <div className={`w-10 h-10 ${isLight ? 'bg-amber-500/20 border border-amber-400/40 text-amber-300' : 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.5)]'} rounded-xl flex items-center justify-center shrink-0 font-bold`}>
           <Shield className="w-5 h-5" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className={`font-black text-sm tracking-tight ${isGov ? 'text-white' : 'gradient-text'}`}>
+            <p className={`font-black text-sm tracking-tight ${isLight ? 'text-white' : 'gradient-text'}`}>
               DrishtiGrid
             </p>
             <p className="text-[10px] text-amber-300/90 font-medium truncate">
@@ -58,7 +58,7 @@ export default function DashboardLayout() {
       <nav className="flex-1 overflow-y-auto py-4 px-2">
         {!collapsed && (
           <div className="px-3 mb-2 flex items-center justify-between">
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isGov ? 'text-slate-400' : 'text-slate-600'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${isLight ? 'text-slate-400' : 'text-slate-600'}`}>
               Surveillance Grid
             </span>
             <span className="text-[9px] font-mono text-amber-400 font-semibold">NIC-GOV</span>
@@ -74,10 +74,10 @@ export default function DashboardLayout() {
                   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 group relative
                   ${collapsed ? 'justify-center' : ''}
                   ${isActive
-                    ? isGov
+                    ? isLight
                       ? 'bg-amber-500 text-[#0a2240] font-bold shadow-md'
                       : 'bg-blue-500/15 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
-                    : isGov
+                    : isLight
                       ? 'text-slate-200 hover:bg-white/10 hover:text-white'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                   }`
@@ -88,17 +88,17 @@ export default function DashboardLayout() {
                   <>
                     <Icon className={`w-4.5 h-4.5 shrink-0 ${
                       isActive
-                        ? isGov ? 'text-[#0a2240]' : 'text-blue-400'
-                        : isGov ? 'text-slate-300 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-300'
+                        ? isLight ? 'text-[#0a2240]' : 'text-blue-400'
+                        : isLight ? 'text-slate-300 group-hover:text-white' : 'text-slate-500 group-hover:text-slate-300'
                     }`} />
                     {!collapsed && (
                       <div className="flex flex-col min-w-0">
                         <span className="truncate leading-tight">{label}</span>
-                        <span className={`text-[9px] ${isActive ? (isGov ? 'text-[#0a2240]/80' : 'text-blue-300/70') : 'text-slate-400'} truncate`}>{labelGu}</span>
+                        <span className={`text-[9px] ${isActive ? (isLight ? 'text-[#0a2240]/80' : 'text-blue-300/70') : 'text-slate-400'} truncate`}>{labelGu}</span>
                       </div>
                     )}
                     {/* Active indicator */}
-                    {isActive && !isGov && (
+                    {isActive && !isLight && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
                     )}
                   </>
@@ -110,10 +110,10 @@ export default function DashboardLayout() {
       </nav>
 
       {/* Status + Profile */}
-      <div className={`border-t ${isGov ? 'border-white/10' : 'border-white/5'} p-3 shrink-0 space-y-2`}>
+      <div className={`border-t ${isLight ? 'border-white/10' : 'border-white/5'} p-3 shrink-0 space-y-2`}>
         {/* Connection status */}
         {!collapsed && (
-          <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${isGov ? 'bg-white/5 text-slate-200' : 'bg-white/3'}`}>
+          <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${isLight ? 'bg-white/5 text-slate-200' : 'bg-white/3'}`}>
             <div className="flex items-center gap-2">
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse-dot' : 'bg-red-400'}`} />
               <span className="text-[11px] font-medium">{isConnected ? 'NIC Grid Online' : 'Disconnected'}</span>
@@ -127,19 +127,19 @@ export default function DashboardLayout() {
 
         {/* User profile */}
         <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
-          <div className={`w-8 h-8 ${isGov ? 'bg-amber-500 text-[#0a2240]' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'} rounded-lg flex items-center justify-center text-xs font-bold shrink-0 shadow-sm`}>
+          <div className={`w-8 h-8 ${isLight ? 'bg-amber-500 text-[#0a2240]' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'} rounded-lg flex items-center justify-center text-xs font-bold shrink-0 shadow-sm`}>
             {user?.name?.charAt(0) || 'A'}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className={`text-xs font-semibold truncate ${isGov ? 'text-white' : 'text-slate-300'}`}>{user?.name || 'Admin'}</p>
-              <p className={`text-[10px] truncate capitalize ${isGov ? 'text-amber-300' : 'text-slate-500'}`}>Gujarat Home Dept</p>
+              <p className={`text-xs font-semibold truncate ${isLight ? 'text-white' : 'text-slate-300'}`}>{user?.name || 'Admin'}</p>
+              <p className={`text-[10px] truncate capitalize ${isLight ? 'text-amber-300' : 'text-slate-500'}`}>Gujarat Home Dept</p>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={handleLogout}
-              className={`p-1.5 rounded-lg transition-all ${isGov ? 'text-slate-300 hover:text-red-300 hover:bg-red-500/20' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'}`}
+              className={`p-1.5 rounded-lg transition-all ${isLight ? 'text-slate-300 hover:text-red-300 hover:bg-red-500/20' : 'text-slate-600 hover:text-red-400 hover:bg-red-500/10'}`}
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -161,7 +161,7 @@ export default function DashboardLayout() {
   );
 
   return (
-    <div className={`flex flex-col h-screen ${isGov ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'} overflow-hidden`}>
+    <div className={`flex flex-col h-screen ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'} overflow-hidden`}>
 
       {/* 🇮🇳 National Tricolor Accent Bar */}
       <div className="gov-tricolor-strip shrink-0" />
@@ -178,7 +178,7 @@ export default function DashboardLayout() {
 
         {/* Sidebar — desktop */}
         <aside
-          className={`hidden lg:flex flex-col ${isGov ? 'bg-[#0a2240] text-white border-r border-[#0e2f57]' : 'bg-[#080c16] border-r border-white/5'} transition-all duration-300 shrink-0 relative
+          className={`hidden lg:flex flex-col ${isLight ? 'bg-[#0a2240] text-white border-r border-[#0e2f57]' : 'bg-[#080c16] border-r border-white/5'} transition-all duration-300 shrink-0 relative
             ${collapsed ? 'w-[70px]' : 'w-[260px]'}`}
         >
           {sidebarContent}
@@ -187,7 +187,7 @@ export default function DashboardLayout() {
           <button
             onClick={() => setCollapsed((p) => !p)}
             className={`absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10 shadow-md ${
-              isGov
+              isLight
                 ? 'bg-[#0a2240] border border-amber-500/40 text-amber-300 hover:bg-amber-500 hover:text-[#0a2240]'
                 : 'bg-[#1e2740] border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-blue-500/20'
             }`}
@@ -198,7 +198,7 @@ export default function DashboardLayout() {
 
         {/* Sidebar — mobile drawer */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col ${isGov ? 'bg-[#0a2240] text-white' : 'bg-[#080c16]'} border-r border-white/5 transition-transform duration-300 lg:hidden
+          className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col ${isLight ? 'bg-[#0a2240] text-white' : 'bg-[#080c16]'} border-r border-white/5 transition-transform duration-300 lg:hidden
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           {sidebarContent}
@@ -209,7 +209,7 @@ export default function DashboardLayout() {
 
           {/* Top Header */}
           <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors ${
-            isGov
+            isLight
               ? 'bg-white border-slate-200 shadow-sm'
               : 'bg-[#0a0d14]/95 border-white/5 backdrop-blur-sm'
           }`}>
@@ -223,21 +223,21 @@ export default function DashboardLayout() {
 
             {/* Official Government Page Title */}
             <div className="hidden lg:flex items-center gap-3">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isGov ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-blue-500/10 text-blue-400'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isLight ? 'bg-amber-50 border border-amber-200 text-amber-700' : 'bg-blue-500/10 text-blue-400'}`}>
                 <Landmark className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${isGov ? 'text-[#0a2240]' : 'text-slate-200'}`}>
+                  <span className={`text-xs font-bold ${isLight ? 'text-[#0a2240]' : 'text-slate-200'}`}>
                     ગુજરાત સરકાર · Government of Gujarat
                   </span>
                   <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                    isGov ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-blue-500/10 text-blue-400'
+                    isLight ? 'bg-blue-50 text-blue-800 border border-blue-200' : 'bg-blue-500/10 text-blue-400'
                   }`}>
                     Home Dept
                   </span>
                 </div>
-                <p className={`text-[11px] ${isGov ? 'text-slate-500' : 'text-slate-400'}`}>
+                <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
                   CCTV Surveillance &amp; Geospatial GIS Command Center
                 </p>
               </div>
@@ -246,50 +246,52 @@ export default function DashboardLayout() {
             {/* Right Actions */}
             <div className="flex items-center gap-3">
 
-              {/* 🎨 Theme Toggle (Gov Portal vs Tactical Dark) */}
-              <div className="flex items-center bg-slate-200/80 dark:bg-white/5 p-1 rounded-xl border border-slate-300/70 dark:border-white/10 shadow-inner">
+              {/* 🎨 Theme Toggle (Light Mode vs Dark Mode) */}
+              <div className={`flex items-center p-1 rounded-xl border shadow-inner ${
+                isLight ? 'bg-slate-100 border-slate-300' : 'bg-white/5 border-white/10'
+              }`}>
                 <button
                   type="button"
                   onClick={() => {
-                    if (!isGov) {
+                    if (!isLight) {
                       toggleTheme();
-                      toast('Switched to Official Gov Portal Theme', { icon: '🏛️' });
+                      toast('Switched to Light Mode', { icon: '☀️' });
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    isGov
-                      ? 'bg-[#0a2240] text-amber-300 shadow-sm'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    isLight
+                      ? 'bg-white text-slate-800 shadow-sm border border-slate-200'
                       : 'text-slate-400 hover:text-white'
                   }`}
-                  title="Official Gujarat Government Portal Theme"
+                  title="Switch to Light Mode"
                 >
-                  <Landmark className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Gov Portal</span>
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="hidden sm:inline">Light Mode</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
-                    if (isGov) {
+                    if (isLight) {
                       toggleTheme();
-                      toast('Switched to Tactical Command Theme', { icon: '🌙' });
+                      toast('Switched to Dark Mode', { icon: '🌙' });
                     }
                   }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                    !isGov
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    !isLight
                       ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      : 'text-slate-500 hover:text-slate-900'
                   }`}
-                  title="Tactical Dark Command Center Theme"
+                  title="Switch to Dark Mode"
                 >
-                  <Moon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Tactical Dark</span>
+                  <Moon className="w-3.5 h-3.5 text-blue-400" />
+                  <span className="hidden sm:inline">Dark Mode</span>
                 </button>
               </div>
 
               {/* Live Indicator */}
               <div className={`flex items-center gap-2 rounded-full px-3 py-1.5 ${
-                isGov
+                isLight
                   ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
                   : 'bg-emerald-500/8 border border-emerald-500/15 text-emerald-400'
               }`}>
@@ -301,7 +303,7 @@ export default function DashboardLayout() {
               <button
                 onClick={() => navigate('/alerts')}
                 className={`relative p-2 rounded-xl transition-all ${
-                  isGov ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                  isLight ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                 }`}
                 title="Security Alerts"
               >
@@ -311,17 +313,17 @@ export default function DashboardLayout() {
 
               {/* User Chip */}
               <div className={`flex items-center gap-2 border rounded-xl px-3 py-1.5 ${
-                isGov
+                isLight
                   ? 'bg-white border-slate-200 shadow-sm'
                   : 'bg-white/4 border-white/7'
               }`}>
                 <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold ${
-                  isGov ? 'bg-[#0a2240] text-amber-300' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
+                  isLight ? 'bg-[#0a2240] text-amber-300' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
                 }`}>
                   {user?.name?.charAt(0) || 'A'}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className={`text-xs font-bold leading-tight ${isGov ? 'text-slate-800' : 'text-slate-200'}`}>{user?.name || 'Admin'}</p>
+                  <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{user?.name || 'Admin'}</p>
                 </div>
               </div>
 
@@ -329,7 +331,7 @@ export default function DashboardLayout() {
           </header>
 
           {/* Page content */}
-          <main className={`flex-1 overflow-y-auto ${isGov ? 'bg-[#f4f6fa]' : 'bg-[#0a0d14]'}`}>
+          <main className={`flex-1 overflow-y-auto ${isLight ? 'bg-[#f4f6fa]' : 'bg-[#0a0d14]'}`}>
             <Outlet />
           </main>
         </div>

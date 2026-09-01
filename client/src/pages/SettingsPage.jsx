@@ -1,5 +1,6 @@
 import { Settings, User, Shield, Bell, Database, Globe, Lock } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 
 function SettingCard({ icon: Icon, title, children }) {
   return (
@@ -38,6 +39,7 @@ function Toggle({ defaultChecked = false }) {
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   return (
     <div className="p-4 lg:p-6 space-y-5 max-w-4xl">
@@ -76,7 +78,17 @@ export default function SettingsPage() {
         <SettingRow label="Map Provider" desc="OpenStreetMap (free, open source)">
           <span className="text-xs text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-lg">Active</span>
         </SettingRow>
-        <SettingRow label="Dark Mode" desc="System always uses dark mode"><Toggle defaultChecked /></SettingRow>
+        <SettingRow label="Theme Appearance" desc="Switch between Light Mode (Gov Portal) and Dark Mode (Tactical Command)">
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              theme === 'dark' ? 'bg-blue-600 text-white shadow-md' : 'bg-amber-500 text-slate-900 shadow-sm'
+            }`}
+          >
+            {theme === 'dark' ? '🌙 Dark Mode' : '☀️ Light Mode'}
+          </button>
+        </SettingRow>
         <SettingRow label="Auto-refresh Dashboard" desc="Refresh stats every 30 seconds"><Toggle defaultChecked /></SettingRow>
       </SettingCard>
 
