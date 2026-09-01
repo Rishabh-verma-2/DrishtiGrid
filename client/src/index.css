@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+/* ─── Theme tokens ──────────────────────────────── */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --color-brand-50:  #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  --color-surface-base:    #0a0d14;
+  --color-surface-default: #0f1420;
+  --color-surface-card:    #141929;
+  --color-surface-hover:   #1a2035;
+  --color-surface-elevated:#1e2740;
+  --color-surface-sidebar: #080c16;
+
+  --color-border-default: rgba(255,255,255,0.07);
+  --color-border-accent:  rgba(59,130,246,0.30);
+
+  --radius-card: 14px;
+}
+
+/* ─── Base resets ───────────────────────────────── */
+*,*::before,*::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background-color: #0a0d14;
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ─── Scrollbar ─────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #0f1420; }
+::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* ─── Leaflet dark overrides ────────────────────── */
+.leaflet-container {
+  background: #0a0d14 !important;
+  font-family: var(--font-sans) !important;
+}
+.leaflet-tile { filter: brightness(0.8) saturate(0.85) contrast(1.05); }
+.leaflet-control-zoom {
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+.leaflet-control-zoom a {
+  background: #141929 !important;
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+}
+.leaflet-control-zoom a:hover { background: #1e2740 !important; }
+.leaflet-control-attribution {
+  background: rgba(10,13,20,0.85) !important;
+  color: #475569 !important;
+  font-size: 10px !important;
+}
+.leaflet-popup-content-wrapper {
+  background: #141929 !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 10px !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+.leaflet-popup-tip { background: #141929 !important; }
+
+/* ─── Pulse animation for online dots ───────────── */
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+.animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* ─── Gradient text helper ──────────────────────── */
+.gradient-text {
+  background: linear-gradient(135deg, #60a5fa, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Grid bg pattern ───────────────────────────── */
+.bg-grid {
+  background-image:
+    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── Scanlines overlay ─────────────────────────── */
+.scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
