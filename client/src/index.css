@@ -1,111 +1,227 @@
 @import "tailwindcss";
 
-/* ─── Theme tokens ──────────────────────────────── */
-@theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-
-  --color-brand-50:  #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-
-  --color-surface-base:    #0a0d14;
-  --color-surface-default: #0f1420;
-  --color-surface-card:    #141929;
-  --color-surface-hover:   #1a2035;
-  --color-surface-elevated:#1e2740;
-  --color-surface-sidebar: #080c16;
-
-  --color-border-default: rgba(255,255,255,0.07);
-  --color-border-accent:  rgba(59,130,246,0.30);
-
-  --radius-card: 14px;
-}
-
-/* ─── Base resets ───────────────────────────────── */
-*,*::before,*::after { box-sizing: border-box; }
+/* ─── Base resets & fonts ───────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
-  font-family: var(--font-sans);
-  background-color: #0a0d14;
-  color: #f1f5f9;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
 }
 
 /* ─── Scrollbar ─────────────────────────────────── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0f1420; }
-::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* ─── Leaflet dark overrides ────────────────────── */
-.leaflet-container {
-  background: #0a0d14 !important;
-  font-family: var(--font-sans) !important;
+.theme-tactical ::-webkit-scrollbar-track { background: #0f1420; }
+.theme-tactical ::-webkit-scrollbar-thumb { background: #1e2740; }
+.theme-tactical ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* ─── National Tricolor Ribbon ──────────────────── */
+.gov-tricolor-strip {
+  height: 4px;
+  background: linear-gradient(90deg, #ff9933 0%, #ff9933 33.33%, #ffffff 33.33%, #ffffff 66.66%, #138808 66.66%, #138808 100%);
+  width: 100%;
 }
-.leaflet-tile { filter: brightness(0.8) saturate(0.85) contrast(1.05); }
-.leaflet-control-zoom {
-  border: 1px solid rgba(255,255,255,0.08) !important;
-  border-radius: 10px !important;
-  overflow: hidden;
-}
-.leaflet-control-zoom a {
-  background: #141929 !important;
-  color: #f1f5f9 !important;
-  border-bottom: 1px solid rgba(255,255,255,0.07) !important;
-}
-.leaflet-control-zoom a:hover { background: #1e2740 !important; }
-.leaflet-control-attribution {
-  background: rgba(10,13,20,0.85) !important;
-  color: #475569 !important;
-  font-size: 10px !important;
-}
-.leaflet-popup-content-wrapper {
-  background: #141929 !important;
-  border: 1px solid rgba(255,255,255,0.07) !important;
-  border-radius: 10px !important;
-  color: #f1f5f9 !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
-}
-.leaflet-popup-tip { background: #141929 !important; }
 
 /* ─── Pulse animation for online dots ───────────── */
 @keyframes pulse-dot {
-  0%,100% { opacity: 1; }
-  50%      { opacity: 0.4; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
 }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
 /* ─── Gradient text helper ──────────────────────── */
 .gradient-text {
+  background: linear-gradient(135deg, #1d4ed8, #0284c7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.theme-tactical .gradient-text {
   background: linear-gradient(135deg, #60a5fa, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-/* ─── Grid bg pattern ───────────────────────────── */
-.bg-grid {
-  background-image:
-    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
-  background-size: 40px 40px;
+/* ═════════════════════════════════════════════════
+   🏛️ OFFICIAL GOVERNMENT OF GUJARAT / NIC PORTAL THEME
+   ═════════════════════════════════════════════════ */
+.theme-gov {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
-/* ─── Scanlines overlay ─────────────────────────── */
-.scanlines::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg, transparent, transparent 2px,
-    rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px
-  );
-  pointer-events: none;
-  z-index: 0;
+.theme-gov body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Main background */
+.theme-gov .bg-\[\#0a0d14\] {
+  background-color: #f1f5f9 !important;
+}
+
+.theme-gov .bg-\[\#050810\] {
+  background-color: #edf2f7 !important;
+}
+
+/* Header */
+.theme-gov header {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Sidebar - Deep Indian Official Navy */
+.theme-gov aside {
+  background-color: #0a2240 !important;
+  border-right: 1px solid #0f2e56 !important;
+  box-shadow: 2px 0 8px rgba(10, 34, 64, 0.08) !important;
+}
+
+.theme-gov aside nav a {
+  color: #cbd5e1 !important;
+}
+
+.theme-gov aside nav a:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.theme-gov aside nav a.active {
+  background-color: #ff9933 !important;
+  color: #0a2240 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(255, 153, 51, 0.3) !important;
+}
+
+.theme-gov aside nav a.active svg {
+  color: #0a2240 !important;
+}
+
+/* White Government Cards */
+.theme-gov .bg-\[\#141929\],
+.theme-gov .bg-\[\#0e1220\],
+.theme-gov .bg-\[\#0f1422\] {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.theme-gov .hover\:bg-\[\#1a2035\]:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Text Overrides for Gov Theme */
+.theme-gov .text-slate-100,
+.theme-gov .text-slate-200 {
+  color: #0f172a !important;
+}
+
+.theme-gov .text-slate-300 {
+  color: #1e293b !important;
+}
+
+.theme-gov .text-slate-400 {
+  color: #475569 !important;
+}
+
+.theme-gov .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Input Fields */
+.theme-gov input,
+.theme-gov select {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.theme-gov input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Table styling */
+.theme-gov table thead {
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+.theme-gov table thead th {
+  color: #475569 !important;
+}
+
+.theme-gov table tbody tr {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.theme-gov table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+/* Leaflet in Gov Portal Theme (Natural, bright, clear tiles) */
+.theme-gov .leaflet-container {
+  background: #f8fafc !important;
+}
+
+.theme-gov .leaflet-tile {
+  filter: none !important;
+}
+
+.theme-gov .leaflet-control-zoom a {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.theme-gov .leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+}
+
+.theme-gov .leaflet-popup-tip {
+  background: #ffffff !important;
+}
+
+/* ═════════════════════════════════════════════════
+   🌙 TACTICAL DARK COMMAND CENTER THEME
+   ═════════════════════════════════════════════════ */
+.theme-tactical {
+  background-color: #0a0d14;
+  color: #f1f5f9;
+}
+
+.theme-tactical .leaflet-container {
+  background: #0a0d14 !important;
+}
+
+.theme-tactical .leaflet-tile {
+  filter: brightness(0.8) saturate(0.85) contrast(1.05);
+}
+
+.theme-tactical .leaflet-control-zoom a {
+  background: #141929 !important;
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.theme-tactical .leaflet-popup-content-wrapper {
+  background: #141929 !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+}
+
+.theme-tactical .leaflet-popup-tip {
+  background: #141929 !important;
 }
