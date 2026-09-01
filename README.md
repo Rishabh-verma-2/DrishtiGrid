@@ -1,88 +1,193 @@
 # DrishtiGrid (દ્રષ્ટિગ્રીડ) 🛡️
-### Gujarat State CCTV Surveillance & Real-Time GIS Command Platform
+### *Gujarat State CCTV Surveillance, GIS Command & Low-Latency Video Intelligence Platform*
 
-An industry-grade, intelligent CCTV surveillance and geospatial monitoring platform designed for the **Government of Gujarat Home Department** and Smart City Command Centers.
-
----
-
-## 🌟 Key Features
-
-- **🏛️ Admin Command & Control:**
-  - Secure JWT authentication with role-based authorization (Superadmin/Admin).
-  - Rate limiting, brute-force lockout protection, and bcrypt password hashing.
-  - Live system health telemetry and real-time operator counter.
-
-- **🎥 30 Live CCTV Feeds (Zero-DB Storage Architecture):**
-  - High-performance **WebRTC (WHEP)** low-latency video streaming (`<500ms`).
-  - **HLS CDN** stream fallback.
-  - Multi-view grid arrangements: **Grid (All 30 Feeds)**, **Quad View (2x2)**, **Matrix (3x3)**, and **Cinema Spotlight**.
-  - **On-Demand Streaming:** Feeds connect strictly when initiated by the operator to conserve network bandwidth and avoid browser overload.
-  - Directional PTZ inspection controls, resolution toggles, and CCTV watermark snapshot capture.
-  - One-click copyable **RTSP (`rtsp://103.250.160.189:8554/stream/camXX`)**, **WebRTC**, and **Python OpenCV** commands for AI inference.
-
-- **🗺️ Gujarat GIS Map Interface:**
-  - Interactive Leaflet & OpenStreetMap geospatial tracking across all Gujarat districts (Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana, etc.).
-  - Real-time status indicators (Online / Offline / Maintenance).
-  - Click-to-inspect camera popup with geo-coordinates and zone categorization.
-
-- **📊 Comprehensive Command Dashboard:**
-  - Live camera status breakdown (Pie & Bar charts).
-  - District-wise camera distribution metrics.
-  - Real-time activity and security event feed.
-  - Interactive mini GIS camera network map.
+[![Node.js](https://img.shields.io/badge/Node.js-v20+-green.svg?logo=node.js)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-19-blue.svg?logo=react)](https://react.dev)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8.svg?logo=tailwindcss)](https://tailwindcss.com)
+[![WebRTC](https://img.shields.io/badge/Streaming-WebRTC%20%7C%20WHEP%20%7C%20HLS-orange.svg)](https://webrtc.org)
+[![Leaflet](https://img.shields.io/badge/GIS-Leaflet%20%7C%20OpenStreetMap-199900.svg?logo=leaflet)](https://leafletjs.com)
+[![License](https://img.shields.io/badge/License-Government%20Internal%20Use-red.svg)](#)
 
 ---
 
-## 🛠️ Technology Stack
+## 🏛️ Executive Summary
 
-- **Frontend:**
-  - **React 19** + **Vite**
-  - **Tailwind CSS v4** (Modern government dark command theme)
-  - **Leaflet** & **React-Leaflet** (GIS mapping)
-  - **Socket.IO Client** (Real-time live telemetry)
-  - **Hls.js** & Native **WebRTC (WHEP)**
-  - **Recharts** (Real-time analytics charts)
-  - **Lucide Icons**
+**DrishtiGrid** is an industry-grade Command and Control (C2) situational awareness platform engineered specifically for the **Government of Gujarat Home Department**, Smart City missions, and state police headquarters.
 
-- **Backend:**
-  - **Node.js** & **Express**
-  - **MongoDB** & **Mongoose** (GIS 2dsphere indexing)
-  - **Socket.IO** (Real-time bi-directional events)
-  - **JWT (JSON Web Tokens)** (Access & Refresh tokens)
-  - **Winston** (Structured logging)
-  - **Helmet**, **CORS**, and **Express-Rate-Limit** (Production security)
+The platform bridges real-time physical security and geospatial intelligence by ingesting live video streams across Gujarat's critical infrastructure—highways, religious shrines, railway junctions, ports, and urban market squares—projecting them onto an interactive GIS grid without persistent storage overhead.
 
 ---
 
-## 🚀 Getting Started
+## 🎯 The Core Problem & Architectural Challenges
 
-### 1. Prerequisites
-- Node.js (v18 or v20+)
-- MongoDB Atlas or local MongoDB instance
+| Challenge | Traditional Approach | DrishtiGrid Solution |
+|---|---|---|
+| **Storage Explosion** | Saving video streams and snapshots to MongoDB/S3, quickly exhausting storage limits. | **Zero-DB Streaming Pipeline:** Feeds are consumed live in memory via WebRTC/HLS directly into browser hardware canvas. Zero video bytes or feed buffers touch MongoDB. |
+| **Network & Browser Overload** | Loading dozens of high-definition camera feeds simultaneously, crashing client browsers and hogging WAN bandwidth. | **On-Demand Pacing:** Standby preview mode loads 0 KB/s in grid view. WebRTC WHEP peer connections negotiate strictly when an operator selects or opens a camera. |
+| **Latency in Remote AI & Monitoring** | HLS/RTMP pipelines with 5 to 30 second lag, causing stale tactical decisions. | **Sub-500ms WebRTC (WHEP):** Ultra-low latency real-time streaming directly from gateway (`103.250.160.189`), with automatic HLS CDN fallback. |
+| **Heterogeneous Stream Consumption** | Separate silos for web dashboards, AI inference pipelines, and field control rooms. | **Unified Multi-Protocol Hub:** WebRTC for browser operator preview, RTSP for Python OpenCV / DeepStream AI models, and HLS for CDN delivery. |
 
-### 2. Installation
+---
 
-Clone the repository:
+## 🏗️ System Architecture
+
+```
+                                  ┌──────────────────────────────────────────────┐
+                                  │      Gujarat Surveillance Camera Network     │
+                                  │   (Ahmedabad, Surat, Gandhinagar, Rajkot...)  │
+                                  └──────────────────────┬───────────────────────┘
+                                                         │ Media Ingest (RTSP / RTMP)
+                                                         ▼
+                                  ┌──────────────────────────────────────────────┐
+                                  │           MediaMTX Streaming Gateway         │
+                                  │       Host: 103.250.160.189 / corp8.cloud    │
+                                  └──────────────┬───────────────┬───────────────┘
+                                                 │               │
+                        RTSP (Port 8554)         │               │  WebRTC WHEP (Port 8889)
+                   ┌─────────────────────────────┘               └─────────────────────────────┐
+                   ▼                                                                           ▼
+      ┌───────────────────────────┐                                               ┌───────────────────────────┐
+      │   AI Inference Pipeline   │                                               │   DrishtiGrid Web Client  │
+      │   (Python, OpenCV, YOLO)  │                                               │   React 19 + Tailwind v4  │
+      └───────────────────────────┘                                               └─────────────┬─────────────┘
+                                                                                                │
+                                                       ┌────────────────────────────────────────┴───────────────────────────────────────┐
+                                                       ▼                                                                                ▼
+                                        ┌─────────────────────────────┐                                                  ┌─────────────────────────────┐
+                                        │   GIS Map (Leaflet / OSM)   │                                                  │   Command Telemetry & RBAC  │
+                                        │   Spatial Geo-indexing      │                                                  │   Express API (Port 5001)   │
+                                        └─────────────────────────────┘                                                  └──────────────┬──────────────┘
+                                                                                                                                        │
+                                                                                                                                        ▼
+                                                                                                                         ┌─────────────────────────────┐
+                                                                                                                         │        MongoDB Atlas        │
+                                                                                                                         │   Metadata only (Zero-DB)   │
+                                                                                                                         └─────────────────────────────┘
+```
+
+---
+
+## ⚡ Key Modules & Capabilities
+
+### 1. 🎥 Zero-DB Live Camera Monitoring (`cam01` – `cam30`)
+- **Direct WebRTC (WHEP) Preview:** Real-time `<500ms` peer connection directly from `http://103.250.160.189:8889/stream/camXX/whep`.
+- **HLS CDN Fallback:** High-compatibility HLS streaming powered by `hls.js` (`https://cctv.corp8.cloud/camXX/index.m3u8`).
+- **Paced Bandwidth Conservation:** Standby cards consume zero bandwidth until an operator initiates a feed.
+- **Multi-Layout Switcher:**
+  - **Grid (30):** Overview of all 30 live Gujarat feeds in standby status.
+  - **Quad (2x2):** 4 active simultaneous feeds for incident tracking.
+  - **Matrix (3x3):** 9 feeds for sector surveillance.
+  - **Cinema Mode:** Spotlight player with quick camera carousel.
+- **Watermarked Snapshots:** Captures high-resolution frame with timestamp and CCTV watermark to PNG.
+- **PTZ Simulation:** Pan, tilt, and digital zoom controls with responsive reticle HUD.
+
+### 2. 🗺️ Gujarat GIS Spatial Command Map
+- Built using **Leaflet** & **OpenStreetMap** with custom dark tactical styling.
+- Pins cameras across major districts: Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana.
+- Status-coded markers (Online, Offline, Maintenance).
+- Click-to-inspect popup with live coordinates, location type, and zone categorization.
+
+### 3. 📊 Analytics & Telemetry Dashboard
+- KPI overview cards (Total cameras, Online percentage, Active alerts, 24h event counter).
+- Status distribution pie chart and district-wise camera bar chart using **Recharts**.
+- Live operational activity log and security feed ticker.
+- Real-time online operator telemetry via **Socket.IO**.
+
+### 4. 🔒 Government-Grade Security & Authentication
+- Admin-only access guard with JWT token rotation (Access Token + Refresh Token).
+- Brute-force protection with account locking after 5 failed attempts.
+- Bcrypt 12-round salted password hashing.
+- Helmet HTTP security headers, CORS origin whitelist, and Express request rate limiting.
+
+### 5. 🤖 AI & Developer Hub
+For law enforcement AI models and hackathon evaluators, each camera provides 1-click copyable commands:
+- **RTSP Endpoint:** `rtsp://103.250.160.189:8554/stream/camXX`
+- **WebRTC WHEP:** `http://103.250.160.189:8889/stream/camXX/whep`
+- **Python OpenCV Code:**
+  ```python
+  import cv2
+
+  cap = cv2.VideoCapture("rtsp://103.250.160.189:8554/stream/cam01")
+  while True:
+      ret, frame = cap.read()
+      if not ret: break
+      cv2.imshow("DrishtiGrid-Live", frame)
+      if cv2.waitKey(1) & 0xFF == ord('q'): break
+  cap.release()
+  cv2.destroyAllWindows()
+  ```
+- **FFmpeg Stream Verification:**
+  ```bash
+  ffplay -rtsp_transport tcp rtsp://103.250.160.189:8554/stream/cam01
+  ```
+
+---
+
+## 📂 Project Structure
+
+```
+DrishtiGrid/
+├── client/                           # React 19 Frontend (Vite + Tailwind v4)
+│   ├── src/
+│   │   ├── api/                      # Axios client with JWT auto-refresh interceptors
+│   │   ├── components/
+│   │   │   ├── cameras/
+│   │   │   │   ├── CameraPlayer.jsx  # WebRTC (WHEP) + HLS dual video engine
+│   │   │   │   └── CameraStreamModal.jsx # HD stream theater with PTZ & commands
+│   │   │   └── layout/
+│   │   │       └── DashboardLayout.jsx # Command center shell & navigation
+│   │   ├── hooks/                    # useSocket real-time connection hook
+│   │   ├── pages/
+│   │   │   ├── LoginPage.jsx         # Glassmorphism login with 1-click demo filler
+│   │   │   ├── DashboardPage.jsx     # Command telemetry & overview
+│   │   │   ├── GISMapPage.jsx        # Full-screen Gujarat Leaflet GIS
+│   │   │   ├── CameraMonitoringPage.jsx # Multi-layout live feeds engine
+│   │   │   ├── CameraManagementPage.jsx # Metadata catalog and management
+│   │   │   └── AlertsPage.jsx        # Security alert dispatch & triage
+│   │   ├── store/                    # Zustand state (authStore, socketStore)
+│   │   └── index.css                 # Tailwind v4 theme tokens & styles
+│   └── vite.config.js                # Vite reverse proxy & optimization
+│
+├── server/                           # Node.js + Express Backend
+│   ├── src/
+│   │   ├── config/db.js              # MongoDB Atlas connection
+│   │   ├── controllers/              # Auth, Camera, and Alert controllers
+│   │   ├── middleware/               # JWT auth & centralized error handler
+│   │   ├── models/                   # Mongoose schemas (User, Camera, Alert)
+│   │   ├── routes/
+│   │   │   ├── auth.js               # Login, refresh, logout routes
+│   │   │   ├── cameras.js            # Camera metadata CRUD & stats
+│   │   │   ├── stream.js             # Zero-DB dynamic stream catalog & WHEP proxy
+│   │   │   └── alerts.js             # Alert tracking & resolution
+│   │   └── socket/socketHandler.js   # Real-time WebSocket rooms
+│   ├── scripts/seed.js               # Initial Gujarat camera & admin seeder
+│   └── index.js                      # Server entry point
+│
+├── .gitignore                        # Strict secrets and build artifact protection
+└── README.md                         # Platform design and solution documentation
+```
+
+---
+
+## 🚦 Quick Start Guide
+
+### 1. Clone & Install
 ```bash
 git clone https://github.com/Rishabh-verma-2/DrishtiGrid.git
 cd DrishtiGrid
-```
 
-Install backend dependencies:
-```bash
+# Install Backend Dependencies
 cd server
 npm install
-```
 
-Install frontend dependencies:
-```bash
+# Install Frontend Dependencies
 cd ../client
 npm install
 ```
 
-### 3. Environment Setup
+### 2. Environment Configuration
 
-Configure `server/.env` (see `server/.env.example`):
+Create `server/.env`:
 ```env
 PORT=5001
 NODE_ENV=development
@@ -92,39 +197,44 @@ JWT_REFRESH_SECRET=your_super_secret_refresh_key
 CLIENT_URL=http://localhost:5173
 ```
 
-Configure `client/.env`:
+Create `client/.env`:
 ```env
 VITE_API_URL=http://localhost:5001/api
 VITE_SOCKET_URL=http://localhost:5001
 ```
 
-### 4. Seed Database (Admin & Gujarat Camera Metadata)
+### 3. Seed Database
 ```bash
 cd server
 npm run seed
 ```
-> **Default Admin Account:**
+> **Default Admin Credentials:**
 > - **Email:** `adminuser@gov.in`
 > - **Password:** `adminpass@123`
 
-### 5. Run Development Servers
+### 4. Run Locally
 
-**Terminal 1 (Backend):**
+**Terminal 1 (Backend API & Socket):**
 ```bash
 cd server
 npm run dev
 ```
 
-**Terminal 2 (Frontend):**
+**Terminal 2 (Frontend Client):**
 ```bash
 cd client
 npm run dev
 ```
 
-Visit **`http://localhost:5173`** (or `http://localhost:5174`) in your browser to access the command center.
+Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## 📋 Security & Compliance
-- Compliant with Gujarat State Surveillance standards and IT Act 2000.
-- Zero local video footage storage preserves data privacy and avoids storage overhead.
+## 🛡️ Compliance & Hackathon Verification Notes
+- **Zero Video DB Footprint:** Confirmed via `db.cameras.find()`—no video files, frames, or streams stored in MongoDB.
+- **Port Standard:** Backend runs on `5001` (avoiding macOS Control Center on port 5000) with dynamic CORS allowing any localhost port.
+- **Network Resilience:** Fallback to backend WHEP proxy in case of client-side port restrictions on port 8889.
+
+---
+
+**Built with dedication for the Government of Gujarat Digital Initiatives.**
