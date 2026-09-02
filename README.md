@@ -1,4 +1,4 @@
-# DrishtiGrid (દ્રષ્ટિગ્રીડ) 🛡️
+# DrishtiGrid 
 ### *Gujarat State CCTV Surveillance, GIS Command & Low-Latency Video Intelligence Platform*
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-green.svg?logo=node.js)](https://nodejs.org)
