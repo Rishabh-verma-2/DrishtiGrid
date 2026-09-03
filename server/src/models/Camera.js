@@ -30,7 +30,11 @@ const cameraSchema = new mongoose.Schema(
         index: '2dsphere',
       },
     },
+    latitude: Number,
+    longitude: Number,
+    cameraName: String,
     address: {
+      full: String,
       street: String,
       area: String,
       city: String,
@@ -38,11 +42,37 @@ const cameraSchema = new mongoose.Schema(
         type: String,
         required: [true, 'District is required'],
       },
+      taluka: String,
       state: {
         type: String,
         default: 'Gujarat',
       },
       pincode: String,
+    },
+    // Location & Placement Details
+    locationName: String,
+    landmark: String,
+    roadName: String,
+    locationType: String,
+    city: String,
+    taluka: String,
+    pincode: String,
+    heading: Number,
+    fieldOfView: Number,
+    mountingHeight: Number,
+    // Stream & Hardware
+    streamId: String,
+    streamType: String,
+    streamStatus: String,
+    camera_model: String,
+    fps: Number,
+    recording_history_days: Number,
+    // Administrative
+    departmentName: String,
+    dataSource: String,
+    verified: {
+      type: Boolean,
+      default: false,
     },
     // Camera metadata
     type: {

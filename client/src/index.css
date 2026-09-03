@@ -92,12 +92,21 @@ body {
 }
 
 /* All Cards, Panels & Containers in Light Mode */
+.theme-light [class*="bg-[#141929]"],
+.theme-light [class*="bg-[#0e1220]"],
+.theme-light [class*="bg-[#0f1422]"],
+.theme-light [class*="bg-[#1e2740]"],
+.theme-light [class*="bg-[#0d121f]"],
+.theme-light [class*="bg-[#0e1322]"],
+.theme-light [class*="bg-[#0b0f19]"],
+.theme-light [class*="bg-[#080c16]"],
 .theme-light .bg-\[\#141929\],
 .theme-light .bg-\[\#0e1220\],
 .theme-light .bg-\[\#0f1422\],
 .theme-light .bg-\[\#1e2740\] {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
+  color: #0f172a !important;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
 }
 
@@ -107,6 +116,7 @@ body {
 }
 
 /* Light Mode Card Sub-Containers & Insets */
+.theme-light [class*="bg-white/"],
 .theme-light .bg-white\/3,
 .theme-light .bg-white\/4,
 .theme-light .bg-white\/5,
@@ -119,6 +129,7 @@ body {
 }
 
 /* Borders in Light Mode */
+.theme-light [class*="border-white/"],
 .theme-light .border-white\/4,
 .theme-light .border-white\/5,
 .theme-light .border-white\/7,
@@ -342,3 +353,561 @@ body {
 .theme-dark ::-webkit-scrollbar-track { background: #0f1420; }
 .theme-dark ::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 4px; }
 .theme-dark ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+/* ═════════════════════════════════════════════════
+   🛰️ GIS CCTV CLUSTER & MARKER SYSTEM
+   ═════════════════════════════════════════════════ */
+
+/* Cluster Icons */
+.cctv-cluster-custom-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.cctv-cluster-node {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.cluster-radar-halo {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  animation: cluster-pulse 2.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
+  pointer-events: none;
+}
+
+.cluster-core {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+}
+
+.cctv-cluster-node:hover .cluster-core {
+  transform: scale(1.12);
+}
+
+.cluster-number {
+  font-size: 15px;
+  line-height: 1.1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: -0.02em;
+}
+
+.cluster-sub {
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+/* Small Cluster (<15) */
+.cluster-small .cluster-core {
+  background: radial-gradient(circle at 30% 30%, #10b981, #065f46);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.45);
+}
+.cluster-small .cluster-radar-halo {
+  border: 2px solid rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.15);
+}
+
+/* Medium Cluster (15 - 50) */
+.cluster-medium .cluster-core {
+  background: radial-gradient(circle at 30% 30%, #06b6d4, #0369a1);
+  border-color: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.45);
+}
+.cluster-medium .cluster-radar-halo {
+  border: 2px solid rgba(6, 182, 212, 0.5);
+  background: rgba(6, 182, 212, 0.15);
+}
+
+/* Large Cluster (>50) */
+.cluster-large .cluster-core {
+  background: radial-gradient(circle at 30% 30%, #6366f1, #312e81);
+  border-color: rgba(99, 102, 241, 0.7);
+  box-shadow: 0 0 26px rgba(99, 102, 241, 0.5);
+}
+.cluster-large .cluster-radar-halo {
+  border: 2px solid rgba(99, 102, 241, 0.6);
+  background: rgba(99, 102, 241, 0.18);
+}
+
+@keyframes cluster-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.22); opacity: 0.2; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* ─── Individual Camera Markers ──────────────────── */
+.custom-camera-marker-wrapper {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-camera-marker {
+  position: relative;
+  width: 36px;
+  height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.custom-camera-marker:hover,
+.custom-camera-marker.selected {
+  transform: translateY(-4px) scale(1.15);
+  z-index: 1000 !important;
+}
+
+.marker-pulse-ring {
+  position: absolute;
+  top: 2px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--c-color);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.custom-camera-marker.online .marker-pulse-ring {
+  animation: marker-radar 2s infinite ease-out;
+}
+
+.marker-bubble {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  background: #0f1422;
+  border: 2px solid var(--c-color);
+  box-shadow: inset 0 0 12px var(--c-glow), 0 0 10px var(--c-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-color);
+  z-index: 2;
+}
+
+.camera-icon-svg {
+  width: 17px;
+  height: 17px;
+}
+
+.type-pill {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: var(--c-color);
+  color: #0b0f19;
+  font-size: 9px;
+  font-weight: 800;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #0f1422;
+  line-height: 1;
+}
+
+.marker-pointer {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--c-color);
+  margin-top: -1px;
+  z-index: 1;
+}
+
+@keyframes marker-radar {
+  0% { transform: scale(0.85); opacity: 0.9; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+/* ─── Rich CCTV Leaflet Popup ────────────────────── */
+.leaflet-popup.cctv-cyber-popup .leaflet-popup-content-wrapper {
+  background: #0b0f19 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 18px !important;
+  padding: 0 !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 25px rgba(6, 182, 212, 0.15) !important;
+  overflow: hidden;
+}
+
+.leaflet-popup.cctv-cyber-popup .leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+  width: 360px !important;
+}
+
+.leaflet-popup.cctv-cyber-popup .leaflet-popup-tip {
+  background: #0b0f19 !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.leaflet-popup.cctv-cyber-popup a.leaflet-popup-close-button {
+  top: 12px !important;
+  right: 12px !important;
+  color: #94a3b8 !important;
+  font-size: 18px !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.15s ease !important;
+}
+
+.leaflet-popup.cctv-cyber-popup a.leaflet-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.cctv-rich-popup-card {
+  display: flex;
+  flex-direction: column;
+  font-family: inherit;
+}
+
+.cctv-popup-header {
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #131929 0%, #0d121f 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.header-top-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.camera-id-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.status-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.status-pill-badge.status-online {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-pill-badge.status-offline {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.status-pill-badge.status-maintenance {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.status-pill-badge.status-fault {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.verified-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.simulated-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.camera-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.cctv-popup-body {
+  padding: 12px 16px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.popup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.section-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.section-icon {
+  width: 12px;
+  height: 12px;
+  color: #38bdf8;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 11px;
+}
+
+.meta-row .label {
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.meta-row .val {
+  color: #cbd5e1;
+  text-align: right;
+  word-break: break-word;
+}
+
+.meta-row .text-address {
+  font-size: 10.5px;
+  color: #cbd5e1;
+  max-width: 220px;
+  line-height: 1.3;
+}
+
+.meta-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.meta-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.box-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.box-val {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cctv-popup-footer {
+  padding: 10px 16px 14px;
+  background: #0d121f;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-popup-stream {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-popup-stream:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+  transform: translateY(-1px);
+}
+
+/* ═════════════════════════════════════════════════
+   ☀️ LIGHT MODE POPUP & MARKER STYLES
+   ═════════════════════════════════════════════════ */
+.theme-light .leaflet-popup.cctv-cyber-popup .leaflet-popup-content-wrapper {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.12), 0 2px 10px rgba(15, 23, 42, 0.06) !important;
+}
+
+.theme-light .leaflet-popup.cctv-cyber-popup .leaflet-popup-tip {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.theme-light .leaflet-popup.cctv-cyber-popup a.leaflet-popup-close-button {
+  top: 12px !important;
+  right: 12px !important;
+  color: #64748b !important;
+  background: #f1f5f9 !important;
+}
+
+.theme-light .leaflet-popup.cctv-cyber-popup a.leaflet-popup-close-button:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.theme-light .cctv-popup-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.theme-light .camera-id-chip {
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.1) !important;
+  border: 1px solid rgba(2, 132, 199, 0.25) !important;
+}
+
+.theme-light .camera-title {
+  color: #0f172a !important;
+}
+
+.theme-light .cctv-popup-body {
+  background: #ffffff !important;
+}
+
+.theme-light .section-title {
+  color: #475569 !important;
+}
+
+.theme-light .section-icon {
+  color: #0284c7 !important;
+}
+
+.theme-light .meta-row .label {
+  color: #64748b !important;
+}
+
+.theme-light .meta-row .val {
+  color: #0f172a !important;
+}
+
+.theme-light .meta-row .text-address {
+  color: #334155 !important;
+}
+
+.theme-light .meta-box {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.theme-light .box-label {
+  color: #64748b !important;
+}
+
+.theme-light .box-val {
+  color: #0f172a !important;
+}
+
+.theme-light .cctv-popup-footer {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+.theme-light .custom-camera-marker .marker-bubble {
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.theme-light .custom-camera-marker .type-pill {
+  border-color: #ffffff !important;
+}
+
+.theme-light .cctv-cluster-node .cluster-core {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+

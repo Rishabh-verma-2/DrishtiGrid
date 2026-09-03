@@ -80,14 +80,26 @@ export default function CameraPlayer({
     }
   }, []);
 
+  // Resolve valid stream channel on MediaMTX (cam01 - cam30)
+  const activeStreamId = (() => {
+    const rawId = String(streamId || '');
+    if (/^cam([0-2][0-9]|30)$/i.test(rawId)) {
+      return rawId.toLowerCase();
+    }
+    const numMatch = rawId.match(/\d+/g);
+    const num = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 1;
+    const channel = ((num - 1) % 30) + 1;
+    return `cam${String(channel).padStart(2, '0')}`;
+  })();
+
   // ─── 1. WebRTC WHEP Connection (Low-latency) ─────────────────────
   const startWhepStream = useCallback(async () => {
     cleanupConnections();
     setStatus('connecting');
     setErrorMessage('');
 
-    const targetWhepUrl = `http://103.250.160.189:8889/stream/${streamId}/whep`;
-    const proxyWhepUrl = `/api/stream/whep/${streamId}`;
+    const targetWhepUrl = `http://103.250.160.189:8889/stream/${activeStreamId}/whep`;
+    const proxyWhepUrl = `/api/stream/whep/${activeStreamId}`;
 
     try {
       const pc = new RTCPeerConnection({
@@ -126,20 +138,36 @@ export default function CameraPlayer({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
+      // Wait briefly for local ICE candidates to gather
+      if (pc.iceGatheringState !== 'complete') {
+        await new Promise((resolve) => {
+          const check = () => {
+            if (pc.iceGatheringState === 'complete') {
+              pc.removeEventListener('icegatheringstatechange', check);
+              resolve();
+            }
+          };
+          pc.addEventListener('icegatheringstatechange', check);
+          setTimeout(resolve, 600); // 600ms timeout
+        });
+      }
+
+      const sdpToSend = pc.localDescription?.sdp || offer.sdp;
+
       // Try direct WHEP endpoint first, fallback to proxy
       let response;
       try {
         response = await fetch(targetWhepUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/sdp' },
-          body: offer.sdp,
+          body: sdpToSend,
         });
       } catch (directErr) {
         console.warn('Direct WHEP blocked, trying backend proxy:', directErr);
         response = await fetch(proxyWhepUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/sdp' },
-          body: offer.sdp,
+          body: sdpToSend,
         });
       }
 
@@ -156,10 +184,10 @@ export default function CameraPlayer({
       const answerSdp = await response.text();
       await pc.setRemoteDescription({ type: 'answer', sdp: answerSdp });
     } catch (err) {
-      console.error(`WHEP connection failed for ${streamId}:`, err);
+      console.error(`WHEP connection failed for ${activeStreamId}:`, err);
       handleStreamDisconnect(err.message);
     }
-  }, [streamId, cleanupConnections]);
+  }, [activeStreamId, cleanupConnections]);
 
   // ─── 2. HLS Connection (Fallback / CDN) ───────────────────────────
   const startHlsStream = useCallback(() => {
@@ -167,7 +195,7 @@ export default function CameraPlayer({
     setStatus('connecting');
     setErrorMessage('');
 
-    const hlsUrl = `https://cctv.corp8.cloud/${streamId}/index.m3u8`;
+    const hlsUrl = `https://cctv.corp8.cloud/${activeStreamId}/index.m3u8`;
 
     if (!videoRef.current) return;
 

@@ -13,7 +13,18 @@ export default function CameraStreamModal({ camera, onClose }) {
 
   if (!camera) return null;
 
-  const streamId = camera.streamId || camera.id || 'cam01';
+  // Resolve valid stream channel on MediaMTX (supports cam01 - cam30)
+  const rawId = camera.streamId || camera.id || camera.cameraId || '';
+  let streamId = 'cam01';
+  if (/^cam([0-2][0-9]|30)$/i.test(rawId)) {
+    streamId = rawId.toLowerCase();
+  } else {
+    const numMatch = String(rawId).match(/\d+/g);
+    const num = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 1;
+    const channel = ((num - 1) % 30) + 1;
+    streamId = `cam${String(channel).padStart(2, '0')}`;
+  }
+
   const rtspUrl = `rtsp://103.250.160.189:8554/stream/${streamId}`;
   const whepUrl = `http://103.250.160.189:8889/stream/${streamId}/whep`;
   const hlsUrl = `https://cctv.corp8.cloud/${streamId}/index.m3u8`;

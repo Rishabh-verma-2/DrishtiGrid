@@ -4,63 +4,9 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
-// ─── Inline minimal models to avoid circular deps ────────────────
-const userSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: { type: String, select: false },
-  role: { type: String, default: 'admin' },
-  department: String,
-  designation: String,
-  phone: String,
-  district: String,
-  isActive: { type: Boolean, default: true },
-}, { timestamps: true });
-
-const User = mongoose.models.User || mongoose.model('User', userSchema);
-
-const cameraSchema = new mongoose.Schema({
-  cameraId: { type: String, unique: true },
-  name: String,
-  description: String,
-  location: {
-    type: { type: String, enum: ['Point'], default: 'Point' },
-    coordinates: [Number],
-  },
-  address: {
-    street: String, area: String, city: String,
-    district: String, state: String, pincode: String,
-  },
-  type: { type: String, default: 'Fixed' },
-  status: { type: String, default: 'offline' },
-  zone: String,
-  streamUrl: { rtsp: String, hls: String },
-  district: String,
-  isActive: { type: Boolean, default: true },
-  coverageAngle: Number,
-  coverageRadius: Number,
-  alertsEnabled: {
-    motionDetection: Boolean,
-    crowdDetection: Boolean,
-    nightVision: Boolean,
-    anprEnabled: Boolean,
-    faceRecognition: Boolean,
-  },
-  // extra fields from JSON
-  locationName: String,
-  landmark: String,
-  roadName: String,
-  locationType: String,
-  heading: Number,
-  fieldOfView: Number,
-  mountingHeight: Number,
-  departmentName: String,
-  dataSource: String,
-  verified: Boolean,
-}, { timestamps: true });
-
-cameraSchema.index({ location: '2dsphere' });
-const Camera = mongoose.models.Camera || mongoose.model('Camera', cameraSchema);
+// ─── Import Canonical Models ──────────────────────────────────────
+const User = require('../src/models/User');
+const Camera = require('../src/models/Camera');
 
 // ─── Status mapper ────────────────────────────────────────────────
 const mapStatus = (s) => {
@@ -129,66 +75,92 @@ async function seed() {
 
     // ─── 2. Seed Cameras from JSON ───────────────────────────────
     console.log('\n📷 Seeding cameras from JSON...');
-    const jsonPath = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras.json');
+    let jsonPath = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras (1).json');
+    if (!fs.existsSync(jsonPath)) {
+      jsonPath = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras.json');
+    }
+    console.log(`   Loading dataset from: ${path.basename(jsonPath)}`);
     const rawData = fs.readFileSync(jsonPath, 'utf8');
     const cameras = JSON.parse(rawData);
 
     let inserted = 0;
-    let skipped = 0;
+    let updated = 0;
 
     for (const cam of cameras) {
-      const existingCam = await Camera.findOne({ cameraId: cam.cameraId });
-      if (existingCam) {
-        skipped++;
-        continue;
-      }
-
-      await Camera.create({
+      const cameraDoc = {
         cameraId: cam.cameraId,
         name: cam.cameraName,
-        description: `${cam.locationType} surveillance camera at ${cam.locationName}`,
+        cameraName: cam.cameraName,
+        description: `${cam.locationType || 'CCTV'} surveillance camera at ${cam.locationName || cam.landmark || cam.city}`,
         location: {
           type: 'Point',
-          coordinates: [cam.longitude, cam.latitude],
+          coordinates: [Number(cam.longitude), Number(cam.latitude)],
         },
+        latitude: Number(cam.latitude),
+        longitude: Number(cam.longitude),
         address: {
-          street: cam.roadName,
-          area: cam.locationName,
-          city: cam.city,
-          district: cam.district,
+          full: cam.address || '',
+          street: cam.roadName || '',
+          area: cam.locationName || '',
+          city: cam.city || '',
+          district: cam.district || 'Gujarat',
+          taluka: cam.taluka || '',
           state: 'Gujarat',
-          pincode: cam.pincode,
+          pincode: cam.pincode || '',
         },
+        city: cam.city || '',
+        district: cam.district || 'Gujarat',
+        taluka: cam.taluka || '',
+        pincode: cam.pincode || '',
+        landmark: cam.landmark || '',
+        roadName: cam.roadName || '',
+        locationName: cam.locationName || '',
+        locationType: cam.locationType || 'General',
         type: mapCameraType(cam.cameraType),
+        brand: (cam.camera_model || '').split(' ')[0] || 'Hikvision',
+        model: cam.camera_model || 'HD Network Camera',
+        camera_model: cam.camera_model || '',
+        resolution: '1080p',
         status: mapStatus(cam.status),
         zone: mapZone(cam.locationType),
-        district: cam.district,
-        locationName: cam.locationName,
-        landmark: cam.landmark,
-        roadName: cam.roadName,
-        locationType: cam.locationType,
-        heading: cam.heading,
-        fieldOfView: cam.fieldOfView,
-        mountingHeight: cam.mountingHeight,
-        departmentName: cam.departmentName,
-        dataSource: cam.dataSource,
-        verified: cam.verified,
+        heading: typeof cam.heading === 'number' ? cam.heading : 0,
+        fieldOfView: typeof cam.fieldOfView === 'number' ? cam.fieldOfView : 90,
+        mountingHeight: typeof cam.mountingHeight === 'number' ? cam.mountingHeight : 6,
+        streamId: `cam${String(((parseInt((cam.cameraId || '').replace(/\D/g, '') || 1) - 1) % 30 + 1)).padStart(2, '0')}`,
+        streamType: cam.streamType || 'RTSP',
+        streamStatus: cam.streamStatus || 'ACTIVE',
+        departmentName: cam.departmentName || 'Gujarat Police Department',
+        dataSource: cam.dataSource || 'DEMO_SIMULATED',
+        verified: Boolean(cam.verified),
+        fps: typeof cam.fps === 'number' ? cam.fps : 25,
+        recording_history_days: typeof cam.recording_history_days === 'number' ? cam.recording_history_days : 30,
         coverageAngle: cam.fieldOfView || 90,
         coverageRadius: 80,
         alertsEnabled: {
           motionDetection: true,
-          crowdDetection: cam.locationType === 'Market' || cam.locationType === 'Railway Station',
-          nightVision: cam.cameraType === 'PTZ',
-          anprEnabled: cam.locationType === 'Highway' || cam.locationType === 'Bridge',
+          crowdDetection: cam.locationType === 'Market' || cam.locationType === 'Railway Station' || cam.locationType === 'Public Place',
+          nightVision: cam.cameraType === 'PTZ' || cam.cameraType === 'Bullet',
+          anprEnabled: cam.locationType === 'Highway' || cam.locationType === 'Bridge' || cam.locationType === 'Junction' || cam.locationType === 'Circle',
           faceRecognition: false,
         },
         isActive: true,
-      });
-      inserted++;
+      };
+
+      const res = await Camera.findOneAndUpdate(
+        { cameraId: cam.cameraId },
+        { $set: cameraDoc },
+        { upsert: true, new: true, rawResult: true }
+      );
+
+      if (res.lastErrorObject && res.lastErrorObject.updatedExisting) {
+        updated++;
+      } else {
+        inserted++;
+      }
     }
 
-    console.log(`   ✅ Cameras inserted: ${inserted}`);
-    console.log(`   ⏭️  Cameras skipped (already exist): ${skipped}`);
+    console.log(`   ✅ New cameras inserted: ${inserted}`);
+    console.log(`   🔄 Existing cameras updated with rich metadata: ${updated}`);
 
     // ─── Summary ─────────────────────────────────────────────────
     const totalCameras = await Camera.countDocuments();

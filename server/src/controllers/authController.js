@@ -56,29 +56,31 @@ const register = async (req, res) => {
  */
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const rawEmail = req.body.email;
+    const password = req.body.password;
 
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
+    const email = String(rawEmail).trim().toLowerCase();
     const user = await User.findOne({ email }).select('+password +refreshToken');
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials. Please check your email and password.' });
     }
 
     if (user.isLocked) {
       return res.status(423).json({
         success: false,
-        message: 'Account is temporarily locked due to multiple failed login attempts',
+        message: 'Account is temporarily locked due to multiple failed login attempts. Please wait or contact administrator.',
       });
     }
 
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       await user.incLoginAttempts();
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid credentials. Please check your email and password.' });
     }
 
     if (!user.isActive) {

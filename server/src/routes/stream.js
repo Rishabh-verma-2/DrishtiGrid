@@ -107,7 +107,14 @@ router.get('/feeds/:id', authenticate, (req, res) => {
  */
 router.post('/whep/:id', async (req, res) => {
   try {
-    const { id } = req.params;
+    let { id } = req.params;
+    // Map any non-canonical ID (like GJ-DEMO-STREAM-0001) to an active channel (cam01 - cam30)
+    if (!/^cam([0-2][0-9]|30)$/i.test(id)) {
+      const numMatch = id.match(/\d+/g);
+      const num = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 1;
+      const channel = ((num - 1) % 30) + 1;
+      id = `cam${String(channel).padStart(2, '0')}`;
+    }
     const targetUrl = `http://${STREAM_IP}:8889/stream/${id}/whep`;
 
     const sdpOffer = req.body;

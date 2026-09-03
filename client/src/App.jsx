@@ -45,6 +45,8 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="gis-map" element={<GISMapPage />} />
+        <Route path="map" element={<Navigate to="/gis-map" replace />} />
+        <Route path="gis" element={<Navigate to="/gis-map" replace />} />
         <Route path="camera-monitoring" element={<CameraMonitoringPage />} />
         <Route path="camera-management" element={<CameraManagementPage />} />
         <Route path="alerts" element={<AlertsPage />} />

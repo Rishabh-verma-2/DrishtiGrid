@@ -31,7 +31,7 @@ export default function LoginPage() {
     const errs = validate();
     if (Object.keys(errs).length) { setFieldErrors(errs); return; }
 
-    const result = await login({ email: form.email.trim(), password: form.password });
+    const result = await login({ email: form.email.trim().toLowerCase(), password: form.password });
     if (result.success) navigate('/dashboard');
   };
 
