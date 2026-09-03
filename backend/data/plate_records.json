@@ -1,0 +1,28 @@
+[
+  {
+    "id": "rec_1788424353423_cvrby",
+    "recordId": "PR-0002",
+    "plate_number": "MH01BM4679",
+    "normalized_plate_number": "MH01BM4679",
+    "category": "OTHER",
+    "priority": "MEDIUM",
+    "status": "ACTIVE",
+    "description": "",
+    "reference_id": "",
+    "createdAt": "2026-09-03T08:32:33.423Z",
+    "updatedAt": "2026-09-03T08:32:33.423Z"
+  },
+  {
+    "id": "rec_1788422419714_0xlui",
+    "recordId": "PR-0001",
+    "plate_number": "GJ 01 AB 1234",
+    "normalized_plate_number": "GJ01AB1234",
+    "category": "Watchlist",
+    "priority": "HIGH",
+    "status": "INACTIVE",
+    "description": "Suspect vehicle",
+    "reference_id": "",
+    "createdAt": "2026-09-03T08:00:19.714Z",
+    "updatedAt": "2026-09-03T08:32:21.214Z"
+  }
+]

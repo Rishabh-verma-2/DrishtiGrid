@@ -1,0 +1,386 @@
+[
+  {
+    "id": "aud_1788430439078_khc7g",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0009",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:13:59.078Z"
+  },
+  {
+    "id": "aud_1788430188901_tgbv7",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0008",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:09:48.901Z"
+  },
+  {
+    "id": "aud_1788430161765_876lx",
+    "action": "ALERT_RESOLVED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0002",
+    "details": {
+      "status": "RESOLVED"
+    },
+    "timestamp": "2026-09-03T10:09:21.765Z"
+  },
+  {
+    "id": "aud_1788430103248_alhyf",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788430099320",
+    "details": {
+      "total_images": 1,
+      "total_plates_detected": 2,
+      "matched_plates": 1,
+      "alerts_generated": 1,
+      "duration_ms": 3928
+    },
+    "timestamp": "2026-09-03T10:08:23.248Z"
+  },
+  {
+    "id": "aud_1788430103246_vhppr",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0007",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:08:23.246Z"
+  },
+  {
+    "id": "aud_1788430096837_r02rj",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0006",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:08:16.837Z"
+  },
+  {
+    "id": "aud_1788430081655_exfb7",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0005",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:08:01.655Z"
+  },
+  {
+    "id": "aud_1788430058611_qf2ss",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0004",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:07:38.611Z"
+  },
+  {
+    "id": "aud_1788429946110_2m58c",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788429928070",
+    "details": {
+      "total_images": 7,
+      "total_plates_detected": 7,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 18040
+    },
+    "timestamp": "2026-09-03T10:05:46.110Z"
+  },
+  {
+    "id": "aud_1788429916044_daood",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0003",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T10:05:16.044Z"
+  },
+  {
+    "id": "aud_1788429607568_hgx1z",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788429599212",
+    "details": {
+      "total_images": 5,
+      "total_plates_detected": 5,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 8356
+    },
+    "timestamp": "2026-09-03T10:00:07.568Z"
+  },
+  {
+    "id": "aud_1788429576111_u2h3u",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0002",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T09:59:36.111Z"
+  },
+  {
+    "id": "aud_1788429540007_tbxf3",
+    "action": "ALERT_RESOLVED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0001",
+    "details": {
+      "status": "RESOLVED"
+    },
+    "timestamp": "2026-09-03T09:59:00.008Z"
+  },
+  {
+    "id": "aud_1788429378746_hz2cp",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0001",
+    "details": {
+      "plate_number": "MHO1BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-03T09:56:18.746Z"
+  },
+  {
+    "id": "aud_1788428799011_58m9k",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788428740005",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 13,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 59005
+    },
+    "timestamp": "2026-09-03T09:46:39.011Z"
+  },
+  {
+    "id": "aud_1788428723834_f82ev",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788428669501",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 13,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 54333
+    },
+    "timestamp": "2026-09-03T09:45:23.834Z"
+  },
+  {
+    "id": "aud_1788427712516_vm8jb",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788427689171",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 59,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 23345
+    },
+    "timestamp": "2026-09-03T09:28:32.516Z"
+  },
+  {
+    "id": "aud_1788426275178_o2ood",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788426250085",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 59,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 25092
+    },
+    "timestamp": "2026-09-03T09:04:35.178Z"
+  },
+  {
+    "id": "aud_1788425315256_zxvxv",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788425290577",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 59,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 24678
+    },
+    "timestamp": "2026-09-03T08:48:35.256Z"
+  },
+  {
+    "id": "aud_1788425258568_sasht",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788425233786",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 59,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 24782
+    },
+    "timestamp": "2026-09-03T08:47:38.568Z"
+  },
+  {
+    "id": "aud_1788424353424_5e751",
+    "action": "RECORD_CREATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0002",
+    "details": {
+      "plate_number": "MH01BM4679",
+      "normalized_plate_number": "MH01BM4679",
+      "category": "OTHER",
+      "priority": "MEDIUM",
+      "status": "ACTIVE"
+    },
+    "timestamp": "2026-09-03T08:32:33.424Z"
+  },
+  {
+    "id": "aud_1788424341215_ygcpf",
+    "action": "RECORD_UPDATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {
+      "status": "INACTIVE"
+    },
+    "timestamp": "2026-09-03T08:32:21.215Z"
+  },
+  {
+    "id": "aud_1788424331885_t8vkk",
+    "action": "RECORD_DELETED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0002",
+    "details": {},
+    "timestamp": "2026-09-03T08:32:11.885Z"
+  },
+  {
+    "id": "aud_1788424326817_fxa1l",
+    "action": "RECORD_CREATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0002",
+    "details": {
+      "plate_number": "MH12DE1433",
+      "normalized_plate_number": "MH12DE1433",
+      "category": "STOLEN",
+      "priority": "HIGH",
+      "status": "ACTIVE"
+    },
+    "timestamp": "2026-09-03T08:32:06.817Z"
+  },
+  {
+    "id": "aud_1788424204483_sseyb",
+    "action": "RECORD_UPDATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {
+      "status": "INACTIVE"
+    },
+    "timestamp": "2026-09-03T08:30:04.483Z"
+  },
+  {
+    "id": "aud_1788424202743_1xvxh",
+    "action": "RECORD_STATUS_INACTIVE",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {
+      "status": "INACTIVE"
+    },
+    "timestamp": "2026-09-03T08:30:02.743Z"
+  },
+  {
+    "id": "aud_1788423640137_xcftd",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788423617033",
+    "details": {
+      "total_images": 11,
+      "total_plates_detected": 59,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 23103
+    },
+    "timestamp": "2026-09-03T08:20:40.137Z"
+  },
+  {
+    "id": "aud_1788423519459_isll3",
+    "action": "BATCH_ANALYZED",
+    "entity_type": "BATCH",
+    "entity_id": "BATCH-1788423512437",
+    "details": {
+      "total_images": 4,
+      "total_plates_detected": 14,
+      "matched_plates": 0,
+      "alerts_generated": 0,
+      "duration_ms": 7021
+    },
+    "timestamp": "2026-09-03T08:18:39.459Z"
+  },
+  {
+    "id": "aud_1788422419715_38o0w",
+    "action": "RECORD_CREATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {
+      "plate_number": "GJ 01 AB 1234",
+      "normalized_plate_number": "GJ01AB1234",
+      "category": "Watchlist",
+      "priority": "HIGH",
+      "status": "ACTIVE"
+    },
+    "timestamp": "2026-09-03T08:00:19.715Z"
+  },
+  {
+    "id": "aud_1788422074740_dtbz9",
+    "action": "RECORD_DELETED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {},
+    "timestamp": "2026-09-03T07:54:34.740Z"
+  },
+  {
+    "id": "aud_1788422064293_0jiw7",
+    "action": "RECORD_CREATED",
+    "entity_type": "RECORD",
+    "entity_id": "PR-0001",
+    "details": {
+      "plate_number": "GJ 01 AB 1234",
+      "normalized_plate_number": "GJ01AB1234",
+      "category": "Watchlist",
+      "priority": "HIGH",
+      "status": "ACTIVE"
+    },
+    "timestamp": "2026-09-03T07:54:24.293Z"
+  }
+]

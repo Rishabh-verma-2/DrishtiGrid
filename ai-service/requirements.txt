@@ -1,0 +1,28 @@
+# Core
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+python-multipart==0.0.9
+
+# Image processing
+opencv-python==4.9.0.80
+Pillow==10.3.0
+numpy==1.26.4
+
+# Deep learning
+torch==2.3.0
+torchvision==0.18.0
+
+# YOLO detection
+ultralytics==8.2.18
+
+# Super-resolution
+realesrgan==0.3.0
+basicsr==1.4.2
+
+# OCR
+paddlepaddle>=2.6.2
+paddleocr==2.7.3
+
+# Utilities
+python-dotenv==1.0.1
+aiofiles==23.2.1
