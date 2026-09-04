@@ -72,3 +72,15 @@ export const systemHealthAPI = {
   get: () => apiClient.get('/system-health'),
 };
 
+export const anprAPI = {
+  analyze: (formData) =>
+    apiClient.post('/anpr/analyze', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  getWatchlist: (params) => apiClient.get('/anpr/watchlist', { params }),
+  createWatchlistRecord: (data) => apiClient.post('/anpr/watchlist', data),
+  updateWatchlistRecord: (id, data) => apiClient.patch(`/anpr/watchlist/${id}`, data),
+  deleteWatchlistRecord: (id, hard = false) => apiClient.delete(`/anpr/watchlist/${id}?hard=${hard}`),
+  getStats: () => apiClient.get('/anpr/stats'),
+};
+

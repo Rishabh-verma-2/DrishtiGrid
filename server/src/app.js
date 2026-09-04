@@ -19,6 +19,7 @@ const userRoutes = require('./routes/users');
 const auditLogRoutes = require('./routes/auditLogs');
 const systemHealthRoutes = require('./routes/systemHealth');
 const notificationRoutes = require('./routes/notifications');
+const anprRoutes = require('./routes/anpr');
 
 const createApp = () => {
   const app = express();
@@ -104,6 +105,7 @@ const createApp = () => {
   app.use('/api/audit-logs', auditLogRoutes);
   app.use('/api/system-health', systemHealthRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/anpr', anprRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────
   app.use(notFound);

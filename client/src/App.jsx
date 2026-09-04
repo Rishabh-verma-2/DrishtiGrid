@@ -16,6 +16,7 @@ import AuditLogsPage from './pages/AuditLogsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
+import ANPRPage from './pages/ANPRPage';
 import RoleRoute from './components/auth/RoleRoute';
 
 // Protected route wrapper
@@ -61,6 +62,7 @@ function App() {
         <Route path="tickets" element={<Navigate to="/footage-requests" replace />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="alerts" element={<AlertsPage />} />
+        <Route path="anpr" element={<ANPRPage />} />
 
         {/* Restricted strictly to ADMIN role only */}
         <Route

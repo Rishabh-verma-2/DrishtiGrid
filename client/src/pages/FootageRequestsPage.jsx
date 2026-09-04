@@ -7,6 +7,7 @@ import useSocketStore from '../store/socketStore';
 import { useThemeStore } from '../store/themeStore';
 import toast from 'react-hot-toast';
 import CCTVVideoPlayer from '../components/evidence/CCTVVideoPlayer';
+import FootageTimeWindowPicker from '../components/common/FootageTimeWindowPicker';
 import {
   FileText, Plus, Shield, Search, Filter, RotateCcw,
   CheckCircle2, Clock, XCircle, Send, Download, ExternalLink,
@@ -354,8 +355,17 @@ export default function FootageRequestsPage() {
     }
   };
 
-  // Create Ticket Form State
-  const defaultTargetDept = userDept.includes('Traffic') ? 'Gujarat Police Department' : 'Gujarat Traffic Police';
+  // Default to past 1 hour for quick workflow
+  const defaultInitWindow = () => {
+    const now = new Date();
+    const past = new Date(now.getTime() - 60 * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, '0');
+    const toLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return { start: toLocal(past), end: toLocal(now) };
+  };
+
+  const initialWindow = defaultInitWindow();
+  const defaultTargetDept = (userDept || '').includes('Traffic') ? 'Gujarat Police Department' : 'Gujarat Traffic Police';
 
   const [createForm, setCreateForm] = useState({
     title: '',
@@ -366,8 +376,8 @@ export default function FootageRequestsPage() {
     classification: 'Confidential',
     targetDepartment: defaultTargetDept,
     cameraId: '',
-    startTime: '',
-    endTime: '',
+    startTime: initialWindow.start,
+    endTime: initialWindow.end,
     purpose: '',
     description: '',
     contactPhone: user?.phone || '+91-79-23250000',
@@ -1381,33 +1391,15 @@ export default function FootageRequestsPage() {
                 </div>
               </div>
 
-              {/* Start & End Time */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    Footage Start Time *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createForm.startTime}
-                    onChange={(e) => setCreateForm((p) => ({ ...p, startTime: e.target.value }))}
-                    className={`w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none font-medium ${inputThemeClass}`}
-                  />
-                </div>
-
-                <div>
-                  <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    Footage End Time *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    required
-                    value={createForm.endTime}
-                    onChange={(e) => setCreateForm((p) => ({ ...p, endTime: e.target.value }))}
-                    className={`w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none font-medium ${inputThemeClass}`}
-                  />
-                </div>
+              {/* Professional CCTV Footage Duration Window */}
+              <div>
+                <FootageTimeWindowPicker
+                  startTime={createForm.startTime}
+                  endTime={createForm.endTime}
+                  onChange={({ startTime, endTime }) =>
+                    setCreateForm((p) => ({ ...p, startTime, endTime }))
+                  }
+                />
               </div>
 
               {/* FIR / Incident Type */}

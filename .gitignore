@@ -29,3 +29,16 @@ Thumbs.db
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# Python & AI Microservice
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+ai-service/venv/
+.pytest_cache/
+ai-service/model_weights/*.pt
+ai-service/model_weights/*.pth
+!ai-service/model_weights/.gitkeep
+ai-service/temp/*
+!ai-service/temp/.gitkeep

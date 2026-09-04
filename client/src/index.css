@@ -1001,4 +1001,37 @@ body {
   border-color: rgba(255, 255, 255, 0.8) !important;
 }
 
+/* ─── Authentic Indian License Plate Component ──── */
+.plate-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 2px solid #0f172a;
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  user-select: none;
+}
+.plate-ind {
+  background-color: #1e3a8a;
+  color: #ffffff;
+  padding: 2px 5px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1.5px solid #0f172a;
+  height: 100%;
+}
+.plate-text {
+  padding: 2px 8px;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
 
