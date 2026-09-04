@@ -1,5 +1,44 @@
 [
   {
+    "id": "aud_1788501738647_qwvwf",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788501661595_xcp8wh",
+    "details": {
+      "video_id": "vid_1788501661595_xcp8wh",
+      "total_detections": 10,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-04T06:02:18.647Z"
+  },
+  {
+    "id": "aud_1788498804429_kae96",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788498740177_9bp3ah",
+    "details": {
+      "video_id": "vid_1788498740177_9bp3ah",
+      "total_detections": 20,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-04T05:13:24.429Z"
+  },
+  {
+    "id": "aud_1788497276633_nh6km",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788497209446_gn5ehm",
+    "details": {
+      "video_id": "vid_1788497209446_gn5ehm",
+      "total_detections": 20,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-04T04:47:56.633Z"
+  },
+  {
     "id": "aud_1788430439078_khc7g",
     "action": "ALERT_GENERATED",
     "entity_type": "ALERT",

@@ -1,20 +1,24 @@
-# Dependencies
+# Dependencies (too large — install with npm install / pip install)
 node_modules/
 package-lock.json
 
-# Python Virtual Environments & Caches
+# Python Virtual Environment (too large — recreate with: python -m venv .venv)
 .venv/
 venv/
 env/
+
+# Python Cache (auto-generated)
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
 
-# Environment Variables & Secrets
+# Environment Variables & Secrets (NEVER commit credentials)
 .env
 .env.local
 .env.*.local
+
+# Logs
 *.log
 
 # Build Outputs
@@ -29,12 +33,7 @@ build/
 Thumbs.db
 desktop.ini
 
-# Model Weights (downloaded automatically via ai-service/download_models.py)
+# Model Weights (too large — download via ai-service/download_models.py)
 *.pt
 *.pth
 !ai-service/model_weights/.gitkeep
-
-# Runtime data files (auto-generated, not for version control)
-backend/data/*.json
-backend/data/*.txt
-!backend/data/.gitkeep
