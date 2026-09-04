@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const SystemAuditLog = require('../models/SystemAuditLog');
 const {
   generateAccessToken,
   generateRefreshToken,
@@ -97,6 +98,16 @@ const login = async (req, res) => {
 
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
+
+    // Record login audit log
+    await SystemAuditLog.record({
+      req,
+      user,
+      action: 'USER_LOGIN',
+      resource: 'Auth',
+      resourceId: user._id,
+      description: `User '${user.name}' (${user.email}) authenticated successfully with role '${user.role}'.`,
+    });
 
     user.password = undefined;
     user.refreshToken = undefined;

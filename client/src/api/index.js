@@ -30,3 +30,30 @@ export const streamAPI = {
   getFeeds: () => apiClient.get('/stream/feeds'),
   getFeedById: (id) => apiClient.get(`/stream/feeds/${id}`),
 };
+
+export const footageTicketAPI = {
+  getAll: (params) => apiClient.get('/footage-tickets', { params }),
+  getStats: () => apiClient.get('/footage-tickets/stats'),
+  getById: (id) => apiClient.get(`/footage-tickets/${id}`),
+  create: (data) => apiClient.post('/footage-tickets', data),
+  updateStatus: (id, data) => apiClient.patch(`/footage-tickets/${id}/status`, data),
+  dispatch: (id, data) => apiClient.post(`/footage-tickets/${id}/dispatch`, data),
+  recordAccess: (id) => apiClient.post(`/footage-tickets/${id}/access`),
+  getAuditLogs: (id) => apiClient.get(`/footage-tickets/${id}/audit-logs`),
+};
+
+export const userAPI = {
+  getAll: (params) => apiClient.get('/users', { params }),
+  create: (data) => apiClient.post('/users', data),
+  update: (id, data) => apiClient.put(`/users/${id}`, data),
+  toggleStatus: (id) => apiClient.patch(`/users/${id}/status`),
+};
+
+export const auditLogAPI = {
+  getAll: (params) => apiClient.get('/audit-logs', { params }),
+};
+
+export const systemHealthAPI = {
+  get: () => apiClient.get('/system-health'),
+};
+

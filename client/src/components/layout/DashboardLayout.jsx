@@ -1,22 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Map, Camera, Video, Bell, Settings,
   LogOut, Shield, ChevronLeft, ChevronRight, Activity,
-  Users, Menu, X, Sun, Moon, Landmark
+  Users, Menu, X, Sun, Moon, Landmark, FileText, BarChart3, Lock
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSocketStore from '../../store/socketStore';
 import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
 
-const NAV_ITEMS = [
-  { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard',             labelGu: 'ડેશબોર્ડ' },
-  { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)' },
-  { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ' },
-  { to: '/camera-management',   icon: Camera,          label: 'Camera Management',      labelGu: 'કેમેરા યાદી' },
-  { to: '/alerts',              icon: Bell,            label: 'Alerts & Incidents',     labelGu: 'ચેતવણીઓ' },
-  { to: '/settings',            icon: Settings,        label: 'System Settings',        labelGu: 'સેટિંગ્સ' },
+const ALL_NAV_ITEMS = [
+  { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard',             labelGu: 'ડેશબોર્ડ',           roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)',         roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ',          roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/footage-requests',    icon: FileText,        label: 'Footage Requests',       labelGu: 'ફૂટેજ વિનંતી',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/users',               icon: Users,           label: 'Users & Roles',          labelGu: 'વપરાશકર્તાઓ',        roles: ['ADMIN'] },
+  { to: '/camera-management',   icon: Camera,          label: 'Camera Management',      labelGu: 'કેમેરા યાદી',         roles: ['ADMIN'] },
+  { to: '/reports',             icon: BarChart3,       label: 'Reports',                labelGu: 'અહેવાલો',             roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/system-health',       icon: Activity,        label: 'System Health',          labelGu: 'સિસ્ટમ સ્થિતિ',       roles: ['ADMIN'] },
+  { to: '/audit-logs',          icon: Shield,          label: 'Audit Logs',             labelGu: 'ઓડિટ લોગ',            roles: ['ADMIN'] },
+  { to: '/settings',            icon: Settings,        label: 'Settings',               labelGu: 'સેટિંગ્સ',            roles: ['ADMIN'] },
 ];
 
 export default function DashboardLayout() {
@@ -34,6 +38,19 @@ export default function DashboardLayout() {
   };
 
   const isLight = theme === 'light';
+
+  const userRole = String(user?.role || '').toUpperCase();
+  const normalizedRole =
+    ['SUPERADMIN', 'ADMIN'].includes(userRole) ? 'ADMIN' :
+    ['OPERATOR', 'VIEWER', 'POLICE'].includes(userRole) ? 'POLICE' :
+    ['TRAFFIC', 'TRAFFIC_POLICE'].includes(userRole) ? 'TRAFFIC_POLICE' : 'POLICE';
+
+  const visibleNavItems = useMemo(() => {
+    return ALL_NAV_ITEMS.filter((item) => {
+      if (!item.roles) return true;
+      return item.roles.includes(normalizedRole);
+    });
+  }, [normalizedRole]);
 
   const sidebarContent = (
     <div className={`flex flex-col h-full ${isLight ? 'bg-white text-slate-800' : 'bg-[#080c16] text-slate-200'}`}>
@@ -78,7 +95,7 @@ export default function DashboardLayout() {
           </div>
         )}
         <ul className="space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, labelGu }) => (
+          {visibleNavItems.map(({ to, icon: Icon, label, labelGu }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -352,20 +369,38 @@ export default function DashboardLayout() {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_6px_#ef4444]" />
               </button>
 
-              {/* User Chip */}
-              <div className={`flex items-center gap-2 border rounded-xl px-3 py-1.5 ${
+              {/* User Profile & Role Badge */}
+              <div className={`flex items-center gap-2.5 border rounded-2xl px-3.5 py-1.5 ${
                 isLight
                   ? 'bg-white border-slate-200 shadow-sm'
-                  : 'bg-white/4 border-white/7'
+                  : 'bg-white/4 border-white/8'
               }`}>
-                <div className={`w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white ${
-                  isLight ? 'bg-blue-600' : 'bg-gradient-to-br from-blue-700 to-blue-500'
+                <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-black text-white ${
+                  normalizedRole === 'ADMIN'
+                    ? 'bg-gradient-to-br from-purple-600 to-indigo-600 shadow-sm'
+                    : normalizedRole === 'TRAFFIC_POLICE'
+                    ? 'bg-gradient-to-br from-amber-600 to-orange-500 shadow-sm'
+                    : 'bg-gradient-to-br from-blue-600 to-cyan-600 shadow-sm'
                 }`}>
-                  {user?.name?.charAt(0) || 'A'}
+                  {user?.name?.charAt(0) || 'U'}
                 </div>
                 <div className="hidden sm:block text-left">
-                  <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                    {user?.name || 'Admin'}
+                  <div className="flex items-center gap-1.5">
+                    <p className={`text-xs font-bold leading-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                      {user?.name || 'User'}
+                    </p>
+                    <span className={`text-[9px] font-mono font-extrabold uppercase px-1.5 py-0.5 rounded border ${
+                      normalizedRole === 'ADMIN'
+                        ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
+                        : normalizedRole === 'TRAFFIC_POLICE'
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                        : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                    }`}>
+                      {normalizedRole === 'ADMIN' ? 'ADMIN' : normalizedRole === 'TRAFFIC_POLICE' ? 'TRAFFIC' : 'POLICE'}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 truncate max-w-[140px]">
+                    {user?.department || 'Government of Gujarat'}
                   </p>
                 </div>
               </div>

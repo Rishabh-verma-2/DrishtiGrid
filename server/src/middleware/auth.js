@@ -55,10 +55,22 @@ const authenticate = async (req, res, next) => {
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+    const userRole = String(req.user.role || '').toUpperCase();
+    const allowed = roles.map((r) => String(r).toUpperCase());
+
+    // Normalize legacy role names
+    const normalizedUserRole =
+      ['SUPERADMIN', 'ADMIN'].includes(userRole) ? 'ADMIN' :
+      ['OPERATOR', 'VIEWER', 'POLICE'].includes(userRole) ? 'POLICE' :
+      ['TRAFFIC', 'TRAFFIC_POLICE'].includes(userRole) ? 'TRAFFIC_POLICE' : userRole;
+
+    if (!allowed.includes(normalizedUserRole)) {
       return res.status(403).json({
         success: false,
-        message: `Role '${req.user.role}' is not authorized to access this resource`,
+        message: `Forbidden: Role '${req.user.role}' is not authorized to access this resource`,
       });
     }
     next();

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
 import { cameraAPI } from '../api';
@@ -26,6 +27,7 @@ const STATUS_COLOR = {
 };
 
 export default function GISMapPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [districtFilter, setDistrictFilter] = useState('all');
@@ -308,6 +310,7 @@ export default function GISMapPage() {
           <CameraClusterLayer
             cameras={filtered}
             onOpenStream={(cam) => setStreamCamera(cam)}
+            onRequestFootage={(cam) => navigate(`/footage-requests?requestCam=${cam.cameraId}`)}
           />
         </MapContainer>
 

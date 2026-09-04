@@ -159,25 +159,54 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Demo hint with auto-fill button */}
-          <div className="mt-6 p-3.5 bg-emerald-500/6 border border-emerald-500/15 rounded-xl flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Demo Credentials</p>
-              <code className="text-[12px] text-emerald-400 font-mono block leading-5">
-                adminuser@gov.in<br />adminpass@123
-              </code>
+          {/* Prototype RBAC Quick-Fill Buttons */}
+          <div className="mt-6 p-4 bg-white/3 border border-white/8 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+                Prototype RBAC Test Accounts
+              </p>
+              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                1-CLICK FILL
+              </span>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setForm({ email: 'adminuser@gov.in', password: 'adminpass@123' });
-                setFieldErrors({});
-                if (error) clearError();
-              }}
-              className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-xs font-semibold rounded-lg transition-all"
-            >
-              Fill Demo
-            </button>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setForm({ email: 'admin@drishtigrid.gov.in', password: 'adminpass@123' });
+                  setFieldErrors({});
+                  if (error) clearError();
+                }}
+                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-300"
+              >
+                Admin
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setForm({ email: 'police@drishtigrid.gov.in', password: 'policepass@123' });
+                  setFieldErrors({});
+                  if (error) clearError();
+                }}
+                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-300"
+              >
+                Police
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setForm({ email: 'traffic@drishtigrid.gov.in', password: 'trafficpass@123' });
+                  setFieldErrors({});
+                  if (error) clearError();
+                }}
+                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300"
+              >
+                Traffic
+              </button>
+            </div>
           </div>
 
           {/* Footer */}

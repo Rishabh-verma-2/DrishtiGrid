@@ -25,8 +25,16 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['superadmin', 'admin', 'operator', 'viewer'],
-      default: 'viewer',
+      enum: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'],
+      default: 'POLICE',
+      set: (val) => {
+        if (!val) return 'POLICE';
+        const upper = String(val).toUpperCase();
+        if (['SUPERADMIN', 'ADMIN'].includes(upper)) return 'ADMIN';
+        if (['OPERATOR', 'VIEWER', 'POLICE'].includes(upper)) return 'POLICE';
+        if (['TRAFFIC', 'TRAFFIC_POLICE', 'TRAFFICPOLICE'].includes(upper)) return 'TRAFFIC_POLICE';
+        return upper;
+      },
     },
     department: {
       type: String,

@@ -49,28 +49,78 @@ async function seed() {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ Connected to MongoDB');
 
-    // ─── 1. Seed Admin User ──────────────────────────────────────
-    console.log('\n👤 Seeding admin user...');
-    const adminEmail = 'adminuser@gov.in';
-    const adminPassword = 'adminpass@123';
+    // ─── 1. Seed 3 Standardized RBAC Users ───────────────────────
+    console.log('\n👤 Seeding 3 Standardized RBAC prototype test users...');
 
-    const existing = await User.findOne({ email: adminEmail });
-    if (existing) {
-      console.log(`   ⚠️  Admin already exists: ${adminEmail}`);
-    } else {
-      const hashedPassword = await bcrypt.hash(adminPassword, 12);
-      await User.create({
-        name: 'DrishtiGrid Admin',
-        email: adminEmail,
-        password: hashedPassword,
-        role: 'superadmin',
+    const testUsers = [
+      {
+        name: 'DrishtiGrid Administrator',
+        email: 'admin@drishtigrid.gov.in',
+        password: 'adminpass@123',
+        role: 'ADMIN',
         department: 'Gujarat Home Department',
-        designation: 'System Administrator',
+        designation: 'State Surveillance Administrator',
         phone: '+91-79-23250000',
         district: 'Ahmedabad',
-        isActive: true,
-      });
-      console.log(`   ✅ Admin created: ${adminEmail} / ${adminPassword}`);
+      },
+      {
+        name: 'Inspector Vijay Patel',
+        email: 'police@drishtigrid.gov.in',
+        password: 'policepass@123',
+        role: 'POLICE',
+        department: 'Gujarat Police Department',
+        designation: 'Circle Police Inspector',
+        phone: '+91-79-25620100',
+        district: 'Gandhinagar',
+      },
+      {
+        name: 'ACP Ramesh Shah',
+        email: 'traffic@drishtigrid.gov.in',
+        password: 'trafficpass@123',
+        role: 'TRAFFIC_POLICE',
+        department: 'Gujarat Traffic Police',
+        designation: 'Assistant Commissioner (Traffic Command)',
+        phone: '+91-79-27552200',
+        district: 'Ahmedabad',
+      },
+    ];
+
+    for (const u of testUsers) {
+      let userDoc = await User.findOne({ email: u.email });
+      if (!userDoc) {
+        userDoc = new User({
+          name: u.name,
+          email: u.email,
+          password: u.password,
+          role: u.role,
+          department: u.department,
+          designation: u.designation,
+          phone: u.phone,
+          district: u.district,
+          isActive: true,
+        });
+        await userDoc.save();
+        console.log(`   ✅ Seeded: ${u.role} -> ${u.email} / ${u.password}`);
+      } else {
+        userDoc.name = u.name;
+        userDoc.role = u.role;
+        userDoc.department = u.department;
+        userDoc.designation = u.designation;
+        userDoc.phone = u.phone;
+        userDoc.district = u.district;
+        userDoc.isActive = true;
+        userDoc.password = u.password;
+        await userDoc.save();
+        console.log(`   🔄 Updated: ${u.role} -> ${u.email} / ${u.password}`);
+      }
+    }
+
+    // Also normalize existing adminuser@gov.in to ADMIN
+    const legacyAdmin = await User.findOne({ email: 'adminuser@gov.in' });
+    if (legacyAdmin) {
+      legacyAdmin.role = 'ADMIN';
+      await legacyAdmin.save({ validateBeforeSave: false });
+      console.log('   🔄 Normalized adminuser@gov.in -> Role: ADMIN');
     }
 
     // ─── 2. Seed Cameras from JSON ───────────────────────────────

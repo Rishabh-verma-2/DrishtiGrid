@@ -9,7 +9,14 @@ import GISMapPage from './pages/GISMapPage';
 import CameraMonitoringPage from './pages/CameraMonitoringPage';
 import CameraManagementPage from './pages/CameraManagementPage';
 import AlertsPage from './pages/AlertsPage';
+import FootageRequestsPage from './pages/FootageRequestsPage';
+import UsersPage from './pages/UsersPage';
+import SystemHealthPage from './pages/SystemHealthPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
+import RoleRoute from './components/auth/RoleRoute';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }) => {
@@ -43,14 +50,62 @@ function App() {
       {/* Protected — all inside Dashboard layout */}
       <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Available to all authenticated roles: Admin, Police, Traffic Police */}
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="gis-map" element={<GISMapPage />} />
         <Route path="map" element={<Navigate to="/gis-map" replace />} />
         <Route path="gis" element={<Navigate to="/gis-map" replace />} />
         <Route path="camera-monitoring" element={<CameraMonitoringPage />} />
-        <Route path="camera-management" element={<CameraManagementPage />} />
+        <Route path="footage-requests" element={<FootageRequestsPage />} />
+        <Route path="tickets" element={<Navigate to="/footage-requests" replace />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="alerts" element={<AlertsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+
+        {/* Restricted strictly to ADMIN role only */}
+        <Route
+          path="users"
+          element={
+            <RoleRoute roles={['ADMIN']}>
+              <UsersPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="camera-management"
+          element={
+            <RoleRoute roles={['ADMIN']}>
+              <CameraManagementPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="system-health"
+          element={
+            <RoleRoute roles={['ADMIN']}>
+              <SystemHealthPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="audit-logs"
+          element={
+            <RoleRoute roles={['ADMIN']}>
+              <AuditLogsPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <RoleRoute roles={['ADMIN']}>
+              <SettingsPage />
+            </RoleRoute>
+          }
+        />
+
+        {/* Unauthorized 403 page */}
+        <Route path="unauthorized" element={<UnauthorizedPage />} />
       </Route>
 
       {/* Catch-all */}

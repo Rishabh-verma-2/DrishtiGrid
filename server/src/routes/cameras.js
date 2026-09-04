@@ -17,9 +17,9 @@ router.get('/stats', authenticate, getCameraStats);
 // CRUD
 router.get('/', authenticate, getCameras);
 router.get('/:id', authenticate, getCamera);
-router.post('/', authenticate, authorize('superadmin', 'admin'), createCamera);
-router.put('/:id', authenticate, authorize('superadmin', 'admin'), updateCamera);
-router.delete('/:id', authenticate, authorize('superadmin'), deleteCamera);
-router.patch('/:id/heartbeat', authenticate, authorize('superadmin', 'admin', 'operator'), updateHeartbeat);
+router.post('/', authenticate, authorize('ADMIN'), createCamera);
+router.put('/:id', authenticate, authorize('ADMIN'), updateCamera);
+router.delete('/:id', authenticate, authorize('ADMIN'), deleteCamera);
+router.patch('/:id/heartbeat', authenticate, authorize('ADMIN'), updateHeartbeat);
 
 module.exports = router;

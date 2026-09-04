@@ -137,4 +137,168 @@ router.post('/whep/:id', async (req, res) => {
   }
 });
 
+// ─── Sentinel CCTV Gateway Authenticated Proxy ─────────────────────────
+let sentinelCookie = null;
+let lastLoginAttempt = 0;
+
+async function getSentinelCookie() {
+  // Reuse existing cookie for up to 12 hours
+  if (sentinelCookie && (Date.now() - lastLoginAttempt < 1000 * 60 * 60 * 12)) {
+    return sentinelCookie;
+  }
+
+  const email = process.env.SENTINEL_EMAIL || 'rishabh.verma2626@gmail.com';
+  const password = process.env.SENTINEL_PASSWORD || 'A6DR-CG63-ZSEU';
+
+  try {
+    const loginRes = await fetch('https://cctv.corp8.cloud/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+      body: new URLSearchParams({ email, password }),
+      redirect: 'manual',
+    });
+
+    const setCookie = loginRes.headers.get('set-cookie');
+    if (setCookie) {
+      const match = setCookie.match(/sentinel=[^;]+/);
+      if (match) {
+        sentinelCookie = match[0];
+        lastLoginAttempt = Date.now();
+        logger.info('Successfully authenticated with Sentinel CCTV gateway for live footage');
+        return sentinelCookie;
+      }
+    }
+  } catch (err) {
+    logger.error('Sentinel login failure:', err.message);
+  }
+  return sentinelCookie;
+}
+
+/**
+ * @desc    Get Sentinel camera manifest (30 real units)
+ * @route   GET /api/stream/sentinel/manifest
+ */
+router.get('/sentinel/manifest', async (req, res) => {
+  try {
+    let cookie = await getSentinelCookie();
+    let upstream = await fetch('https://cctv.corp8.cloud/cameras.json', {
+      headers: {
+        'Cookie': cookie || '',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://cctv.corp8.cloud/',
+      },
+    });
+
+    if (upstream.status === 401 || upstream.status === 403 || upstream.status === 302) {
+      sentinelCookie = null;
+      cookie = await getSentinelCookie();
+      upstream = await fetch('https://cctv.corp8.cloud/cameras.json', {
+        headers: {
+          'Cookie': cookie || '',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://cctv.corp8.cloud/',
+        },
+      });
+    }
+
+    const data = await upstream.json();
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+/**
+ * @desc    Proxy Sentinel HLS playlist (.m3u8) with authentication
+ * @route   GET /api/stream/sentinel/:camId/index.m3u8
+ */
+router.get('/sentinel/:camId/index.m3u8', async (req, res) => {
+  try {
+    let { camId } = req.params;
+    if (!/^cam([0-2][0-9]|30)$/i.test(camId)) {
+      const numMatch = camId.match(/\d+/g);
+      const num = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 1;
+      const channel = ((num - 1) % 30) + 1;
+      camId = `cam${String(channel).padStart(2, '0')}`;
+    }
+
+    let cookie = await getSentinelCookie();
+    let upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
+      headers: {
+        'Cookie': cookie || '',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://cctv.corp8.cloud/',
+      },
+    });
+
+    if (upstream.status === 401 || upstream.status === 403 || upstream.status === 302) {
+      sentinelCookie = null;
+      cookie = await getSentinelCookie();
+      upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
+        headers: {
+          'Cookie': cookie || '',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://cctv.corp8.cloud/',
+        },
+      });
+    }
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).send('Sentinel feed unavailable');
+    }
+
+    const playlist = await upstream.text();
+    res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-cache, no-store');
+    res.send(playlist);
+  } catch (err) {
+    logger.error('Error proxying Sentinel m3u8:', err.message);
+    res.status(500).send(err.message);
+  }
+});
+
+/**
+ * @desc    Proxy Sentinel HLS video segment (.ts) with authentication
+ * @route   GET /api/stream/sentinel/:camId/:segment
+ */
+router.get('/sentinel/:camId/:segment', async (req, res) => {
+  try {
+    let { camId, segment } = req.params;
+    if (!/^cam([0-2][0-9]|30)$/i.test(camId)) {
+      const numMatch = camId.match(/\d+/g);
+      const num = numMatch ? parseInt(numMatch[numMatch.length - 1], 10) : 1;
+      const channel = ((num - 1) % 30) + 1;
+      camId = `cam${String(channel).padStart(2, '0')}`;
+    }
+
+    const cookie = await getSentinelCookie();
+    const upstream = await fetch(`https://cctv.corp8.cloud/${camId}/${segment}`, {
+      headers: {
+        'Cookie': cookie || '',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://cctv.corp8.cloud/',
+      },
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).send('Segment unavailable');
+    }
+
+    res.setHeader('Content-Type', 'video/mp2t');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    const arrayBuffer = await upstream.arrayBuffer();
+    res.send(Buffer.from(arrayBuffer));
+  } catch (err) {
+    logger.error('Error proxying Sentinel segment:', err.message);
+    res.status(500).send(err.message);
+  }
+});
+
 module.exports = router;
+

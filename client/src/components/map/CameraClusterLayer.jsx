@@ -147,17 +147,21 @@ function createPopupContent(cam) {
       </div>
 
       <!-- Action Footer -->
-      <div class="cctv-popup-footer">
-        <button type="button" class="btn-popup-stream" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))">
+      <div class="cctv-popup-footer" style="display: flex; gap: 8px; align-items: center;">
+        <button type="button" class="btn-popup-stream" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))" style="flex: 1;">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          View Live Feed
+          Live Feed
+        </button>
+        <button type="button" class="btn-popup-requisition" onclick="window.dispatchEvent(new CustomEvent('cctv:request-footage', { detail: '${cam.cameraId}' }))" style="flex: 1; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.35);">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+          Request Footage
         </button>
       </div>
     </div>
   `;
 }
 
-export default function CameraClusterLayer({ cameras = [], onOpenStream }) {
+export default function CameraClusterLayer({ cameras = [], onOpenStream, onRequestFootage }) {
   const map = useMap();
   const clusterGroupRef = useRef(null);
   const markersMapRef = useRef(new Map());
@@ -172,9 +176,21 @@ export default function CameraClusterLayer({ cameras = [], onOpenStream }) {
       }
     };
 
+    const handleRequisitionEvent = (e) => {
+      const cameraId = e.detail;
+      const cam = cameras.find((c) => c.cameraId === cameraId);
+      if (cam && onRequestFootage) {
+        onRequestFootage(cam);
+      }
+    };
+
     window.addEventListener('cctv:open-stream', handleStreamEvent);
-    return () => window.removeEventListener('cctv:open-stream', handleStreamEvent);
-  }, [cameras, onOpenStream]);
+    window.addEventListener('cctv:request-footage', handleRequisitionEvent);
+    return () => {
+      window.removeEventListener('cctv:open-stream', handleStreamEvent);
+      window.removeEventListener('cctv:request-footage', handleRequisitionEvent);
+    };
+  }, [cameras, onOpenStream, onRequestFootage]);
 
   useEffect(() => {
     if (!map) return;

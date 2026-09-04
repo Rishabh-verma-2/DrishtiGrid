@@ -14,6 +14,10 @@ const authRoutes = require('./routes/auth');
 const cameraRoutes = require('./routes/cameras');
 const alertRoutes = require('./routes/alerts');
 const streamRoutes = require('./routes/stream');
+const footageTicketRoutes = require('./routes/footageTickets');
+const userRoutes = require('./routes/users');
+const auditLogRoutes = require('./routes/auditLogs');
+const systemHealthRoutes = require('./routes/systemHealth');
 
 const createApp = () => {
   const app = express();
@@ -91,6 +95,10 @@ const createApp = () => {
   app.use('/api/cameras', cameraRoutes);
   app.use('/api/alerts', alertRoutes);
   app.use('/api/stream', streamRoutes);
+  app.use('/api/footage-tickets', footageTicketRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/audit-logs', auditLogRoutes);
+  app.use('/api/system-health', systemHealthRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────
   app.use(notFound);
