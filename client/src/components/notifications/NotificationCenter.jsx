@@ -21,11 +21,12 @@ export default function NotificationCenter() {
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
 
-  // Fetch notifications
+  // Fetch notifications (relies on real-time Socket.IO pushes rather than aggressive polling)
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => notificationAPI.getAll({ limit: 25 }).then((r) => r.data),
-    refetchInterval: 12000,
+    staleTime: 60000,
+    refetchOnWindowFocus: true,
   });
 
   const notifications = data?.data || [];

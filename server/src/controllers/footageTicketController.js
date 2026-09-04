@@ -179,11 +179,10 @@ const createTicket = async (req, res) => {
 
     // Auto-detect departments
     const requestingDept = req.user.department || (req.user.role === 'TRAFFIC_POLICE' ? 'Gujarat Traffic Police' : 'Gujarat Police Department');
-    // If target dept is specified in body or derived from camera, use it
-    let targetDept = req.body.targetDepartment || cameraDoc.departmentName;
+    // Honor explicit targetDepartment from request body
+    let targetDept = req.body.targetDepartment;
     if (!targetDept) {
-      // Default logically: if requesting is Traffic Police, target is Police and vice-versa
-      targetDept = requestingDept.includes('Traffic') ? 'Gujarat Police Department' : 'Gujarat Traffic Police';
+      targetDept = cameraDoc.departmentName || (requestingDept.includes('Traffic') ? 'Gujarat Police Department' : 'Gujarat Traffic Police');
     }
 
     const ticket = await FootageTicket.create({
@@ -286,18 +285,79 @@ const getTickets = async (req, res) => {
 
     const filter = {};
 
-    // Department direction filtering
+    // Helper to get precise department regex pattern
+    const getDeptPattern = (d) => {
+      if (!d) return null;
+      if (/traffic/i.test(d)) {
+        return { isTraffic: true };
+      }
+      if (/home/i.test(d)) {
+        return { isHome: true };
+      }
+      // General Police (strictly exclude Traffic)
+      return { isPolice: true };
+    };
+
+    const userDeptInfo = getDeptPattern(userDept);
+
+    // Department direction filtering (Strict mutual exclusivity)
     if (direction === 'incoming') {
-      filter.targetDepartment = userDept;
+      if (isAdmin) {
+        // Admins in Incoming view: requests targeted to Gujarat Home Department or awaiting custodian processing
+        filter.requestingDepartment = { $not: { $regex: 'home', $options: 'i' } };
+      } else if (userDeptInfo?.isTraffic) {
+        // Must be targeted to Traffic, and NOT requested by Traffic
+        filter.targetDepartment = { $regex: 'traffic', $options: 'i' };
+        filter.requestingDepartment = { $not: { $regex: 'traffic', $options: 'i' } };
+      } else if (userDeptInfo?.isPolice) {
+        // Must be targeted to Police (non-traffic), and NOT requested by Police
+        filter.targetDepartment = { $regex: '^(?!.*traffic).*police.*$', $options: 'i' };
+        filter.requestingDepartment = { $not: { $regex: '^(?!.*traffic).*police.*$', $options: 'i' } };
+      } else {
+        filter.targetDepartment = userDept;
+        filter.requestingDepartment = { $ne: userDept };
+      }
     } else if (direction === 'outgoing') {
-      filter.requestingDepartment = userDept;
+      if (isAdmin) {
+        // Admins in Outgoing view: requests submitted by Admin or Gujarat Home Department
+        filter.$or = [
+          { requestingDepartment: { $regex: 'home', $options: 'i' } },
+          { requestedBy: req.user._id },
+        ];
+        filter.targetDepartment = { $not: { $regex: 'home', $options: 'i' } };
+      } else if (userDeptInfo?.isTraffic) {
+        // Must be requested BY Traffic, and NOT targeted to Traffic
+        filter.requestingDepartment = { $regex: 'traffic', $options: 'i' };
+        filter.targetDepartment = { $not: { $regex: 'traffic', $options: 'i' } };
+      } else if (userDeptInfo?.isPolice) {
+        // Must be requested BY Police, and NOT targeted to Police
+        filter.requestingDepartment = { $regex: '^(?!.*traffic).*police.*$', $options: 'i' };
+        filter.targetDepartment = { $not: { $regex: '^(?!.*traffic).*police.*$', $options: 'i' } };
+      } else {
+        filter.requestingDepartment = userDept;
+        filter.targetDepartment = { $ne: userDept };
+      }
     } else if (!isAdmin) {
-      // Non-admins see only tickets involving their department or created by them
-      filter.$or = [
-        { targetDepartment: userDept },
-        { requestingDepartment: userDept },
-        { requestedBy: req.user._id },
-      ];
+      // 'all' direction for non-admins: tickets where department is either target OR requester
+      if (userDeptInfo?.isTraffic) {
+        filter.$or = [
+          { targetDepartment: { $regex: 'traffic', $options: 'i' } },
+          { requestingDepartment: { $regex: 'traffic', $options: 'i' } },
+          { requestedBy: req.user._id },
+        ];
+      } else if (userDeptInfo?.isPolice) {
+        filter.$or = [
+          { targetDepartment: { $regex: '^(?!.*traffic).*police.*$', $options: 'i' } },
+          { requestingDepartment: { $regex: '^(?!.*traffic).*police.*$', $options: 'i' } },
+          { requestedBy: req.user._id },
+        ];
+      } else {
+        filter.$or = [
+          { targetDepartment: userDept },
+          { requestingDepartment: userDept },
+          { requestedBy: req.user._id },
+        ];
+      }
     }
 
     if (status && status !== 'all') {
@@ -513,10 +573,22 @@ const updateTicketStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Requisition ticket not found' });
     }
 
-    const userDept = req.user.department || '';
+    const userDept = (req.user.department || '').toLowerCase().trim();
     const isAdmin = String(req.user.role || '').toUpperCase() === 'ADMIN';
-    const isRequestingDept = ticket.requestingDepartment === userDept;
-    const isTargetDept = ticket.targetDepartment === userDept;
+    const targetDept = (ticket.targetDepartment || '').toLowerCase().trim();
+    const reqDept = (ticket.requestingDepartment || '').toLowerCase().trim();
+
+    const isRequestingDept =
+      reqDept.includes(userDept) ||
+      userDept.includes(reqDept) ||
+      (ticket.requestedBy && ticket.requestedBy.toString() === req.user._id.toString());
+
+    const isTargetDept =
+      targetDept.includes(userDept) ||
+      userDept.includes(targetDept) ||
+      (userDept.includes('traffic') && targetDept.includes('traffic')) ||
+      (userDept.includes('police') && targetDept.includes('police')) ||
+      (!targetDept.includes('police') && (userDept.includes('police') || userDept.includes('traffic')));
 
     // RBAC checks for status changes
     if (!isAdmin) {
@@ -643,10 +715,17 @@ const uploadEvidence = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Requisition ticket not found' });
     }
 
-    // RBAC: only target department or admin can upload evidence
-    const userDept = req.user.department || '';
+    // RBAC: target department or admin can upload evidence
+    const userDept = (req.user.department || '').toLowerCase().trim();
+    const targetDept = (ticket.targetDepartment || '').toLowerCase().trim();
     const isAdmin = String(req.user.role || '').toUpperCase() === 'ADMIN';
-    const isTargetDept = ticket.targetDepartment === userDept;
+
+    const isTargetDept =
+      targetDept.includes(userDept) ||
+      userDept.includes(targetDept) ||
+      (userDept.includes('traffic') && targetDept.includes('traffic')) ||
+      (userDept.includes('police') && targetDept.includes('police')) ||
+      (!targetDept.includes('police') && (userDept.includes('police') || userDept.includes('traffic')));
 
     if (!isAdmin && !isTargetDept) {
       return res.status(403).json({
@@ -837,17 +916,40 @@ const streamEvidence = async (req, res) => {
     }
 
     // RBAC: check if user is authorized to view
-    const userDept = req.user.department || '';
-    const isAdmin = String(req.user.role || '').toUpperCase() === 'ADMIN';
+    const userDept = (req.user.department || '').toLowerCase().trim();
+    const userRole = String(req.user.role || '').toUpperCase();
+    const targetDept = (ticket.targetDepartment || '').toLowerCase().trim();
+    const reqDept = (ticket.requestingDepartment || '').toLowerCase().trim();
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
     const isOwner = ticket.requestedBy && ticket.requestedBy.toString() === req.user._id.toString();
-    const isRequestingDept = ticket.requestingDepartment === userDept;
-    const isTargetDept = ticket.targetDepartment === userDept;
+
+    const isRequestingDept =
+      reqDept.includes(userDept) ||
+      userDept.includes(reqDept) ||
+      (userRole === 'POLICE' && reqDept.includes('police')) ||
+      (userRole === 'TRAFFIC_POLICE' && reqDept.includes('traffic'));
+
+    const isTargetDept =
+      targetDept.includes(userDept) ||
+      userDept.includes(targetDept) ||
+      (userRole === 'POLICE' && targetDept.includes('police')) ||
+      (userRole === 'TRAFFIC_POLICE' && targetDept.includes('traffic'));
 
     if (!isAdmin && !isOwner && !isRequestingDept && !isTargetDept) {
       return res.status(403).json({
         success: false,
         message: 'Unauthorized: You do not have security clearance to access this CCTV evidence',
       });
+    }
+
+    // Determine correct MIME type
+    let mimeType = evidence.fileType || 'video/mp4';
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const ext = (evidence.originalFileName || '').split('.').pop().toLowerCase();
+      if (ext === 'webm') mimeType = 'video/webm';
+      else if (ext === 'mkv') mimeType = 'video/x-matroska';
+      else if (ext === 'avi') mimeType = 'video/x-msvideo';
+      else mimeType = 'video/mp4';
     }
 
     // 1. Fetch encrypted binary from Cloudinary
@@ -927,7 +1029,7 @@ const streamEvidence = async (req, res) => {
         'Content-Range': `bytes ${start}-${end}/${totalSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunkSize,
-        'Content-Type': evidence.fileType || 'video/mp4',
+        'Content-Type': mimeType,
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
       });
 
@@ -935,7 +1037,7 @@ const streamEvidence = async (req, res) => {
     } else {
       res.writeHead(200, {
         'Content-Length': totalSize,
-        'Content-Type': evidence.fileType || 'video/mp4',
+        'Content-Type': mimeType,
         'Content-Disposition': `inline; filename="${evidence.originalFileName}"`,
         'Cache-Control': 'no-store, no-cache, must-revalidate, private',
       });
@@ -944,6 +1046,109 @@ const streamEvidence = async (req, res) => {
     }
   } catch (error) {
     logger.error(`Error streaming evidence: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Download decrypted CCTV footage evidence file for forensic dossier
+ * @route   GET /api/footage-tickets/:id/evidence/:evidenceId/download
+ */
+const downloadEvidence = async (req, res) => {
+  try {
+    const { id, evidenceId } = req.params;
+
+    const ticket = await FootageTicket.findOne({
+      $or: [{ ticketId: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }],
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: 'Requisition ticket not found' });
+    }
+
+    const evidence = await Evidence.findOne({
+      $or: [{ evidenceId }, { _id: evidenceId.match(/^[0-9a-fA-F]{24}$/) ? evidenceId : null }],
+    });
+
+    if (!evidence) {
+      return res.status(404).json({ success: false, message: 'Evidence record not found' });
+    }
+
+    // RBAC: check if user is authorized to download
+    const userDept = (req.user.department || '').toLowerCase().trim();
+    const userRole = String(req.user.role || '').toUpperCase();
+    const targetDept = (ticket.targetDepartment || '').toLowerCase().trim();
+    const reqDept = (ticket.requestingDepartment || '').toLowerCase().trim();
+    const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+    const isOwner = ticket.requestedBy && ticket.requestedBy.toString() === req.user._id.toString();
+
+    const isRequestingDept =
+      reqDept.includes(userDept) ||
+      userDept.includes(reqDept) ||
+      (userRole === 'POLICE' && reqDept.includes('police')) ||
+      (userRole === 'TRAFFIC_POLICE' && reqDept.includes('traffic'));
+
+    const isTargetDept =
+      targetDept.includes(userDept) ||
+      userDept.includes(targetDept) ||
+      (userRole === 'POLICE' && targetDept.includes('police')) ||
+      (userRole === 'TRAFFIC_POLICE' && targetDept.includes('traffic'));
+
+    if (!isAdmin && !isOwner && !isRequestingDept && !isTargetDept) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized: Security clearance insufficient to download forensic evidence',
+      });
+    }
+
+    const encryptedBuffer = await cloudinaryService.fetchEncryptedBuffer(
+      evidence.cloudinaryAsset.secureUrl,
+      evidence.cloudinaryAsset.publicId
+    );
+
+    const decryptedBuffer = cryptoService.decryptBuffer(
+      encryptedBuffer,
+      evidence.encryption.iv,
+      evidence.encryption.authTag
+    );
+
+    const isIntact = cryptoService.verifySha256(decryptedBuffer, evidence.sha256Hash);
+    if (!isIntact) {
+      return res.status(422).json({
+        success: false,
+        message: '🔴 Evidence Integrity Compromised! Cryptographic checksum does not match official seal.',
+      });
+    }
+
+    await createAuditEntry({
+      ticket,
+      ticketId: ticket.ticketId,
+      action: 'EVIDENCE_DOWNLOADED',
+      req,
+      remarks: `Evidence file downloaded by ${req.user.name} (${userDept}). SHA-256 seal verified.`,
+      evidenceId: evidence.evidenceId,
+      actionResult: 'SUCCESS',
+    });
+
+    const filename = evidence.originalFileName || `CCTV_${ticket.ticketId}_${evidence.evidenceId}.mp4`;
+    let mimeType = evidence.fileType || 'video/mp4';
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      const ext = filename.split('.').pop().toLowerCase();
+      if (ext === 'webm') mimeType = 'video/webm';
+      else if (ext === 'mkv') mimeType = 'video/x-matroska';
+      else mimeType = 'video/mp4';
+    }
+
+    res.writeHead(200, {
+      'Content-Length': decryptedBuffer.length,
+      'Content-Type': mimeType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+      'Cache-Control': 'no-store, private',
+    });
+
+    return res.end(decryptedBuffer);
+  } catch (error) {
+    logger.error(`Error downloading evidence: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -1372,4 +1577,5 @@ module.exports = {
   getAllAuditLogs,
   recordFootageAccess,
   dispatchFootage,
+  downloadEvidence,
 };

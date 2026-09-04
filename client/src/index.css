@@ -198,6 +198,34 @@ body {
   color: #334155 !important;
 }
 
+/* Ensure code terminals and dark code blocks remain high contrast in Light Mode */
+.terminal-code-box,
+.theme-light .terminal-code-box {
+  background-color: #090d16 !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+.terminal-code-box *,
+.theme-light .terminal-code-box * {
+  color: inherit !important;
+}
+
+.terminal-code-box .code-emerald,
+.theme-light .terminal-code-box .code-emerald {
+  color: #34d399 !important;
+}
+
+.terminal-code-box .code-cyan,
+.theme-light .terminal-code-box .code-cyan {
+  color: #38bdf8 !important;
+}
+
+.terminal-code-box .code-amber,
+.theme-light .terminal-code-box .code-amber {
+  color: #fbbf24 !important;
+}
+
 .theme-light .text-slate-500 {
   color: #475569 !important;
 }

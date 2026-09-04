@@ -44,25 +44,26 @@ const createApp = () => {
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
 
-  // Rate limiting
-  const limiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-    max: parseInt(process.env.RATE_LIMIT_MAX) || 1000,
-    message: { success: false, message: 'Too many requests, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-  app.use('/api/', limiter);
+  // Rate limiting (Only active in production, disabled in development to prevent lockouts)
+  if (!isDev) {
+    const limiter = rateLimit({
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+      max: parseInt(process.env.RATE_LIMIT_MAX) || 5000,
+      message: { success: false, message: 'Too many requests, please try again later' },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    app.use('/api/', limiter);
 
-  // Auth-specific limiter (lenient in development to prevent lockouts)
-  const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: isDev ? 500 : 30,
-    message: { success: false, message: 'Too many login attempts, please try again later' },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-  app.use('/api/auth/login', authLimiter);
+    const authLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+      message: { success: false, message: 'Too many login attempts, please try again later' },
+      standardHeaders: true,
+      legacyHeaders: false,
+    });
+    app.use('/api/auth/login', authLimiter);
+  }
 
   // ─── Body Parsing ─────────────────────────────────────────────
   app.use(express.text({ type: 'application/sdp', limit: '2mb' }));
@@ -71,7 +72,9 @@ const createApp = () => {
 
   // ─── Logging ──────────────────────────────────────────────────
   if (process.env.NODE_ENV === 'development') {
-    app.use(morgan('dev'));
+    app.use(morgan('dev', {
+      skip: (req, res) => res.statusCode === 304 && req.url.includes('/notifications'),
+    }));
   } else {
     app.use(morgan('combined', {
       stream: { write: (msg) => logger.info(msg.trim()) },

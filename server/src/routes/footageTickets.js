@@ -9,6 +9,7 @@ const {
   updateTicketStatus,
   uploadEvidence,
   streamEvidence,
+  downloadEvidence,
   verifyEvidenceIntegrity,
   addTicketResponse,
   getTicketResponses,
@@ -61,6 +62,7 @@ router.patch('/:id/status', updateTicketStatus);
 // Evidence handling
 router.post('/:id/evidence', upload.single('footage'), uploadEvidence);
 router.get('/:id/evidence/:evidenceId/stream', streamEvidence);
+router.get('/:id/evidence/:evidenceId/download', downloadEvidence);
 router.get('/:id/evidence/:evidenceId/verify', verifyEvidenceIntegrity);
 
 // Case conversations / responses
