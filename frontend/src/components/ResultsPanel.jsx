@@ -1,4 +1,5 @@
 import PlateCard from "./PlateCard";
+import { ImageIcon, EyeIcon, CarIcon, ClockIcon } from "./Icons";
 
 export default function ResultsPanel({ result }) {
   const {
@@ -22,8 +23,9 @@ export default function ResultsPanel({ result }) {
       <div className="image-grid">
         <div className="image-card">
           <div className="image-card-header">
-            <span className="image-card-title">
-              🖼️ Original Image
+            <span className="image-card-title flex items-center gap-1.5">
+              <ImageIcon className="w-4 h-4" />
+              <span>Original Image</span>
             </span>
             <span className="image-card-badge badge-original">ORIGINAL</span>
           </div>
@@ -38,8 +40,9 @@ export default function ResultsPanel({ result }) {
 
         <div className="image-card">
           <div className="image-card-header">
-            <span className="image-card-title">
-              🔍 Processed Image
+            <span className="image-card-title flex items-center gap-1.5">
+              <EyeIcon className="w-4 h-4" />
+              <span>Processed Image</span>
             </span>
             <span className="image-card-badge badge-processed">ANNOTATED</span>
           </div>
@@ -56,7 +59,9 @@ export default function ResultsPanel({ result }) {
       {/* Plates count banner */}
       {total_plates_detected === 0 ? (
         <div className="no-plates-banner">
-          <div className="no-plates-icon">🚗</div>
+          <div className="no-plates-icon flex justify-center mb-2">
+            <CarIcon className="w-10 h-10 text-slate-400" />
+          </div>
           <div className="no-plates-title">No License Plates Detected</div>
           <div className="no-plates-desc">
             The AI could not find any license plates in this image. Try a clearer
@@ -98,7 +103,10 @@ export default function ResultsPanel({ result }) {
       {/* Processing timings */}
       {Object.keys(timings).length > 0 && (
         <div className="timings-panel mt-xl">
-          <div className="timings-title">⏱ Processing Timings</div>
+          <div className="timings-title flex items-center gap-1.5">
+            <ClockIcon className="w-4 h-4 text-slate-500" />
+            <span>Processing Timings</span>
+          </div>
           <div className="timings-grid">
             {timings.detection != null && (
               <div className="timing-item">

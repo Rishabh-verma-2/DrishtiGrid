@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { AlertTriangleIcon, CheckCircleIcon, EyeIcon } from "./Icons";
 
 /**
  * LocalPreview: shows the uploaded file immediately using a blob URL (instant, no server round-trip).
@@ -132,8 +133,9 @@ export default function GroupedImageResults({ results = [], localFiles = [], onV
                     {imgResult.plates_detected} {imgResult.plates_detected === 1 ? "Plate" : "Plates"} Detected
                   </span>
                   {hasMatches && (
-                    <span className="text-xs font-black bg-red-100 text-red-800 border border-red-200 px-2.5 py-0.5 rounded">
-                      🚨 {imgResult.matched_plates} MATCH FOUND
+                    <span className="inline-flex items-center gap-1 text-xs font-bold bg-red-100 text-red-800 border border-red-200 px-2.5 py-0.5 rounded">
+                      <AlertTriangleIcon className="w-3.5 h-3.5 text-red-700" />
+                      <span>{imgResult.matched_plates} MATCH FOUND</span>
                     </span>
                   )}
                   <span className="text-xs text-slate-500 font-mono hidden sm:inline">

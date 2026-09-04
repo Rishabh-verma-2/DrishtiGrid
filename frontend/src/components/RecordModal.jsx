@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { XIcon } from "./Icons";
 
 const CATEGORIES = ["STOLEN", "SUSPECT", "VIP", "WANTED", "BLACKLISTED", "FLEET", "OTHER"];
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
@@ -49,7 +50,7 @@ export default function RecordModal({ onClose, onSave, existingRecord = null }) 
         {/* Header */}
         <div className="bg-slate-900 px-5 py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-base font-extrabold text-white tracking-wide">
+            <h2 className="text-sm font-bold text-white tracking-wider uppercase">
               {isEdit ? "EDIT PLATE RECORD" : "ADD PLATE RECORD"}
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -58,10 +59,10 @@ export default function RecordModal({ onClose, onSave, existingRecord = null }) 
           </div>
           <button
             type="button"
-            className="text-slate-400 hover:text-white text-xl font-bold transition-colors w-8 h-8 flex items-center justify-center rounded"
+            className="text-slate-400 hover:text-white p-1 transition-colors rounded"
             onClick={onClose}
           >
-            ✕
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 

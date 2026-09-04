@@ -1,3 +1,6 @@
+import React from "react";
+import { CheckCircleIcon, AlertTriangleIcon, XIcon } from "./Icons";
+
 function ConfidenceBar({ label, value, className }) {
   const pct = Math.round((value || 0) * 100);
   return (
@@ -18,30 +21,45 @@ function ConfidenceBar({ label, value, className }) {
 
 function ValidationBadge({ status }) {
   const map = {
-    VALID_FORMAT:    { cls: "valid-format",    icon: "✅", label: "Valid Format" },
-    POSSIBLE_FORMAT: { cls: "possible-format", icon: "⚠️", label: "Possible Format" },
-    INVALID_FORMAT:  { cls: "invalid-format",  icon: "❌", label: "Invalid Format" },
-    UNCERTAIN:       { cls: "uncertain",       icon: "❓", label: "Uncertain" },
+    VALID_FORMAT:    { cls: "valid-format",    icon: <CheckCircleIcon className="w-3.5 h-3.5 inline mr-1 text-emerald-600" />, label: "Valid Format" },
+    POSSIBLE_FORMAT: { cls: "possible-format", icon: <AlertTriangleIcon className="w-3.5 h-3.5 inline mr-1 text-amber-600" />, label: "Possible Format" },
+    INVALID_FORMAT:  { cls: "invalid-format",  icon: <XIcon className="w-3.5 h-3.5 inline mr-1 text-red-600" />, label: "Invalid Format" },
+    UNCERTAIN:       { cls: "uncertain",       icon: null, label: "Uncertain" },
   };
   const { cls, icon, label } = map[status] || map["UNCERTAIN"];
   return (
-    <div className={`validation-badge ${cls}`}>
-      {icon} {label}
+    <div className={`validation-badge ${cls} flex items-center gap-1`}>
+      {icon} <span>{label}</span>
     </div>
   );
 }
 
 function ProcessingStatusBadge({ status }) {
   if (status === "SUCCESS") {
-    return <span className="plate-status-badge status-success">✓ SUCCESS</span>;
+    return (
+      <span className="plate-status-badge status-success flex items-center gap-1">
+        <CheckCircleIcon className="w-3 h-3 text-emerald-600" />
+        <span>SUCCESS</span>
+      </span>
+    );
   }
   if (status === "OCR_FAILED") {
-    return <span className="plate-status-badge status-failed">⚠ OCR FAILED</span>;
+    return (
+      <span className="plate-status-badge status-failed flex items-center gap-1">
+        <AlertTriangleIcon className="w-3 h-3 text-red-600" />
+        <span>OCR FAILED</span>
+      </span>
+    );
   }
   if (status === "OCR_NO_TEXT") {
-    return <span className="plate-status-badge status-partial">~ NO TEXT</span>;
+    return <span className="plate-status-badge status-partial">NO TEXT</span>;
   }
-  return <span className="plate-status-badge status-failed">✗ FAILED</span>;
+  return (
+    <span className="plate-status-badge status-failed flex items-center gap-1">
+      <XIcon className="w-3 h-3 text-red-600" />
+      <span>FAILED</span>
+    </span>
+  );
 }
 
 export default function PlateCard({ plate, index }) {

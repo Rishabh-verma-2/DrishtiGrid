@@ -1,3 +1,5 @@
+import { XIcon } from "./Icons";
+
 const PRIORITY_CLASSES = {
   HIGH: "bg-red-100 text-red-800 border-red-300",
   MEDIUM: "bg-amber-100 text-amber-800 border-amber-300",
@@ -27,15 +29,15 @@ export default function RecordDetailModal({ record, onClose, onEdit }) {
         {/* Header */}
         <div className="bg-slate-900 px-5 py-4 flex justify-between items-center">
           <div>
-            <h2 className="text-base font-extrabold text-white tracking-wide">RECORD DOSSIER</h2>
+            <h2 className="text-sm font-bold text-white tracking-wider uppercase">RECORD DOSSIER</h2>
             <p className="text-xs text-slate-400 mt-0.5">Monitored Plate Record Details</p>
           </div>
           <button
             type="button"
-            className="text-slate-400 hover:text-white text-xl font-bold transition-colors w-8 h-8 flex items-center justify-center rounded"
+            className="text-slate-400 hover:text-white p-1 transition-colors rounded"
             onClick={onClose}
           >
-            ✕
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 

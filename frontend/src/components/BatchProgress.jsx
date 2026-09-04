@@ -1,3 +1,5 @@
+import { CheckCircleIcon } from "./Icons";
+
 export default function BatchProgress({
   totalImages,
   processedCount,
@@ -61,7 +63,13 @@ export default function BatchProgress({
                     : "text-slate-400"
                 }`}
               >
-                <span>{isCompleted ? "✓" : isCurrent ? "●" : "○"}</span>
+                {isCompleted ? (
+                  <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                ) : isCurrent ? (
+                  <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse shrink-0 ml-1 mr-0.5" />
+                ) : (
+                  <span className="w-2 h-2 rounded-full border border-slate-300 shrink-0 ml-1 mr-0.5" />
+                )}
                 <span className="truncate" title={file.name}>
                   {file.name}
                 </span>

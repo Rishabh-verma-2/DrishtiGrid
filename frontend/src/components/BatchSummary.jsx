@@ -1,3 +1,5 @@
+import { AlertTriangleIcon, CheckCircleIcon } from "./Icons";
+
 export default function BatchSummary({ summary, onReset }) {
   if (!summary) return null;
 
@@ -12,13 +14,23 @@ export default function BatchSummary({ summary, onReset }) {
       <div className="flex flex-wrap justify-between items-center gap-2">
         <div className="flex items-center gap-3">
           <span
-            className={`text-xs font-extrabold px-2.5 py-1 rounded tracking-wider ${
+            className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded tracking-wider ${
               hasMatches
-                ? "bg-red-100 text-red-800 border border-red-200 animate-pulse"
+                ? "bg-red-100 text-red-800 border border-red-200"
                 : "bg-emerald-100 text-emerald-800 border border-emerald-200"
             }`}
           >
-            {hasMatches ? "🚨 MATCHES IDENTIFIED" : "✓ ANALYSIS COMPLETE"}
+            {hasMatches ? (
+              <>
+                <AlertTriangleIcon className="w-3.5 h-3.5 text-red-700" />
+                <span>MATCHES IDENTIFIED</span>
+              </>
+            ) : (
+              <>
+                <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-700" />
+                <span>ANALYSIS COMPLETE</span>
+              </>
+            )}
           </span>
           <h3 className="text-base font-extrabold text-slate-900">
             Operational Analysis Summary
@@ -114,7 +126,7 @@ export default function BatchSummary({ summary, onReset }) {
 
       {!hasMatches && (
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold px-3.5 py-2.5 rounded flex items-center gap-2">
-          <span>ℹ️</span>
+          <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>No active matching plate records were found in this batch of images.</span>
         </div>
       )}

@@ -9,6 +9,7 @@ const aiRoutes = require("./routes/aiRoutes");
 const plateRecordRoutes = require("./routes/plateRecordRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const storedPlatesRoutes = require("./routes/storedPlatesRoutes");
 
 const PORT = parseInt(process.env.PORT || "5000", 10);
 const app = express();
@@ -40,6 +41,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/plate-records", plateRecordRoutes);
 app.use("/api/plate-alerts", alertRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/stored-plates", storedPlatesRoutes);
 
 // ---------------------------------------------------------------------------
 // 404

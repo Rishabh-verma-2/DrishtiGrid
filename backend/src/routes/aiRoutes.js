@@ -7,8 +7,10 @@ const express = require("express");
 const axios = require("axios");
 const FormData = require("form-data");
 const multer = require("multer");
-const { uploadSingle, uploadMulti } = require("../middleware/upload");
+const { uploadSingle, uploadMulti, uploadVideo } = require("../middleware/upload");
 const storage = require("../services/storage");
+const plateStorageService = require("../services/plateStorageService");
+const videoService = require("../services/videoService");
 const { matchPlateAgainstRecords, normalizePlateNumber } = require("../utils/plateUtils");
 
 const router = express.Router();
@@ -94,6 +96,72 @@ async function matchAndAlertPlates(plates, sourceImageName, originalImageB64, al
       uncertainCount++;
     }
 
+    // Persist plate detection record into MongoDB platedetections collection
+    let detectionDoc = null;
+    try {
+      detectionDoc = await storage.createPlateDetection({
+        video_id: null,
+        source_type: "IMAGE",
+        source_name: sourceImageName,
+        plate_number: normalizePlateNumber(detectedText),
+        raw_ocr: rawOcr,
+        timestamp: new Date().toISOString(),
+        cropped_image_url: plate.enhanced_crop
+          ? `data:image/jpeg;base64,${plate.enhanced_crop}`
+          : plate.original_crop
+          ? `data:image/jpeg;base64,${plate.original_crop}`
+          : null,
+        car_color: plate.car_color || null,
+        car_model: plate.car_model || null,
+        detection_confidence: detConf,
+        ocr_confidence: ocrConf,
+        overall_confidence: overallConf,
+        match_status: matchResult.matchStatus,
+        matched_record: matchResult.matchedRecord
+          ? {
+              id: matchResult.matchedRecord.id || matchResult.matchedRecord._id,
+              recordId: matchResult.matchedRecord.recordId,
+              plate_number: matchResult.matchedRecord.plate_number,
+              category: matchResult.matchedRecord.category,
+              priority: matchResult.matchedRecord.priority,
+              status: matchResult.matchedRecord.status,
+              description: matchResult.matchedRecord.description,
+            }
+          : null,
+        image_deleted: false,
+      });
+    } catch (detErr) {
+      console.warn("Could not save image plate detection:", detErr.message);
+    }
+
+    // Also persist into the dedicated storedplates registry
+    const normalizedNum = normalizePlateNumber(detectedText);
+    if (normalizedNum && normalizedNum.length >= 3) {
+      try {
+        await plateStorageService.storePlate({
+          plate_number: normalizedNum,
+          raw_ocr: rawOcr,
+          car_color: plate.car_color || null,
+          car_model: plate.car_model || null,
+          source_type: "IMAGE",
+          source_name: sourceImageName,
+          video_id: null,
+          frame_second: 0,
+          first_seen_second: 0,
+          last_seen_second: 0,
+          occurrence_count: 1,
+          seen_seconds: [],
+          overall_confidence: overallConf,
+          detection_confidence: detConf,
+          ocr_confidence: ocrConf,
+          match_status: matchResult.matchStatus,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (storeErr) {
+        console.warn("[aiRoutes] plateStorageService.storePlate failed for image plate:", storeErr.message);
+      }
+    }
+
     enrichedPlates.push({
       ...plate,
       match_status: matchResult.matchStatus,
@@ -112,6 +180,7 @@ async function matchAndAlertPlates(plates, sourceImageName, originalImageB64, al
         : null,
       alert_id: alertDoc ? alertDoc.alertId : null,
       alert_db_id: alertDoc ? (alertDoc.id || alertDoc._id) : null,
+      detection_id: detectionDoc ? (detectionDoc.id || detectionDoc.detectionId) : null,
     });
   }
 
@@ -328,6 +397,126 @@ function handleAIError(err, res) {
     error: err.message || "An unexpected error occurred during processing.",
   });
 }
+
+/**
+ * POST /api/ai/analyze-video
+ * FEATURE 1 & 4: Video upload and asynchronous background analysis endpoint.
+ * Immediately uploads raw video to Cloudinary and kicks off 1-fps background processing.
+ */
+router.post("/analyze-video", uploadVideo.single("video"), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      error: "No video file provided. Send a file in the 'video' field.",
+    });
+  }
+
+  const { buffer, originalname } = req.file;
+  const { recorded_at, latitude, longitude } = req.body;
+
+  const videoId = `vid_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+
+  try {
+    const jobInfo = await videoService.enqueueVideoProcessing({
+      videoId,
+      videoBuffer: buffer,
+      originalFilename: originalname,
+      recordedAt: recorded_at || null,
+      latitude: latitude != null && latitude !== "" ? parseFloat(latitude) : null,
+      longitude: longitude != null && longitude !== "" ? parseFloat(longitude) : null,
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: "Video uploaded successfully. Processing enqueued in background.",
+      job_id: jobInfo.jobId,
+      video_id: jobInfo.videoId,
+      source_video_url: jobInfo.source_video_url,
+      status: jobInfo.status,
+    });
+  } catch (err) {
+    console.error("Error enqueuing video processing:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "Failed to initiate video analysis.",
+    });
+  }
+});
+
+/**
+ * GET /api/ai/video-job/:jobId
+ * Poll the live progress and status of a video processing job.
+ */
+router.get("/video-job/:jobId", (req, res) => {
+  const { jobId } = req.params;
+  const job = videoService.getJobStatus(jobId);
+
+  if (!job) {
+    return res.status(404).json({
+      success: false,
+      error: `Video job '${jobId}' not found.`,
+    });
+  }
+
+  return res.json({
+    success: true,
+    job,
+  });
+});
+
+/**
+ * GET /api/ai/detections
+ * Retrieve all persistent plate detection occurrences across images and videos.
+ */
+router.get("/detections", async (req, res) => {
+  try {
+    const { video_id, match_status, source_type, search, car_color, limit } = req.query;
+    const detections = await storage.getPlateDetections({
+      video_id,
+      match_status,
+      source_type,
+      search,
+      car_color,
+      limit: limit ? parseInt(limit, 10) : 200,
+    });
+
+    return res.json({
+      success: true,
+      total_detections: detections.length,
+      detections,
+    });
+  } catch (err) {
+    console.error("Error retrieving plate detections:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "Failed to retrieve plate detections.",
+    });
+  }
+});
+
+/**
+ * GET /api/ai/video-detections/:videoId
+ * Retrieve all persistent plate detection occurrences recorded for a video.
+ */
+router.get("/video-detections/:videoId", async (req, res) => {
+  const { videoId } = req.params;
+
+  try {
+    const detections = await storage.getPlateDetections({ video_id: videoId });
+    return res.json({
+      success: true,
+      video_id: videoId,
+      total_detections: detections.length,
+      detections,
+    });
+  } catch (err) {
+    console.error("Error retrieving video detections:", err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || "Failed to retrieve video detections.",
+    });
+  }
+});
 
 /**
  * Multer error handler

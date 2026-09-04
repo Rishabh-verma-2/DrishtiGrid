@@ -1,31 +1,34 @@
 import React from "react";
+import { AlertTriangleIcon, BellIcon, XIcon } from "./Icons";
 
 export default function MatchAlertPopup({ matches = [], onClose, onViewAlerts }) {
   if (!matches || matches.length === 0) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border-2 border-red-600 overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-3xl rounded-xl shadow-2xl border border-red-500 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Urgent Emergency Header */}
-        <div className="bg-gradient-to-r from-red-800 via-red-600 to-red-800 text-white px-6 py-4 flex items-center justify-between shadow-lg animate-pulse">
+        <div className="bg-red-900 text-white px-6 py-4 flex items-center justify-between border-b border-red-800">
           <div className="flex items-center gap-3">
-            <span className="text-3xl animate-bounce">🚨</span>
+            <div className="w-10 h-10 rounded-lg bg-red-800/80 border border-red-700 flex items-center justify-center shrink-0">
+              <AlertTriangleIcon className="w-5 h-5 text-red-200" />
+            </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-black tracking-wider uppercase drop-shadow">
-                SECURITY ALERT — WATCHLIST MATCH DETECTED!
+              <h2 className="text-base sm:text-lg font-bold tracking-wider uppercase">
+                SECURITY ALERT — WATCHLIST MATCH DETECTED
               </h2>
-              <p className="text-xs text-red-100 font-semibold tracking-wide">
-                {matches.length} matching license plate {matches.length === 1 ? "record" : "records"} identified in uploaded images.
+              <p className="text-xs text-red-200">
+                {matches.length} matching license plate {matches.length === 1 ? "record" : "records"} identified in surveillance pipeline.
               </p>
             </div>
           </div>
           <button
             type="button"
-            className="text-white hover:text-red-200 text-2xl font-bold p-1 transition-colors"
+            className="text-red-300 hover:text-white p-1 transition-colors"
             onClick={onClose}
             title="Dismiss Alert"
           >
-            ✕
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -178,13 +181,13 @@ export default function MatchAlertPopup({ matches = [], onClose, onViewAlerts })
           <div className="flex items-center gap-3">
             <button
               type="button"
-              className="px-5 py-2 text-xs font-black text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-md flex items-center gap-1.5 animate-pulse"
+              className="px-5 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
               onClick={() => {
                 onClose();
                 if (onViewAlerts) onViewAlerts();
               }}
             >
-              <span>🚨</span>
+              <BellIcon className="w-4 h-4 text-white" />
               <span>VIEW IN ALERT HISTORY</span>
             </button>
           </div>

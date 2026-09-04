@@ -102,16 +102,31 @@ def run_ocr_on_crop(crop: np.ndarray) -> Dict:
                 "error": None,
             }
 
-        # Aggregate all text boxes
-        texts = []
-        confidences = []
+        # Filter and sort lines geometrically: top-to-bottom (rows), then left-to-right
+        valid_lines = []
         for line in result[0]:
             if line is None:
                 continue
             bbox_pts, (text, conf) = line
-            if text and text.strip():
-                texts.append(text.strip())
-                confidences.append(float(conf))
+            text_str = text.strip() if text else ""
+            if not text_str:
+                continue
+            # Ignore standalone IND badge marker box if separate from the plate text
+            if text_str.upper() == "IND":
+                continue
+            valid_lines.append((bbox_pts, text_str, float(conf)))
+
+        # Sort by vertical bucket (Y / 25px) then horizontal position (X)
+        def get_box_sort_key(item):
+            pts = item[0]
+            avg_y = sum(p[1] for p in pts) / len(pts)
+            min_x = min(p[0] for p in pts)
+            return (round(avg_y / 25.0), min_x)
+
+        valid_lines.sort(key=get_box_sort_key)
+
+        texts = [item[1] for item in valid_lines]
+        confidences = [item[2] for item in valid_lines]
 
         raw_ocr = " ".join(texts)
         avg_conf = sum(confidences) / len(confidences) if confidences else 0.0

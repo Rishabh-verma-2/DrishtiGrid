@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { getPlateRecords as getRecords, createPlateRecord as createRecord, updatePlateRecord as updateRecord, deletePlateRecord as deleteRecord } from "../api/recordsApi";
 import RecordModal from "../components/RecordModal";
 import RecordDetailModal from "../components/RecordDetailModal";
+import { PlusIcon, RefreshCwIcon, SearchIcon } from "../components/Icons";
 
 const PRIORITY_CLASSES = {
   HIGH: "bg-red-100 text-red-800 border border-red-200",
@@ -113,13 +114,14 @@ export default function PlateRecordsPage({ onRecordsChanged }) {
         </div>
         <button
           type="button"
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-extrabold rounded-lg shadow-sm transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-md shadow-sm transition-colors flex items-center gap-1.5"
           onClick={() => {
             setEditRecord(null);
             setShowAddModal(true);
           }}
         >
-          <span className="text-base">+</span> Add Record
+          <PlusIcon className="w-4 h-4" />
+          <span>Add Record</span>
         </button>
       </div>
 

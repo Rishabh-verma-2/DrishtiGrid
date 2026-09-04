@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { getAuditLogs } from "../api/dashboardApi";
+import { RefreshCwIcon } from "../components/Icons";
 
 const ACTION_COLORS = {
   RECORD_CREATED: "bg-blue-100 text-blue-800 border-blue-200",
@@ -77,10 +78,11 @@ export default function AuditLogsPage() {
         </div>
         <button
           type="button"
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-sm font-bold rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-semibold rounded-md transition-colors shadow-sm"
           onClick={fetchLogs}
         >
-          ↻ Refresh
+          <RefreshCwIcon className="w-3.5 h-3.5" />
+          <span>Refresh</span>
         </button>
       </div>
 

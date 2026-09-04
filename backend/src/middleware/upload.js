@@ -57,10 +57,55 @@ const uploadMulti = multer({
   fileFilter,
 });
 
+const ALLOWED_VIDEO_MIME_TYPES = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/x-matroska",
+  "video/x-msvideo",
+  "video/webm",
+  "application/octet-stream",
+]);
+
+const ALLOWED_VIDEO_EXTENSIONS = new Set([".mp4", ".mov", ".mkv", ".avi", ".webm"]);
+
+const MAX_VIDEO_MB = parseInt(process.env.MAX_VIDEO_SIZE_MB || "150", 10);
+const MAX_VIDEO_BYTES = MAX_VIDEO_MB * 1024 * 1024;
+
+function videoFileFilter(req, file, cb) {
+  const mimeType = (file.mimetype || "").toLowerCase();
+  const ext = path.extname(file.originalname || "").toLowerCase();
+
+  if (ALLOWED_VIDEO_MIME_TYPES.has(mimeType) || ALLOWED_VIDEO_EXTENSIONS.has(ext)) {
+    cb(null, true);
+  } else {
+    cb(
+      new multer.MulterError(
+        "LIMIT_UNEXPECTED_FILE",
+        `Unsupported video type: ${mimeType || ext}. Only MP4, MOV, MKV, AVI, and WEBM are accepted.`
+      ),
+      false
+    );
+  }
+}
+
+// Video upload middleware
+const uploadVideo = multer({
+  storage,
+  limits: {
+    fileSize: MAX_VIDEO_BYTES,
+    files: 1,
+  },
+  fileFilter: videoFileFilter,
+});
+
 module.exports = {
   upload: uploadSingle,
   uploadSingle,
   uploadMulti,
+  uploadVideo,
   MAX_BYTES,
+  MAX_VIDEO_BYTES,
   ALLOWED_MIME_TYPES,
+  ALLOWED_VIDEO_MIME_TYPES,
 };
+

@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback } from "react";
+import { UploadCloudIcon, RefreshCwIcon, AlertTriangleIcon } from "./Icons";
 
 const MAX_SIZE_MB = 20;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -76,7 +77,9 @@ export default function UploadZone({ onFileSelected, disabled }) {
 
       {!preview ? (
         <>
-          <div className="upload-icon">📷</div>
+          <div className="upload-icon flex justify-center py-2">
+            <UploadCloudIcon className="w-10 h-10 text-slate-400" />
+          </div>
           <div className="upload-title">
             {dragOver ? "Release to upload" : "Drag & drop your image"}
           </div>
@@ -101,7 +104,10 @@ export default function UploadZone({ onFileSelected, disabled }) {
                 className="upload-preview-overlay"
                 onClick={() => inputRef.current?.click()}
               >
-                <span className="upload-preview-change">🔄 Change image</span>
+                <span className="upload-preview-change flex items-center justify-center gap-1.5">
+                  <RefreshCwIcon className="w-3.5 h-3.5" />
+                  <span>Change image</span>
+                </span>
               </div>
             )}
           </div>
@@ -112,8 +118,9 @@ export default function UploadZone({ onFileSelected, disabled }) {
       )}
 
       {error && (
-        <div className="upload-error mt-sm">
-          <span>⚠️</span> {error}
+        <div className="upload-error mt-sm flex items-center justify-center gap-1.5">
+          <AlertTriangleIcon className="w-4 h-4 text-red-500 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
     </div>

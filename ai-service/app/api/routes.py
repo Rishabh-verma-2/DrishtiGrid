@@ -94,6 +94,8 @@ async def process_image(image: UploadFile = File(...)):
             "bbox": p["bbox"],
             "original_crop": p.get("original_crop_b64", ""),
             "enhanced_crop": p.get("enhanced_crop_b64", ""),
+            "car_color": p.get("car_color"),
+            "car_model": p.get("car_model"),
             "raw_ocr": p.get("raw_ocr", ""),
             "normalized_plate": p.get("normalized_plate", ""),
             "detection_confidence": p.get("detection_confidence", 0.0),

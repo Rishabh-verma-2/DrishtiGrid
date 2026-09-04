@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getPlateAlerts as getAlerts, updateAlertStatus } from "../api/alertsApi";
 import AlertDetailModal from "../components/AlertDetailModal";
+import { RefreshCwIcon, SearchIcon } from "../components/Icons";
 
 const PRIORITY_CLASSES = {
   HIGH: "bg-red-100 text-red-800 border border-red-200",
@@ -99,10 +100,11 @@ export default function AlertHistoryPage() {
         </div>
         <button
           type="button"
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-sm font-bold rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 text-xs font-semibold rounded-md transition-colors shadow-sm"
           onClick={fetchAlerts}
         >
-          ↻ Refresh
+          <RefreshCwIcon className="w-3.5 h-3.5" />
+          <span>Refresh</span>
         </button>
       </div>
 

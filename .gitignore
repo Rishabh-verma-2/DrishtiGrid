@@ -33,3 +33,8 @@ desktop.ini
 *.pt
 *.pth
 !ai-service/model_weights/.gitkeep
+
+# Runtime data files (auto-generated, not for version control)
+backend/data/*.json
+backend/data/*.txt
+!backend/data/.gitkeep

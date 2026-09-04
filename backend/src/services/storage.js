@@ -19,6 +19,7 @@ if (!fs.existsSync(DATA_DIR)) {
 const RECORDS_FILE = path.join(DATA_DIR, "plate_records.json");
 const ALERTS_FILE = path.join(DATA_DIR, "plate_alerts.json");
 const AUDIT_FILE = path.join(DATA_DIR, "audit_logs.json");
+const DETECTIONS_FILE = path.join(DATA_DIR, "plate_detections.json");
 
 // Helper to safely read JSON file
 function readJson(filePath, defaultValue = []) {
@@ -602,6 +603,172 @@ async function getAuditLogs(limit = 100) {
   return logs.slice(0, limit);
 }
 
+// ---------------------------------------------------------------------------
+// Video Plate Detections Operations (FEATURE 4 & 5)
+// ---------------------------------------------------------------------------
+
+async function createPlateDetection(data) {
+  if (isMongoConnected()) {
+    try {
+      const PlateDetection = require("../models/PlateDetection");
+      const detection = await PlateDetection.create({
+        video_id: data.video_id || null,
+        source_type: data.source_type || (data.video_id ? "VIDEO" : "IMAGE"),
+        source_name: data.source_name || (data.video_id ? `video_${data.video_id}` : "upload.jpg"),
+        frame_second: data.frame_second != null ? data.frame_second : 0,
+        first_seen_second: data.first_seen_second != null ? data.first_seen_second : (data.frame_second || 0),
+        last_seen_second: data.last_seen_second != null ? data.last_seen_second : (data.frame_second || 0),
+        occurrence_count: data.occurrence_count != null ? data.occurrence_count : 1,
+        seen_seconds: Array.isArray(data.seen_seconds) ? data.seen_seconds : (data.frame_second != null ? [data.frame_second] : [0]),
+        plate_number: data.plate_number,
+        raw_ocr: data.raw_ocr || "",
+        timestamp: data.timestamp || new Date().toISOString(),
+        latitude: data.latitude != null ? Number(data.latitude) : null,
+        longitude: data.longitude != null ? Number(data.longitude) : null,
+        location_address: data.location_address || null,
+        cropped_image_url: data.cropped_image_url || null,
+        cropped_image_public_id: data.cropped_image_public_id || null,
+        source_video_url: data.source_video_url || "",
+        car_color: data.car_color || null,
+        car_model: data.car_model || null,
+        detection_confidence: data.detection_confidence || 0.0,
+        ocr_confidence: data.ocr_confidence || 0.0,
+        overall_confidence: data.overall_confidence || 0.0,
+        match_status: data.match_status || "NO_MATCH",
+        matched_record: data.matched_record || null,
+        image_deleted: !!data.image_deleted,
+      });
+      return detection.toJSON();
+    } catch (err) {
+      console.warn("MongoDB createPlateDetection failed, falling back to local store:", err.message);
+    }
+  }
+
+  const detections = readJson(DETECTIONS_FILE, []);
+  const newDetection = {
+    id: `det_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+    detectionId: `DET-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+    video_id: data.video_id || null,
+    source_type: data.source_type || (data.video_id ? "VIDEO" : "IMAGE"),
+    source_name: data.source_name || (data.video_id ? `video_${data.video_id}` : "upload.jpg"),
+    frame_second: data.frame_second != null ? data.frame_second : 0,
+    first_seen_second: data.first_seen_second != null ? data.first_seen_second : (data.frame_second || 0),
+    last_seen_second: data.last_seen_second != null ? data.last_seen_second : (data.frame_second || 0),
+    occurrence_count: data.occurrence_count != null ? data.occurrence_count : 1,
+    seen_seconds: Array.isArray(data.seen_seconds) ? data.seen_seconds : (data.frame_second != null ? [data.frame_second] : [0]),
+    plate_number: data.plate_number,
+    raw_ocr: data.raw_ocr || "",
+    timestamp: data.timestamp || new Date().toISOString(),
+    latitude: data.latitude != null ? Number(data.latitude) : null,
+    longitude: data.longitude != null ? Number(data.longitude) : null,
+    location_address: data.location_address || null,
+    cropped_image_url: data.cropped_image_url || null,
+    cropped_image_public_id: data.cropped_image_public_id || null,
+    source_video_url: data.source_video_url || "",
+    car_color: data.car_color || null,
+    car_model: data.car_model || null,
+    detection_confidence: data.detection_confidence || 0.0,
+    ocr_confidence: data.ocr_confidence || 0.0,
+    overall_confidence: data.overall_confidence || 0.0,
+    match_status: data.match_status || "NO_MATCH",
+    matched_record: data.matched_record || null,
+    image_deleted: !!data.image_deleted,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  detections.unshift(newDetection);
+  writeJson(DETECTIONS_FILE, detections);
+  return newDetection;
+}
+
+async function getPlateDetections(query = {}) {
+  const { video_id, match_status, source_type, search, car_color, limit = 500 } = query;
+
+  if (isMongoConnected()) {
+    try {
+      const PlateDetection = require("../models/PlateDetection");
+      const filter = {};
+      if (video_id) filter.video_id = video_id;
+      if (match_status && match_status !== "ALL") filter.match_status = match_status;
+      if (source_type && source_type !== "ALL") filter.source_type = source_type;
+      if (car_color && car_color !== "ALL") filter.car_color = { $regex: car_color, $options: "i" };
+      if (search && search.trim()) {
+        const clean = search.trim();
+        filter.$or = [
+          { plate_number: { $regex: clean, $options: "i" } },
+          { raw_ocr: { $regex: clean, $options: "i" } },
+          { location_address: { $regex: clean, $options: "i" } },
+          { source_name: { $regex: clean, $options: "i" } },
+        ];
+      }
+      const detections = await PlateDetection.find(filter)
+        .sort({ createdAt: -1, frame_second: 1 })
+        .limit(Number(limit))
+        .lean();
+      return detections.map((d) => ({
+        ...d,
+        id: d._id.toString(),
+      }));
+    } catch (err) {
+      console.warn("MongoDB getPlateDetections failed, falling back to local store:", err.message);
+    }
+  }
+
+  let detections = readJson(DETECTIONS_FILE, []);
+  if (video_id) {
+    detections = detections.filter((d) => d.video_id === video_id);
+  }
+  if (match_status && match_status !== "ALL") {
+    detections = detections.filter((d) => d.match_status === match_status);
+  }
+  if (source_type && source_type !== "ALL") {
+    detections = detections.filter((d) => (d.source_type || "VIDEO") === source_type);
+  }
+  if (car_color && car_color !== "ALL") {
+    detections = detections.filter((d) => (d.car_color || "").toLowerCase().includes(car_color.toLowerCase()));
+  }
+  if (search && search.trim()) {
+    const clean = search.trim().toLowerCase();
+    detections = detections.filter(
+      (d) =>
+        (d.plate_number || "").toLowerCase().includes(clean) ||
+        (d.raw_ocr || "").toLowerCase().includes(clean) ||
+        (d.location_address || "").toLowerCase().includes(clean) ||
+        (d.source_name || "").toLowerCase().includes(clean)
+    );
+  }
+
+  // Sort by newest created, then by frame_second
+  detections.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  return detections.slice(0, Number(limit));
+}
+
+async function updatePlateDetection(id, updates) {
+  if (isMongoConnected()) {
+    try {
+      const PlateDetection = require("../models/PlateDetection");
+      const filter = id.startsWith("DET-") ? { detectionId: id } : { _id: id };
+      const doc = await PlateDetection.findOneAndUpdate(filter, { $set: updates }, { new: true }).lean();
+      if (doc) return { ...doc, id: doc._id.toString() };
+    } catch (err) {
+      console.warn("MongoDB updatePlateDetection failed, falling back to local store:", err.message);
+    }
+  }
+
+  const detections = readJson(DETECTIONS_FILE, []);
+  const index = detections.findIndex((d) => d.id === id || d.detectionId === id);
+  if (index === -1) return null;
+
+  detections[index] = {
+    ...detections[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+  writeJson(DETECTIONS_FILE, detections);
+  return detections[index];
+}
+
 module.exports = {
   getPlateRecords,
   createPlateRecord,
@@ -615,4 +782,7 @@ module.exports = {
   logAudit,
   getDashboardStats,
   getAuditLogs,
+  createPlateDetection,
+  getPlateDetections,
+  updatePlateDetection,
 };

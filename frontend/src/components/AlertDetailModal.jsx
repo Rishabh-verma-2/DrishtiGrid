@@ -1,3 +1,5 @@
+import { AlertTriangleIcon, XIcon } from "./Icons";
+
 const PRIORITY_CLASSES = {
   HIGH: "bg-red-100 text-red-800 border-red-300",
   MEDIUM: "bg-amber-100 text-amber-800 border-amber-300",
@@ -30,16 +32,21 @@ export default function AlertDetailModal({ alert, onClose, onUpdateStatus }) {
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-red-900 px-5 py-4 flex justify-between items-center">
-          <div>
-            <h2 className="text-base font-extrabold text-white tracking-wide">🚨 ALERT INCIDENT REPORT</h2>
-            <p className="text-xs text-red-300 mt-0.5">Alert ID: {alert.alertId}</p>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded bg-red-800 border border-red-700 flex items-center justify-center text-white shrink-0">
+              <AlertTriangleIcon className="w-4 h-4 text-red-200" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white tracking-wider uppercase">ALERT INCIDENT REPORT</h2>
+              <p className="text-xs text-red-300 mt-0.5 font-mono">Alert ID: {alert.alertId}</p>
+            </div>
           </div>
           <button
             type="button"
-            className="text-red-300 hover:text-white text-xl font-bold transition-colors w-8 h-8 flex items-center justify-center rounded"
+            className="text-red-300 hover:text-white p-1 transition-colors rounded"
             onClick={onClose}
           >
-            ✕
+            <XIcon className="w-5 h-5" />
           </button>
         </div>
 
