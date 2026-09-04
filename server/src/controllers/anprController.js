@@ -1,8 +1,12 @@
 const PlateRecord = require('../models/PlateRecord');
+const PlateDetection = require('../models/PlateDetection');
+const StoredPlate = require('../models/StoredPlate');
 const Alert = require('../models/Alert');
 const Camera = require('../models/Camera');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
+const videoService = require('../services/videoService');
+const plateStorageService = require('../services/plateStorageService');
 const {
   normalizePlateNumber,
   canonicalPlateNumber,
@@ -57,7 +61,6 @@ async function callAIService(buffer, filename, mimetype) {
  * Allows testing the UI, watchlist matching, and alerts seamlessly.
  */
 function generateFallbackAIDetection(filename, activeRecords) {
-  // Check if filename contains a known plate or pick from watchlist / realistic Gujarat plate
   let samplePlate = 'GJ01BM4679';
   let matchedSample = null;
 
@@ -85,17 +88,19 @@ function generateFallbackAIDetection(filename, activeRecords) {
     plates: [
       {
         plate_id: 1,
-        bbox: { x: 180, y: 220, width: 220, height: 65 },
-        original_crop: '',
-        enhanced_crop: '',
+        bbox: { x1: 180, y1: 220, x2: 400, y2: 285 },
+        original_crop_b64: '',
+        enhanced_crop_b64: '',
         raw_ocr: rawOcr,
         normalized_plate: normalizePlateNumber(samplePlate),
         detection_confidence: 0.942,
         ocr_confidence: 0.968,
         overall_confidence: 0.955,
+        car_color: 'White',
+        vehicle_type: 'car',
+        car_model: null,
         validation_status: 'VALID_FORMAT',
         validation_note: 'Validated Indian Registration Syntax (Gujarat/State Standard)',
-        stages_applied: ['opencv_preprocess', 'clahe', 'paddleocr_simulated'],
       },
     ],
     timings: { total_ms: 120, simulated: true },
@@ -110,7 +115,6 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
   let alertCount = 0;
   const enrichedPlates = [];
 
-  // Lookup camera for metadata if provided
   let cameraDoc = null;
   if (cameraId) {
     cameraDoc = await Camera.findById(cameraId).catch(() => null);
@@ -138,11 +142,11 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
           type: 'anpr_match',
           severity: alertSeverity,
           title: `ANPR Hit: ${rec.category} Vehicle ${rec.plate_number}`,
-          description: `Vehicle with license plate "${rec.plate_number}" matched active watchlist [${rec.category}]. Detection confidence: ${(plate.overall_confidence * 100).toFixed(1)}%.`,
+          description: `Vehicle with license plate "${rec.plate_number}" matched active watchlist [${rec.category}]. Color: ${plate.car_color || 'Unknown'}. Detection confidence: ${((plate.overall_confidence || 0.9) * 100).toFixed(1)}%.`,
           location: cameraDoc?.location || { type: 'Point', coordinates: [72.5714, 23.0225] },
           district: cameraDoc?.district || 'Ahmedabad',
           address: cameraDoc?.address || { district: 'Ahmedabad', city: 'Ahmedabad', area: 'Command Grid' },
-          snapshot: plate.enhanced_crop || plate.original_crop || '',
+          snapshot: plate.enhanced_crop_b64 || plate.original_crop_b64 || plate.enhanced_crop || '',
           metadata: {
             detected_plate: plate.raw_ocr || plate.normalized_plate,
             normalized_plate: plate.normalized_plate,
@@ -153,6 +157,8 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
             ocr_confidence: plate.ocr_confidence,
             detection_confidence: plate.detection_confidence,
             overall_confidence: plate.overall_confidence,
+            car_color: plate.car_color || null,
+            vehicle_type: plate.vehicle_type || 'car',
             source_image_name: sourceImageName,
             reference_id: rec.reference_id,
             vehicleModel: rec.vehicleModel,
@@ -165,13 +171,11 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
           await createdAlert.populate('camera', 'name cameraId address location');
         }
 
-        // Increment alert count and last detected on record
         await PlateRecord.findByIdAndUpdate(rec._id, {
           $inc: { total_alerts: 1 },
           last_detected_at: new Date(),
         });
 
-        // Broadcast real-time Socket.IO alerts
         if (io) {
           io.emit('alert:new', createdAlert);
           io.emit('anpr:match', {
@@ -191,6 +195,25 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
       } catch (err) {
         logger.error(`Error saving ANPR alert: ${err.message}`);
       }
+    }
+
+    // Also store plate into registry
+    try {
+      await plateStorageService.storePlate({
+        plate_number: plate.normalized_plate || plate.raw_ocr,
+        raw_ocr: plate.raw_ocr,
+        car_color: plate.car_color || null,
+        car_model: plate.car_model || null,
+        source_type: 'IMAGE',
+        source_name: sourceImageName || 'image_upload',
+        overall_confidence: plate.overall_confidence || 0.9,
+        detection_confidence: plate.detection_confidence || 0.9,
+        ocr_confidence: plate.ocr_confidence || 0.9,
+        match_status: matchResult.matchStatus,
+        cropped_image_url: plate.enhanced_crop_b64 || plate.original_crop_b64 ? `data:image/jpeg;base64,${plate.enhanced_crop_b64 || plate.original_crop_b64}` : null,
+      });
+    } catch (storeErr) {
+      // Non-fatal
     }
 
     enrichedPlates.push({
@@ -314,6 +337,174 @@ const analyzeVehicleImages = async (req, res) => {
 };
 
 /**
+ * @desc    Upload & analyze video footage for 1-FPS ANPR surveillance
+ * @route   POST /api/anpr/video/upload
+ */
+const uploadAndAnalyzeVideo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No video file provided. Please upload an MP4, MOV, AVI, or WebM video.',
+      });
+    }
+
+    const videoId = `vid_${Date.now()}`;
+    const { recordedAt, latitude, longitude } = req.body;
+
+    const job = await videoService.enqueueVideoProcessing({
+      videoId,
+      videoBuffer: req.file.buffer,
+      originalFilename: req.file.originalname,
+      recordedAt,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null,
+      io: req.io,
+    });
+
+    res.status(202).json({
+      success: true,
+      message: 'Video accepted for 1-FPS ANPR surveillance analysis.',
+      jobId: job.jobId,
+      videoId: job.videoId,
+      status: job.status,
+      source_video_url: job.source_video_url,
+    });
+  } catch (error) {
+    logger.error(`Video upload error: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get video processing job progress/status
+ * @route   GET /api/anpr/video/job/:jobId
+ */
+const getVideoJobStatus = async (req, res) => {
+  const { jobId } = req.params;
+  const status = videoService.getJobStatus(jobId);
+
+  if (!status) {
+    return res.status(404).json({
+      success: false,
+      message: `Job ${jobId} not found or expired from memory.`,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    job: status,
+  });
+};
+
+/**
+ * @desc    Get all plate detections for a specific video
+ * @route   GET /api/anpr/video/detections/:videoId
+ */
+const getVideoDetections = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const detections = await PlateDetection.find({ video_id: videoId })
+      .sort({ frame_second: 1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      count: detections.length,
+      detections,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get historical plate detections across all videos/images
+ * @route   GET /api/anpr/detections
+ */
+const getDetections = async (req, res) => {
+  try {
+    const {
+      plate_number,
+      car_color,
+      vehicle_type,
+      match_status,
+      video_id,
+      startDate,
+      endDate,
+      page = 1,
+      limit = 50,
+    } = req.query;
+
+    const query = {};
+
+    if (plate_number) {
+      query.plate_number = { $regex: plate_number.trim(), $options: 'i' };
+    }
+    if (car_color && car_color !== 'ALL') {
+      query.car_color = car_color;
+    }
+    if (vehicle_type && vehicle_type !== 'ALL') {
+      query.vehicle_type = vehicle_type;
+    }
+    if (match_status && match_status !== 'ALL') {
+      query.match_status = match_status;
+    }
+    if (video_id) {
+      query.video_id = video_id;
+    }
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    const total = await PlateDetection.countDocuments(query);
+    const detections = await PlateDetection.find(query)
+      .sort({ createdAt: -1 })
+      .skip((parseInt(page) - 1) * parseInt(limit))
+      .limit(parseInt(limit))
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      count: detections.length,
+      detections,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get stored plates registry
+ * @route   GET /api/anpr/stored-plates
+ */
+const getStoredPlates = async (req, res) => {
+  try {
+    const { search, car_color, match_status, video_id, limit } = req.query;
+    const plates = await plateStorageService.getStoredPlates({
+      search,
+      car_color,
+      match_status,
+      video_id,
+      limit: limit ? parseInt(limit) : 200,
+    });
+
+    res.status(200).json({
+      success: true,
+      count: plates.length,
+      plates,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
  * @desc    Get all Watchlist Plate Records
  * @route   GET /api/anpr/watchlist
  */
@@ -375,7 +566,6 @@ const createWatchlistRecord = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid vehicle plate number format.' });
     }
 
-    // Check duplicate active record
     const existing = await PlateRecord.findOne({ normalized_plate_number: normalized });
     if (existing) {
       return res.status(409).json({
@@ -476,6 +666,7 @@ const getANPRStats = async (req, res) => {
   try {
     const activeRecords = await PlateRecord.countDocuments({ status: 'ACTIVE' });
     const totalRecords = await PlateRecord.countDocuments();
+    const totalDetections = await PlateDetection.countDocuments();
 
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -501,6 +692,7 @@ const getANPRStats = async (req, res) => {
       data: {
         activeRecords,
         totalRecords,
+        totalDetections,
         alertsToday,
         activeAlerts,
         totalAnprAlerts,
@@ -515,6 +707,11 @@ const getANPRStats = async (req, res) => {
 
 module.exports = {
   analyzeVehicleImages,
+  uploadAndAnalyzeVideo,
+  getVideoJobStatus,
+  getVideoDetections,
+  getDetections,
+  getStoredPlates,
   getWatchlist,
   createWatchlistRecord,
   updateWatchlistRecord,

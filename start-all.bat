@@ -8,12 +8,15 @@ echo.
 cd /d "%~dp0"
 
 :: 1. Launch Python AI Service (if configured)
-if exist "ai-service\venv\Scripts\uvicorn.exe" (
+if exist "ai-service\.venv\Scripts\uvicorn.exe" (
+    echo [1/3] Starting Python FastAPI AI Service on port 8000...
+    start "DrishtiGrid - Python AI Service (:8000)" cmd /k "cd ai-service && call .venv\Scripts\activate.bat && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+) else if exist "ai-service\venv\Scripts\uvicorn.exe" (
     echo [1/3] Starting Python FastAPI AI Service on port 8000...
     start "DrishtiGrid - Python AI Service (:8000)" cmd /k "cd ai-service && call venv\Scripts\activate.bat && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 ) else (
     echo [INFO] Python venv not found. Node.js backend will run with intelligent ANPR simulation fallback.
-    echo To enable the full local deep-learning AI pipeline, run setup-anpr.bat
+    echo To enable the full local deep-learning AI pipeline, see RUN_AND_INSTALL_COMMANDS.txt
 )
 
 :: 2. Launch Node.js Backend Server

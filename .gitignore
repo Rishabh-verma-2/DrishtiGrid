@@ -2,11 +2,11 @@
 node_modules/
 */node_modules/
 
-# Environment variables (CRITICAL: NEVER COMMIT SECRETS)
-.env
-.env*.local
-server/.env
-client/.env
+# Environment variables (Tracked for private repository multi-device deployment)
+!.env
+!server/.env
+!client/.env
+!ai-service/.env
 
 # Production build outputs
 dist/
@@ -35,7 +35,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 venv/
+.venv/
 ai-service/venv/
+ai-service/.venv/
 .pytest_cache/
 ai-service/model_weights/*.pt
 ai-service/model_weights/*.pth

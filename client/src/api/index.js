@@ -77,6 +77,14 @@ export const anprAPI = {
     apiClient.post('/anpr/analyze', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
+  uploadVideo: (formData) =>
+    apiClient.post('/anpr/video/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  getVideoJobStatus: (jobId) => apiClient.get(`/anpr/video/job/${jobId}`),
+  getVideoDetections: (videoId) => apiClient.get(`/anpr/video/detections/${videoId}`),
+  getDetections: (params) => apiClient.get('/anpr/detections', { params }),
+  getStoredPlates: (params) => apiClient.get('/anpr/stored-plates', { params }),
   getWatchlist: (params) => apiClient.get('/anpr/watchlist', { params }),
   createWatchlistRecord: (data) => apiClient.post('/anpr/watchlist', data),
   updateWatchlistRecord: (id, data) => apiClient.patch(`/anpr/watchlist/${id}`, data),

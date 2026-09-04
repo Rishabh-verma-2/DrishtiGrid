@@ -74,6 +74,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"PaddleOCR loading failed: {e}")
 
+    # 5. YOLO Vehicle Attributes Model
+    try:
+        from app.detection.vehicle_attributes import _get_vehicle_model
+        _get_vehicle_model()
+    except Exception as e:
+        logger.warning(f"Vehicle model preloading failed (non-fatal): {e}")
+
     logger.info("=== All models loaded. Ready to serve requests. ===")
 
     yield  # --- Application runs here ---

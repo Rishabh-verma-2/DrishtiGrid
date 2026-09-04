@@ -4,6 +4,11 @@ const multer = require('multer');
 const { authenticate, authorize } = require('../middleware/auth');
 const {
   analyzeVehicleImages,
+  uploadAndAnalyzeVideo,
+  getVideoJobStatus,
+  getVideoDetections,
+  getDetections,
+  getStoredPlates,
   getWatchlist,
   createWatchlistRecord,
   updateWatchlistRecord,
@@ -11,11 +16,11 @@ const {
   getANPRStats,
 } = require('../controllers/anprController');
 
-// Configure multer memory storage for vehicle image uploads
-const upload = multer({
+// Multer memory storage for vehicle image uploads (up to 30 MB)
+const uploadImage = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 30 * 1024 * 1024, // 30 MB per file
+    fileSize: 30 * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
@@ -27,6 +32,22 @@ const upload = multer({
   },
 });
 
+// Multer memory storage for video uploads (up to 150 MB)
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 150 * 1024 * 1024,
+  },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/mkv', 'application/octet-stream'];
+    if (allowed.includes(file.mimetype) || /\.(mp4|mov|avi|webm|mkv)$/i.test(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid video format. Supported formats: MP4, MOV, AVI, WebM, MKV.'), false);
+    }
+  },
+});
+
 // All ANPR endpoints require authentication & government role authorization
 router.use(authenticate);
 router.use(authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'));
@@ -34,12 +55,11 @@ router.use(authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'));
 // Vehicle Image Analysis (single or batch up to 10 images)
 router.post(
   '/analyze',
-  upload.fields([
+  uploadImage.fields([
     { name: 'images', maxCount: 10 },
     { name: 'image', maxCount: 1 },
   ]),
   (req, res, next) => {
-    // Normalize files so req.files is a flat array
     if (req.files) {
       const allFiles = [...(req.files['images'] || []), ...(req.files['image'] || [])];
       req.files = allFiles;
@@ -48,6 +68,15 @@ router.post(
   },
   analyzeVehicleImages
 );
+
+// 1-FPS Video Surveillance Processing
+router.post('/video/upload', uploadVideo.single('video'), uploadAndAnalyzeVideo);
+router.get('/video/job/:jobId', getVideoJobStatus);
+router.get('/video/detections/:videoId', getVideoDetections);
+
+// Historical Detections Explorer & Stored Plates Registry
+router.get('/detections', getDetections);
+router.get('/stored-plates', getStoredPlates);
 
 // Watchlist CRUD
 router.get('/watchlist', getWatchlist);

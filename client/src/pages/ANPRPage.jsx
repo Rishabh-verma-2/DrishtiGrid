@@ -5,11 +5,15 @@ import { useThemeStore } from '../store/themeStore';
 import {
   Car, Shield, AlertTriangle, CheckCircle, Search, Plus, RefreshCw,
   UploadCloud, FileText, Activity, Image as ImageIcon, Sparkles, Filter,
-  CheckCircle2, XCircle, AlertCircle, Eye, Trash2, Edit, Radio, Clock
+  CheckCircle2, XCircle, AlertCircle, Eye, Trash2, Edit, Radio, Clock,
+  Video, Layers
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MatchAlertModal from '../components/anpr/MatchAlertModal';
 import WatchlistModal from '../components/anpr/WatchlistModal';
+import VideoUploadZone from '../components/anpr/VideoUploadZone';
+import VideoAnalysisResults from '../components/anpr/VideoAnalysisResults';
+import DetectionsExplorer from '../components/anpr/DetectionsExplorer';
 
 const CATEGORY_COLORS = {
   STOLEN: 'text-red-400 bg-red-500/15 border-red-500/30',
@@ -39,6 +43,7 @@ export default function ANPRPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [batchResults, setBatchResults] = useState(null);
   const [activeMatchModal, setActiveMatchModal] = useState(null);
+  const [activeVideoJob, setActiveVideoJob] = useState(null);
 
   // Watchlist state
   const [search, setSearch] = useState('');
@@ -259,10 +264,10 @@ export default function ANPRPage() {
       </div>
 
       {/* ─── Navigation Tabs ─── */}
-      <div className={`border-b flex items-center gap-2 ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
+      <div className={`border-b flex items-center gap-2 overflow-x-auto ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
         <button
           onClick={() => setActiveTab('SCANNER')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
             activeTab === 'SCANNER'
               ? 'border-blue-500 text-blue-500 bg-blue-500/5'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -273,8 +278,35 @@ export default function ANPRPage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('VIDEO')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
+            activeTab === 'VIDEO'
+              ? 'border-blue-500 text-blue-500 bg-blue-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Video className="w-4 h-4" />
+          <span>1-FPS Video Surveillance</span>
+          <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-blue-500/20 text-blue-400 font-bold">
+            NEW
+          </span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('DETECTIONS')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
+            activeTab === 'DETECTIONS'
+              ? 'border-blue-500 text-blue-500 bg-blue-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Intelligence Explorer</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('WATCHLIST')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
             activeTab === 'WATCHLIST'
               ? 'border-blue-500 text-blue-500 bg-blue-500/5'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -289,7 +321,7 @@ export default function ANPRPage() {
 
         <button
           onClick={() => setActiveTab('INCIDENTS')}
-          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 transition-all ${
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
             activeTab === 'INCIDENTS'
               ? 'border-red-500 text-red-400 bg-red-500/5'
               : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -495,6 +527,33 @@ export default function ANPRPage() {
                                   <p className="text-[11px] text-slate-400 font-mono">
                                     Normalized: <strong className="text-slate-200">{plate.normalized_plate}</strong>
                                   </p>
+                                  {(plate.car_color || plate.vehicle_type) && (
+                                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                                      {plate.car_color && (
+                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/5 border border-white/10 text-slate-300">
+                                          <span
+                                            className="w-2 h-2 rounded-full border border-white/30"
+                                            style={{
+                                              backgroundColor:
+                                                plate.car_color.toLowerCase().includes('white') ? '#ffffff'
+                                                : plate.car_color.toLowerCase().includes('black') ? '#000000'
+                                                : plate.car_color.toLowerCase().includes('red') ? '#ef4444'
+                                                : plate.car_color.toLowerCase().includes('blue') ? '#3b82f6'
+                                                : plate.car_color.toLowerCase().includes('green') ? '#22c55e'
+                                                : plate.car_color.toLowerCase().includes('silver') || plate.car_color.toLowerCase().includes('gray') ? '#94a3b8'
+                                                : '#64748b'
+                                            }}
+                                          />
+                                          <span>{plate.car_color}</span>
+                                        </span>
+                                      )}
+                                      {plate.vehicle_type && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                          {plate.vehicle_type}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
 
                                 <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${
@@ -577,6 +636,39 @@ export default function ANPRPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: 1-FPS CCTV VIDEO SURVEILLANCE PIPELINE
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'VIDEO' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          {!activeVideoJob ? (
+            <VideoUploadZone
+              activeRecordsCount={statsData?.activeRecords ?? 0}
+              onAnalysisComplete={(jobId, videoId) => {
+                setActiveVideoJob({ jobId, videoId });
+              }}
+            />
+          ) : (
+            <VideoAnalysisResults
+              jobId={activeVideoJob.jobId}
+              videoId={activeVideoJob.videoId}
+              sourceVideoUrl={activeVideoJob.sourceVideoUrl}
+              onReset={() => setActiveVideoJob(null)}
+              onViewAlert={() => setActiveTab('INCIDENTS')}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB: HISTORICAL INTELLIGENCE EXPLORER & REGISTRY
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'DETECTIONS' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <DetectionsExplorer />
         </div>
       )}
 

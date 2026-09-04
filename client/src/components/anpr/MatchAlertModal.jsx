@@ -143,7 +143,38 @@ export default function MatchAlertModal({ match, onClose, onAcknowledge }) {
               <div>
                 <span className={`font-bold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Vehicle Model / Spec:</span>
                 <p className={`font-semibold mt-0.5 ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                  {rec.vehicleModel || 'N/A'}
+                  {match.car_model || rec.vehicleModel || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <span className={`font-bold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Detected Body Color:</span>
+                <p className={`font-semibold mt-0.5 ${isLight ? 'text-slate-900' : 'text-slate-200'} flex items-center gap-1.5`}>
+                  {match.car_color || rec.vehicleColor ? (
+                    <>
+                      <span
+                        className="w-2.5 h-2.5 rounded-full border border-white/40 inline-block"
+                        style={{
+                          backgroundColor:
+                            (match.car_color || rec.vehicleColor || '').toLowerCase().includes('white') ? '#ffffff'
+                            : (match.car_color || rec.vehicleColor || '').toLowerCase().includes('black') ? '#000000'
+                            : (match.car_color || rec.vehicleColor || '').toLowerCase().includes('red') ? '#ef4444'
+                            : (match.car_color || rec.vehicleColor || '').toLowerCase().includes('blue') ? '#3b82f6'
+                            : (match.car_color || rec.vehicleColor || '').toLowerCase().includes('green') ? '#22c55e'
+                            : (match.car_color || rec.vehicleColor || '').toLowerCase().includes('silver') || (match.car_color || rec.vehicleColor || '').toLowerCase().includes('gray') ? '#94a3b8'
+                            : '#64748b'
+                        }}
+                      />
+                      <span>{match.car_color || rec.vehicleColor}</span>
+                    </>
+                  ) : (
+                    'Not Available'
+                  )}
+                </p>
+              </div>
+              <div>
+                <span className={`font-bold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Detected Vehicle Type:</span>
+                <p className={`font-semibold uppercase text-blue-400 mt-0.5`}>
+                  {match.vehicle_type || 'Car'}
                 </p>
               </div>
             </div>

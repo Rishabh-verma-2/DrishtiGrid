@@ -1,0 +1,142 @@
+================================================================================
+DRISHTIGRID ANPR - INSTALLATION & SERVER EXECUTION MANUAL
+Platform: Gujarat Government CCTV Surveillance & GIS Intelligence Platform
+================================================================================
+
+This document provides all setup, installation, and server startup commands
+for the 3 microservices composing DrishtiGrid:
+  1. Python FastAPI AI Service (Inference Engine)      -> Port 8000
+  2. Node.js Express Server (Backend API & Sockets)     -> Port 5001
+  3. React 19 + Vite Web Application (Frontend)         -> Port 5173
+
+--------------------------------------------------------------------------------
+PART 1: PREREQUISITES
+--------------------------------------------------------------------------------
+- OS: Windows 10/11 (or Linux / macOS)
+- Node.js: v18+ (tested on v24.x)
+- Python: 3.10+ (tested on Python 3.10 / 3.11 / 3.12)
+- MongoDB: Running locally at mongodb://localhost:27017/drishtigrid OR MongoDB Atlas URI in server/.env
+
+--------------------------------------------------------------------------------
+PART 2: INSTALLATION COMMANDS
+--------------------------------------------------------------------------------
+
+[A] Python AI Service (ai-service):
+----------------------------------
+Open PowerShell or Command Prompt in the repository root:
+
+  cd e:\DrishtiGrid\ai-service
+
+  # 1. Create Python virtual environment
+  python -m venv .venv
+
+  # 2. Activate virtual environment
+  # In PowerShell:
+  .\.venv\Scripts\Activate.ps1
+  # OR in Command Prompt (CMD):
+  .\.venv\Scripts\activate.bat
+
+  # 3. Upgrade pip
+  python -m pip install --upgrade pip
+
+  # 4. Install all required AI and computer vision packages
+  pip install -r requirements.txt
+
+  # 5. Download pretrained neural weights (YOLOv8, Zero-DCE, Real-ESRGAN):
+  python download_models.py
+
+  # Note: PaddleOCR weights download automatically on first inference.
+
+
+[B] Node.js Backend Server (server):
+-----------------------------------
+Open a terminal in the server directory:
+
+  cd e:\DrishtiGrid\server
+
+  # Install all npm dependencies (includes express, mongoose, socket.io,
+  # cloudinary, fluent-ffmpeg, and ffmpeg-static for 1-FPS video extraction):
+  npm install
+
+
+[C] React Frontend Client (client):
+-----------------------------------
+Open a terminal in the client directory:
+
+  cd e:\DrishtiGrid\client
+
+  # Install frontend packages:
+  npm install
+
+
+--------------------------------------------------------------------------------
+PART 3: RUNNING THE SERVERS
+--------------------------------------------------------------------------------
+
+OPTION 1: AUTOMATIC 1-CLICK LAUNCH (Recommended for Windows)
+------------------------------------------------------------
+From the repository root, simply double-click or run:
+
+  .\start-all.bat
+
+Or in PowerShell:
+  powershell -ExecutionPolicy Bypass -File .\start-all.ps1
+
+This automatically launches all 3 services in separate titled terminal windows.
+
+
+OPTION 2: MANUAL LAUNCH (3 Separate Terminal Windows)
+-----------------------------------------------------
+
+[Terminal 1] - Python AI Microservice (Port 8000)
+-------------------------------------------------
+  cd e:\DrishtiGrid\ai-service
+  .\.venv\Scripts\uvicorn.exe app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  Health Check:
+    Open browser at: http://localhost:8000/health
+    API Docs (Swagger): http://localhost:8000/docs
+
+
+[Terminal 2] - Node.js Express Backend (Port 5001)
+--------------------------------------------------
+  cd e:\DrishtiGrid\server
+  npm run dev
+
+  Backend Health:
+    http://localhost:5001/api/health
+
+
+[Terminal 3] - React Web Portal (Port 5173)
+-------------------------------------------
+  cd e:\DrishtiGrid\client
+  npm run dev
+
+  Web Dashboard:
+    http://localhost:5173
+
+
+--------------------------------------------------------------------------------
+PART 4: VERIFYING ANPR FEATURES
+--------------------------------------------------------------------------------
+1. Navigate to: http://localhost:5173
+2. Log in with government credentials (e.g., Police or Admin).
+3. From the left sidebar, click "ANPR Surveillance" (વાહન નંબર પ્લેટ ટ્રેકિંગ).
+4. Five operational tabs are available:
+   - Tab 1: Plate Verification & Scanner:
+     Upload multi-vehicle photos. Inspect plate bounding boxes, raw vs enhanced
+     crops, OCR confidence meters, vehicle body color swatch, and vehicle type.
+   - Tab 2: 1-FPS Video Surveillance (NEW):
+     Drag-and-drop CCTV video clips (.mp4, .mov, .avi, .webm).
+     Enqueues 1-FPS frame extraction with 30s temporal track deduplication,
+     consensus vehicle color majority voting, and automatic Cloudinary privacy
+     cleanup (non-matching vehicle crops are purged; watchlist hits are retained).
+   - Tab 3: Intelligence Explorer (NEW):
+     Filter historical sightings and the unique stored plate registry by
+     plate number, vehicle color, vehicle type, match state, and date.
+   - Tab 4: Hotlist & Watchlist Registry:
+     Add/Edit/Deactivate wanted, stolen, or suspicious vehicles.
+   - Tab 5: Incident Detections:
+     Real-time police alert log with instant audio and Socket.IO broadcast.
+
+================================================================================

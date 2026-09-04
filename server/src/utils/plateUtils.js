@@ -6,11 +6,16 @@
  * Normalizes a plate number string:
  * - Upper-cases
  * - Removes spaces, hyphens, dots, underscores, special characters
+ * - Strips embossed 'IND' prefix if present
  * Example: 'GJ 01 AB 1234' -> 'GJ01AB1234'
  */
 function normalizePlateNumber(input) {
   if (!input || typeof input !== 'string') return '';
-  return input.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let clean = input.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (clean.startsWith('IND') && clean.length >= 11) {
+    clean = clean.slice(3);
+  }
+  return clean;
 }
 
 /**
@@ -91,6 +96,90 @@ function levenshteinDistance(s1, s2) {
 }
 
 /**
+ * Find the longest common substring between two strings.
+ */
+function findLongestCommonSubstring(s1, s2) {
+  if (!s1 || !s2) return '';
+  let longest = '';
+  for (let i = 0; i < s1.length; i++) {
+    for (let j = i + 1; j <= s1.length; j++) {
+      const sub = s1.slice(i, j);
+      if (s2.includes(sub) && sub.length > longest.length) {
+        longest = sub;
+      }
+    }
+  }
+  return longest;
+}
+
+/**
+ * Determine whether two plate detections represent the same vehicle / number plate,
+ * handling partial crops, single-row vs two-row OCR, character substitutions, and prefix/suffix noise.
+ */
+function arePlatesSimilar(p1, p2) {
+  if (!p1 || !p2) return false;
+  const n1 = normalizePlateNumber(p1);
+  const n2 = normalizePlateNumber(p2);
+  if (!n1 || !n2) return false;
+
+  // 1. Exact match
+  if (n1 === n2) return true;
+
+  // 2. Canonical match (O/0, I/1, B/8, Z/2, S/5)
+  const c1 = canonicalPlateNumber(n1);
+  const c2 = canonicalPlateNumber(n2);
+  if (c1 === c2) return true;
+
+  // 3. Substring containment (one plate is a partial/half view of the other)
+  if (n1.length >= 4 && n2.includes(n1)) return true;
+  if (n2.length >= 4 && n1.includes(n2)) return true;
+  if (c1.length >= 4 && c2.includes(c1)) return true;
+  if (c2.length >= 4 && c1.includes(c2)) return true;
+
+  // 4. Same registration number suffix (last 4 digits match and edit distance <= 3)
+  if (n1.length >= 5 && n2.length >= 5) {
+    const end1 = n1.slice(-4);
+    const end2 = n2.slice(-4);
+    if (end1 === end2 && /^\d{3,4}$/.test(end1)) {
+      if (levenshteinDistance(c1, c2) <= 3) return true;
+    }
+  }
+
+  // 5. Longest Common Substring
+  const lcs = findLongestCommonSubstring(c1, c2);
+  if (lcs.length >= 5) return true;
+  if (lcs.length >= 4 && Math.min(n1.length, n2.length) <= 6) return true;
+
+  // 6. Levenshtein edit distance <= 2 for strings with length >= 6
+  if (Math.abs(n1.length - n2.length) <= 2 && Math.min(n1.length, n2.length) >= 6) {
+    if (levenshteinDistance(c1, c2) <= 2) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Determine consensus vehicle color across multiple frame detections via majority vote.
+ */
+function getConsensusColor(colorsList) {
+  if (!colorsList || !Array.isArray(colorsList) || colorsList.length === 0) return null;
+  const counts = {};
+  for (const c of colorsList) {
+    if (!c) continue;
+    counts[c] = (counts[c] || 0) + 1;
+  }
+  let bestColor = null;
+  let maxCount = 0;
+  for (const [color, count] of Object.entries(counts)) {
+    if (count > maxCount) {
+      maxCount = count;
+      bestColor = color;
+    }
+  }
+  return bestColor;
+}
+
+/**
  * Match a detected plate against active watchlist records.
  */
 function matchPlateAgainstRecords(detectedPlate, allRecords) {
@@ -168,5 +257,8 @@ module.exports = {
   normalizePlateNumber,
   canonicalPlateNumber,
   levenshteinDistance,
+  findLongestCommonSubstring,
+  arePlatesSimilar,
+  getConsensusColor,
   matchPlateAgainstRecords,
 };

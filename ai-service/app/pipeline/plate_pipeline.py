@@ -27,6 +27,7 @@ import cv2
 import numpy as np
 
 from app.config.settings import MODEL_CONFIG
+from app.detection.vehicle_attributes import detect_vehicle_attributes
 from app.detection.yolo_detector import detect_license_plates
 from app.enhancement.clahe import apply_clahe
 from app.enhancement.zero_dce import enhance_with_zero_dce
@@ -87,6 +88,8 @@ def _process_single_plate(
         "detection_confidence": round(detection_confidence, 4),
         "original_crop_b64": "",
         "enhanced_crop_b64": "",
+        "car_color": None,
+        "car_model": None,
         "raw_ocr": "",
         "normalized_plate": "",
         "ocr_confidence": 0.0,
@@ -274,9 +277,57 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
             continue
         valid_plate_results.append(p)
 
+    # Deduplicate by normalized plate text:
+    # When the same plate number is read from two slightly different crops
+    # (e.g. overlapping bounding boxes that survived NMS), keep the one with
+    # the highest overall_confidence. Plates with empty normalized text are
+    # deduplicated by raw_ocr instead so genuine empty-OCR detections are
+    # also collapsed (only the best bbox survives).
+    seen_texts: dict = {}  # normalized_text → plate_result with highest confidence
+    for p in valid_plate_results:
+        norm = p.get("normalized_plate", "").strip()
+        key = norm if norm else f"__raw_{p.get('raw_ocr', '').strip()}"
+        # Plates with no OCR text at all keep a unique key so they are NOT
+        # merged with each other (each is independently retained).
+        if not key or key == "__raw_":
+            key = f"__noocr_{p['plate_id']}"
+        existing = seen_texts.get(key)
+        if existing is None:
+            seen_texts[key] = p
+        else:
+            # Keep the higher-confidence detection
+            if p.get("overall_confidence", 0.0) > existing.get("overall_confidence", 0.0):
+                logger.info(
+                    f"Deduplicated plate text '{key}': replacing plate #{existing['plate_id']} "
+                    f"(conf={existing.get('overall_confidence', 0.0):.3f}) with "
+                    f"plate #{p['plate_id']} (conf={p.get('overall_confidence', 0.0):.3f})"
+                )
+                seen_texts[key] = p
+            else:
+                logger.info(
+                    f"Deduplicated plate text '{key}': discarding plate #{p['plate_id']} "
+                    f"(conf={p.get('overall_confidence', 0.0):.3f}), "
+                    f"keeping #{existing['plate_id']} (conf={existing.get('overall_confidence', 0.0):.3f})"
+                )
+
+    valid_plate_results = list(seen_texts.values())
+
     # Re-index plate IDs
     for idx, p in enumerate(valid_plate_results, start=1):
         p["plate_id"] = idx
+
+    # --- Vehicle attribute detection (Feature 2) ---
+    for p in valid_plate_results:
+        try:
+            attr = detect_vehicle_attributes(image, p["bbox"])
+            p["car_color"] = attr.get("car_color")
+            p["car_model"] = attr.get("car_model")
+            p["vehicle_bbox"] = attr.get("vehicle_bbox")
+        except Exception as e:
+            logger.warning(f"Plate #{p['plate_id']}: Vehicle attribute detection failed: {e}")
+            p["car_color"] = None
+            p["car_model"] = None
+            p["vehicle_bbox"] = None
 
     result["total_plates_detected"] = len(valid_plate_results)
     result["timings"]["plate_processing"] = round(time.perf_counter() - t0, 3)

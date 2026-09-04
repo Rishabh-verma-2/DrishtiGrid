@@ -70,6 +70,10 @@ def normalize_plate_text(raw: str) -> str:
     # Remove non-alphanumeric characters
     cleaned = re.sub(r"[^A-Z0-9]", "", cleaned)
 
+    # Strip embossed 'IND' badge text if present at beginning of plate
+    if cleaned.startswith("IND") and len(cleaned) >= 11:
+        cleaned = cleaned[3:]
+
     # Smart Indian license plate canonical character correction
     # Format: [2 State Letters][1-2 District Digits][1-3 Series Letters][1-4 Number Digits]
     if 8 <= len(cleaned) <= 11:

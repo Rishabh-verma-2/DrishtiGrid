@@ -7,13 +7,17 @@ Write-Host ""
 $RootPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # 1. AI Service
-$UvicornExe = "$RootPath\ai-service\venv\Scripts\uvicorn.exe"
-if (Test-Path $UvicornExe) {
+$UvicornDotVenv = "$RootPath\ai-service\.venv\Scripts\uvicorn.exe"
+$UvicornVenv = "$RootPath\ai-service\venv\Scripts\uvicorn.exe"
+if (Test-Path $UvicornDotVenv) {
+    Write-Host "[1/3] Starting Python FastAPI AI Service on port 8000..." -ForegroundColor Yellow
+    Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$RootPath\ai-service'; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --host 0.0.0.0 --port 8000"
+} elseif (Test-Path $UvicornVenv) {
     Write-Host "[1/3] Starting Python FastAPI AI Service on port 8000..." -ForegroundColor Yellow
     Start-Process powershell -ArgumentList "-NoExit", "-Command", "Set-Location '$RootPath\ai-service'; .\venv\Scripts\activate.ps1; uvicorn app.main:app --host 0.0.0.0 --port 8000"
 } else {
-    Write-Host "[INFO] Python virtual environment not found in ai-service/venv." -ForegroundColor Yellow
-    Write-Host "The server will operate in intelligent fallback simulation mode until .\setup-anpr.ps1 is run." -ForegroundColor DarkGray
+    Write-Host "[INFO] Python virtual environment not found in ai-service/.venv or ai-service/venv." -ForegroundColor Yellow
+    Write-Host "The server will operate in intelligent fallback simulation mode until AI dependencies are installed (see RUN_AND_INSTALL_COMMANDS.txt)." -ForegroundColor DarkGray
 }
 
 # 2. Server
