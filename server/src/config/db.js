@@ -1,5 +1,13 @@
+const dns = require('dns');
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
+
+// Set reliable public DNS servers to resolve MongoDB SRV records on networks where local DNS refuses SRV queries
+try {
+  dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+  // Ignore in environments where setting DNS servers is not supported
+}
 
 const connectDB = async () => {
   try {

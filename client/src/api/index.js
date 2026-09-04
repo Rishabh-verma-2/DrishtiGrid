@@ -37,9 +37,24 @@ export const footageTicketAPI = {
   getById: (id) => apiClient.get(`/footage-tickets/${id}`),
   create: (data) => apiClient.post('/footage-tickets', data),
   updateStatus: (id, data) => apiClient.patch(`/footage-tickets/${id}/status`, data),
-  dispatch: (id, data) => apiClient.post(`/footage-tickets/${id}/dispatch`, data),
-  recordAccess: (id) => apiClient.post(`/footage-tickets/${id}/access`),
+  uploadEvidence: (id, formData) =>
+    apiClient.post(`/footage-tickets/${id}/evidence`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  verifyEvidence: (id, evidenceId) =>
+    apiClient.get(`/footage-tickets/${id}/evidence/${evidenceId}/verify`),
+  getResponses: (id) => apiClient.get(`/footage-tickets/${id}/responses`),
+  addResponse: (id, data) => apiClient.post(`/footage-tickets/${id}/responses`, data),
   getAuditLogs: (id) => apiClient.get(`/footage-tickets/${id}/audit-logs`),
+  getAllAuditLogs: (params) => apiClient.get('/footage-tickets/audit-logs/all', { params }),
+  dispatch: (id, data) => apiClient.post(`/footage-tickets/${id}/dispatch`, data),
+  recordAccess: (id, data) => apiClient.post(`/footage-tickets/${id}/access`, data),
+};
+
+export const notificationAPI = {
+  getAll: (params) => apiClient.get('/notifications', { params }),
+  markRead: (id) => apiClient.patch(`/notifications/${id}/read`),
+  markAllRead: () => apiClient.patch('/notifications/read-all'),
 };
 
 export const userAPI = {

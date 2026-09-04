@@ -18,6 +18,7 @@ const footageTicketRoutes = require('./routes/footageTickets');
 const userRoutes = require('./routes/users');
 const auditLogRoutes = require('./routes/auditLogs');
 const systemHealthRoutes = require('./routes/systemHealth');
+const notificationRoutes = require('./routes/notifications');
 
 const createApp = () => {
   const app = express();
@@ -99,6 +100,7 @@ const createApp = () => {
   app.use('/api/users', userRoutes);
   app.use('/api/audit-logs', auditLogRoutes);
   app.use('/api/system-health', systemHealthRoutes);
+  app.use('/api/notifications', notificationRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────
   app.use(notFound);

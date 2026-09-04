@@ -8,6 +8,7 @@ import {
 import useAuthStore from '../../store/authStore';
 import useSocketStore from '../../store/socketStore';
 import { useThemeStore } from '../../store/themeStore';
+import NotificationCenter from '../notifications/NotificationCenter';
 import toast from 'react-hot-toast';
 
 const ALL_NAV_ITEMS = [
@@ -103,12 +104,13 @@ export default function DashboardLayout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-150 group relative
                   ${collapsed ? 'justify-center' : ''}
+                  ${isActive ? 'active' : ''}
                   ${isActive
                     ? isLight
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-blue-500/15 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20'
+                      : 'bg-blue-500/15 hover:bg-blue-500/20 text-blue-400 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.25)]'
                     : isLight
-                      ? 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                      ? 'text-slate-700 hover:bg-blue-50/80 hover:text-blue-700'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
                   }`
                 }
@@ -116,24 +118,30 @@ export default function DashboardLayout() {
               >
                 {({ isActive }) => (
                   <>
-                    <Icon className={`w-4.5 h-4.5 shrink-0 ${
+                    <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
                       isActive
                         ? 'text-white'
-                        : isLight ? 'text-slate-500 group-hover:text-slate-800' : 'text-slate-500 group-hover:text-slate-300'
+                        : isLight ? 'text-slate-500 group-hover:text-blue-600' : 'text-slate-500 group-hover:text-blue-400'
                     }`} />
                     {!collapsed && (
                       <div className="flex flex-col min-w-0">
-                        <span className="truncate leading-tight">{label}</span>
-                        <span className={`text-[9px] ${
+                        <span className={`truncate leading-tight sidebar-label-main ${
                           isActive
-                            ? isLight ? 'text-blue-100' : 'text-blue-300/80'
-                            : isLight ? 'text-slate-400' : 'text-slate-500'
-                        } truncate`}>
+                            ? isLight ? 'text-white font-bold' : 'text-blue-300 font-bold'
+                            : isLight ? 'text-slate-800 group-hover:text-slate-900 font-semibold' : 'text-slate-300 group-hover:text-slate-100 font-semibold'
+                        }`}>
+                          {label}
+                        </span>
+                        <span className={`text-[10px] truncate sidebar-label-gu transition-colors ${
+                          isActive
+                            ? isLight ? 'text-blue-100 font-semibold' : 'text-blue-400 font-semibold'
+                            : isLight ? 'text-slate-500 group-hover:text-blue-700 font-medium' : 'text-slate-500 group-hover:text-blue-300 font-medium'
+                        }`}>
                           {labelGu}
                         </span>
                       </div>
                     )}
-                    {/* Active indicator */}
+                    {/* Active indicator for dark mode */}
                     {isActive && !isLight && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-400 rounded-r-full" />
                     )}
@@ -357,17 +365,8 @@ export default function DashboardLayout() {
                 <span className="text-[11px] font-black tracking-wide">GRID LIVE</span>
               </div>
 
-              {/* Alert Bell */}
-              <button
-                onClick={() => navigate('/alerts')}
-                className={`relative p-2 rounded-xl transition-all ${
-                  isLight ? 'text-slate-600 hover:bg-slate-100 hover:text-slate-900' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                }`}
-                title="Security Alerts"
-              >
-                <Bell className="w-4.5 h-4.5" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_6px_#ef4444]" />
-              </button>
+              {/* Real-time Department & Ticket Notification Center */}
+              <NotificationCenter />
 
               {/* User Profile & Role Badge */}
               <div className={`flex items-center gap-2.5 border rounded-2xl px-3.5 py-1.5 ${

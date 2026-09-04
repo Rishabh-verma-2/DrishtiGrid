@@ -3,20 +3,24 @@ const logger = require('../utils/logger');
 
 // Track connected operators
 const connectedUsers = new Map();
+let ioInstance = null;
 
 const initializeSocket = (io) => {
+  ioInstance = io;
+
   // Socket authentication middleware
   io.use(authenticateSocket);
 
   io.on('connection', (socket) => {
     const user = socket.user;
-    logger.info(`Socket connected: ${user.name} (${user.role}) - ${socket.id}`);
+    logger.info(`Socket connected: ${user.name} (${user.role}) - Dept: ${user.department || 'N/A'} - ${socket.id}`);
 
     // Store connected user
     connectedUsers.set(socket.id, {
       userId: user._id.toString(),
       name: user.name,
       role: user.role,
+      department: user.department,
       district: user.district,
       socketId: socket.id,
       connectedAt: new Date(),
@@ -24,6 +28,15 @@ const initializeSocket = (io) => {
 
     // Emit connected users count
     io.emit('users:online', connectedUsers.size);
+
+    // Join user-specific private room
+    socket.join(`user:${user._id.toString()}`);
+
+    // Join department room for ticket and evidence notifications
+    if (user.department) {
+      socket.join(`dept:${user.department}`);
+      logger.debug(`${user.name} joined dept room: dept:${user.department}`);
+    }
 
     // Join district room
     if (user.district) {
@@ -33,6 +46,9 @@ const initializeSocket = (io) => {
 
     // Join role-based room
     socket.join(`role:${user.role}`);
+    if (['ADMIN', 'SUPERADMIN'].includes(String(user.role).toUpperCase())) {
+      socket.join('role:admin');
+    }
 
     // ─── Camera Events ───────────────────────────────────────────
     socket.on('camera:subscribe', (cameraId) => {
@@ -67,7 +83,7 @@ const initializeSocket = (io) => {
     socket.on('control:message', (data) => {
       const message = {
         id: Date.now(),
-        from: { name: user.name, role: user.role },
+        from: { name: user.name, role: user.role, department: user.department },
         text: data.text,
         timestamp: new Date(),
       };
@@ -95,4 +111,33 @@ const initializeSocket = (io) => {
  */
 const getConnectedUsers = () => connectedUsers;
 
-module.exports = { initializeSocket, getConnectedUsers };
+const getIO = () => ioInstance;
+
+const emitToDepartment = (department, event, data) => {
+  if (ioInstance && department) {
+    ioInstance.to(`dept:${department}`).emit(event, data);
+    // Also notify Admins
+    ioInstance.to('role:admin').to('role:ADMIN').emit(event, data);
+  }
+};
+
+const emitToUser = (userId, event, data) => {
+  if (ioInstance && userId) {
+    ioInstance.to(`user:${userId.toString()}`).emit(event, data);
+  }
+};
+
+const emitGlobal = (event, data) => {
+  if (ioInstance) {
+    ioInstance.emit(event, data);
+  }
+};
+
+module.exports = {
+  initializeSocket,
+  getConnectedUsers,
+  getIO,
+  emitToDepartment,
+  emitToUser,
+  emitGlobal,
+};

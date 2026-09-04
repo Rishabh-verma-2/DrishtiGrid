@@ -71,20 +71,59 @@ body {
   box-shadow: 1px 0 3px rgba(0, 0, 0, 0.03) !important;
 }
 
-.theme-light aside nav a {
+.theme-light aside nav a:not(.active) {
   color: #334155 !important;
 }
 
-.theme-light aside nav a:hover {
-  background-color: #f1f5f9 !important;
+.theme-light aside nav a:not(.active) .sidebar-label-main {
+  color: #1e293b !important;
+}
+
+.theme-light aside nav a:not(.active) .sidebar-label-gu {
+  color: #64748b !important;
+}
+
+.theme-light aside nav a:not(.active) svg {
+  color: #64748b !important;
+}
+
+.theme-light aside nav a:not(.active):hover {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.theme-light aside nav a:not(.active):hover .sidebar-label-main {
   color: #0f172a !important;
+}
+
+.theme-light aside nav a:not(.active):hover .sidebar-label-gu {
+  color: #2563eb !important;
+  font-weight: 600 !important;
+}
+
+.theme-light aside nav a:not(.active):hover svg {
+  color: #2563eb !important;
 }
 
 .theme-light aside nav a.active {
   background-color: #2563eb !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+}
+
+.theme-light aside nav a.active:hover {
+  background-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+
+.theme-light aside nav a.active .sidebar-label-main {
+  color: #ffffff !important;
+}
+
+.theme-light aside nav a.active .sidebar-label-gu {
+  color: #dbeafe !important;
+  font-weight: 600 !important;
 }
 
 .theme-light aside nav a.active svg {
@@ -311,12 +350,36 @@ body {
 }
 
 .theme-dark aside nav a.active {
-  background-color: rgba(59, 130, 246, 0.15) !important;
+  background-color: rgba(59, 130, 246, 0.18) !important;
   color: #60a5fa !important;
-  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3) !important;
+}
+
+.theme-dark aside nav a.active .sidebar-label-main {
+  color: #bfdbfe !important;
+}
+
+.theme-dark aside nav a.active .sidebar-label-gu {
+  color: #60a5fa !important;
 }
 
 .theme-dark aside nav a.active svg {
+  color: #60a5fa !important;
+}
+
+.theme-dark aside nav a:not(.active):hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-dark aside nav a:not(.active):hover .sidebar-label-main {
+  color: #f8fafc !important;
+}
+
+.theme-dark aside nav a:not(.active):hover .sidebar-label-gu {
+  color: #93c5fd !important;
+}
+
+.theme-dark aside nav a:not(.active):hover svg {
   color: #60a5fa !important;
 }
 

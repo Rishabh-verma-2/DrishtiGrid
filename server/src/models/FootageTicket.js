@@ -128,15 +128,73 @@ const footageTicketSchema = new mongoose.Schema(
       default: 0,
     },
 
+    description: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+
     // ─── Status Lifecycle ──────────────────────────────────────────
     status: {
       type: String,
-      enum: ['submitted', 'under_review', 'approved', 'rejected', 'dispatched', 'closed'],
-      default: 'submitted',
+      enum: [
+        'Pending',
+        'Accepted',
+        'Processing',
+        'Evidence Uploaded',
+        'Available',
+        'Viewed',
+        'Responded',
+        'Closed',
+        'Rejected',
+        // Legacy compatibility
+        'submitted',
+        'under_review',
+        'approved',
+        'dispatched',
+        'rejected',
+        'closed',
+      ],
+      default: 'Pending',
+      set: (val) => {
+        if (!val) return 'Pending';
+        const map = {
+          submitted: 'Pending',
+          pending: 'Pending',
+          under_review: 'Accepted',
+          accepted: 'Accepted',
+          approved: 'Processing',
+          processing: 'Processing',
+          'evidence uploaded': 'Evidence Uploaded',
+          evidence_uploaded: 'Evidence Uploaded',
+          dispatched: 'Available',
+          available: 'Available',
+          viewed: 'Viewed',
+          responded: 'Responded',
+          closed: 'Closed',
+          rejected: 'Rejected',
+        };
+        const key = String(val).toLowerCase().trim();
+        return map[key] || val;
+      },
       index: true,
     },
 
     // ─── Evidence Attachment & Resolution ─────────────────────────
+    evidence: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Evidence',
+    },
+    evidenceId: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    integrityStatus: {
+      type: String,
+      enum: ['unverified', 'verified', 'compromised'],
+      default: 'unverified',
+    },
     footageUrl: {
       type: String,
       trim: true,
