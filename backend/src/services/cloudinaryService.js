@@ -15,6 +15,20 @@ cloudinary.config({
   secure: true,
 });
 
+let isCloudinaryDisabled = false;
+
+function checkAndMarkAuthError(error) {
+  if (!error) return;
+  const msg = String(error.message || error);
+  const code = error.http_code;
+  if (code === 401 || code === 403 || msg.includes("403") || msg.includes("401") || msg.includes("disabled")) {
+    if (!isCloudinaryDisabled) {
+      console.warn(`[Cloudinary] Authentication failed (${msg}). Disabling Cloudinary uploads to avoid delay and falling back to direct base64 storage.`);
+      isCloudinaryDisabled = true;
+    }
+  }
+}
+
 /**
  * Upload raw video buffer to Cloudinary.
  * @param {Buffer} buffer - Raw video file buffer
@@ -22,6 +36,10 @@ cloudinary.config({
  * @returns {Promise<{ url: string, public_id: string }>}
  */
 async function uploadVideo(buffer, videoId) {
+  if (isCloudinaryDisabled) {
+    return { url: null, public_id: null, error: "Cloudinary disabled" };
+  }
+
   return new Promise((resolve) => {
     try {
       const publicId = `drishtigrid/videos/${videoId}`;
@@ -33,6 +51,7 @@ async function uploadVideo(buffer, videoId) {
         },
         (error, result) => {
           if (error) {
+            checkAndMarkAuthError(error);
             console.error(`[Cloudinary] uploadVideo error for ${videoId}:`, error.message || error);
             // Return null url and public_id so video processing continues uninterrupted
             return resolve({
@@ -50,6 +69,7 @@ async function uploadVideo(buffer, videoId) {
 
       Readable.from(buffer).pipe(uploadStream);
     } catch (err) {
+      checkAndMarkAuthError(err);
       console.error(`[Cloudinary] uploadVideo stream exception for ${videoId}:`, err.message);
       resolve({
         url: null,
@@ -70,6 +90,10 @@ async function uploadVideo(buffer, videoId) {
  * @returns {Promise<{ url: string|null, public_id: string|null, error?: string }>}
  */
 async function uploadPlateCrop(buffer, videoId, frameSecond, plateIndex) {
+  if (isCloudinaryDisabled) {
+    return { url: null, public_id: null, error: "Cloudinary disabled" };
+  }
+
   return new Promise((resolve) => {
     try {
       const publicId = `drishtigrid/${videoId}/${frameSecond}_${plateIndex}`;
@@ -81,6 +105,7 @@ async function uploadPlateCrop(buffer, videoId, frameSecond, plateIndex) {
         },
         (error, result) => {
           if (error) {
+            checkAndMarkAuthError(error);
             console.error(
               `[Cloudinary] uploadPlateCrop error for ${publicId}:`,
               error.message || error
@@ -100,6 +125,7 @@ async function uploadPlateCrop(buffer, videoId, frameSecond, plateIndex) {
 
       Readable.from(buffer).pipe(uploadStream);
     } catch (err) {
+      checkAndMarkAuthError(err);
       console.error(`[Cloudinary] uploadPlateCrop stream exception for ${videoId}:`, err.message);
       resolve({
         url: null,
@@ -112,20 +138,32 @@ async function uploadPlateCrop(buffer, videoId, frameSecond, plateIndex) {
 
 /**
  * Delete an asset (image or video) from Cloudinary.
- * @param {string} public_id - Public ID of asset to delete
- * @param {string} [resource_type='image'] - 'image' or 'video'
- * @returns {Promise<any>}
+ * Used for GDPR / privacy compliance to clean up non-matching vehicle crops.
+ * @param {string} publicId - Cloudinary public identifier
+ * @param {string} resourceType - "image" | "video"
+ * @returns {Promise<{ success: boolean, result?: any, error?: string }>}
  */
-async function deleteAsset(public_id, resource_type = "image") {
-  if (!public_id) return { result: "skipped_no_id" };
+async function deleteAsset(publicId, resourceType = "image") {
+  if (isCloudinaryDisabled || !publicId) {
+    return { success: false, error: "Cloudinary disabled or no publicId" };
+  }
+
   try {
-    const res = await cloudinary.uploader.destroy(public_id, {
-      resource_type,
+    const result = await cloudinary.uploader.destroy(publicId, {
+      resource_type: resourceType,
+      invalidate: true,
     });
-    return res;
+    return {
+      success: result.result === "ok",
+      result: result.result,
+    };
   } catch (err) {
-    console.error(`[Cloudinary] deleteAsset error for ${public_id}:`, err.message || err);
-    return { result: "error", error: err.message };
+    checkAndMarkAuthError(err);
+    console.error(`[Cloudinary] deleteAsset error for ${publicId}:`, err.message);
+    return {
+      success: false,
+      error: err.message,
+    };
   }
 }
 

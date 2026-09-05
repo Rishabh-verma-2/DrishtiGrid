@@ -56,9 +56,11 @@ export default function Analyzer({ onViewAlert, onNavigateToRecords }) {
       return;
     }
 
+    let consecutiveErrors = 0;
     const poll = async () => {
       try {
         const updatedJob = await getVideoJobStatus(videoJob.jobId);
+        consecutiveErrors = 0;
         setVideoJob(updatedJob);
 
         // If newly completed, fetch detections and check for match alerts
@@ -82,6 +84,20 @@ export default function Analyzer({ onViewAlert, onNavigateToRecords }) {
         }
       } catch (err) {
         console.warn("Error polling video job status:", err);
+        consecutiveErrors++;
+        // If 404 (job missing) or repeated connection failures, stop polling loop
+        if (err.message?.includes("404") || consecutiveErrors >= 3) {
+          if (pollingTimerRef.current) {
+            clearInterval(pollingTimerRef.current);
+            pollingTimerRef.current = null;
+          }
+          setVideoError(
+            err.message?.includes("404")
+              ? "Video processing job was not found or was interrupted. Please try re-uploading."
+              : (err.message || "Error communicating with video processing service.")
+          );
+          setVideoJob((prev) => (prev ? { ...prev, status: "FAILED", error: err.message } : null));
+        }
       }
     };
 

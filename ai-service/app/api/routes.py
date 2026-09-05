@@ -29,7 +29,10 @@ async def health_check():
 
 
 @router.post("/process")
-async def process_image(image: UploadFile = File(...)):
+async def process_image(
+    image: UploadFile = File(...),
+    skip_full_images: Optional[bool] = False,
+):
     """
     Receive an uploaded image and run the full ANPR pipeline.
 
@@ -78,10 +81,11 @@ async def process_image(image: UploadFile = File(...)):
     # ---- Run pipeline ----
     logger.info(
         f"Processing image: '{image.filename}' "
-        f"({len(image_bytes) / 1024:.1f} KB)"
+        f"({len(image_bytes) / 1024:.1f} KB, skip_full_images={skip_full_images})"
     )
 
-    pipeline_result = run_pipeline(image_bytes)
+    include_images = not bool(skip_full_images)
+    pipeline_result = run_pipeline(image_bytes, include_images=include_images)
 
     if not pipeline_result.get("success") and pipeline_result.get("error"):
         raise HTTPException(status_code=500, detail=pipeline_result["error"])

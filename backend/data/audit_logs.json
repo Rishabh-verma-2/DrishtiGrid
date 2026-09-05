@@ -1,5 +1,56 @@
 [
   {
+    "id": "aud_1788588066339_n71ua",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788588012329_keymmb",
+    "details": {
+      "video_id": "vid_1788588012329_keymmb",
+      "total_detections": 7,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-05T06:01:06.339Z"
+  },
+  {
+    "id": "aud_1788587921199_t5xb8",
+    "action": "ALERT_GENERATED",
+    "entity_type": "ALERT",
+    "entity_id": "ALT-0010",
+    "details": {
+      "plate_number": "MH01BM4679",
+      "priority": "MEDIUM",
+      "source_image_name": "Screenshot 2026-09-03 133853.png"
+    },
+    "timestamp": "2026-09-05T05:58:41.199Z"
+  },
+  {
+    "id": "aud_1788586628369_qw77h",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788586575297_3a5i22",
+    "details": {
+      "video_id": "vid_1788586575297_3a5i22",
+      "total_detections": 7,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-05T05:37:08.369Z"
+  },
+  {
+    "id": "aud_1788585384330_k0yjs",
+    "action": "VIDEO_DETECTION_CLEANUP",
+    "entity_type": "VIDEO",
+    "entity_id": "vid_1788585334290_cvr1w8",
+    "details": {
+      "video_id": "vid_1788585334290_cvr1w8",
+      "total_detections": 7,
+      "deleted_images": 0,
+      "retained_images": 0
+    },
+    "timestamp": "2026-09-05T05:16:24.330Z"
+  },
+  {
     "id": "aud_1788501738647_qwvwf",
     "action": "VIDEO_DETECTION_CLEANUP",
     "entity_type": "VIDEO",

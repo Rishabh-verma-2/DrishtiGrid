@@ -86,14 +86,48 @@ function base64ToBuffer(b64String) {
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
 const AI_TIMEOUT_MS = 60_000;
 
-// In-memory active jobs registry
+// In-memory active jobs registry + flat-file persistence
 const activeJobs = new Map();
+const JOBS_FILE = path.join(__dirname, "../../data/video_jobs.json");
+
+function loadPersistedJobs() {
+  try {
+    if (fs.existsSync(JOBS_FILE)) {
+      const raw = fs.readFileSync(JOBS_FILE, "utf8");
+      const list = JSON.parse(raw || "[]");
+      for (const j of list) {
+        if (j && j.jobId) {
+          activeJobs.set(j.jobId, j);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[VideoService] Could not load persisted video jobs:", e.message);
+  }
+}
+
+function savePersistedJobs() {
+  try {
+    const list = Array.from(activeJobs.values()).slice(-50);
+    fs.writeFileSync(JOBS_FILE, JSON.stringify(list, null, 2), "utf8");
+  } catch (e) {
+    console.warn("[VideoService] Could not save persisted video jobs:", e.message);
+  }
+}
+
+// Initial load
+loadPersistedJobs();
 
 /**
  * Get the current status of a background video processing job.
  */
 function getJobStatus(jobId) {
-  return activeJobs.get(jobId) || null;
+  let job = activeJobs.get(jobId);
+  if (!job) {
+    loadPersistedJobs();
+    job = activeJobs.get(jobId);
+  }
+  return job || null;
 }
 
 /**
@@ -169,7 +203,7 @@ async function processFrameWithAIService(frameBuffer, frameFileName) {
     contentType: "image/jpeg",
   });
 
-  const response = await axios.post(`${AI_SERVICE_URL}/process`, form, {
+  const response = await axios.post(`${AI_SERVICE_URL}/process?skip_full_images=true`, form, {
     headers: {
       ...form.getHeaders(),
     },
@@ -396,6 +430,11 @@ async function runVideoProcessingJob({
         }
       }
 
+      // Fallback to direct base64 data URI if Cloudinary is unavailable or disabled
+      if (!cropUrl && track.bestCropB64) {
+        cropUrl = `data:image/jpeg;base64,${track.bestCropB64}`;
+      }
+
       // 4c. Generate single alert for matched vehicle
       const isMatch =
         (track.match_status === "MATCH_FOUND" || track.match_status === "POSSIBLE_MATCH") &&
@@ -516,6 +555,7 @@ async function runVideoProcessingJob({
     job.cleanedUpCount = deletedImagesCount;
     job.retainedCount = retainedImagesCount;
     job.updatedAt = new Date().toISOString();
+    savePersistedJobs();
     console.log(
       `[VideoService] Video job ${jobId} finished successfully. Unique Plates: ${detectionDocs.length}, Deleted: ${deletedImagesCount}, Retained: ${retainedImagesCount}`
     );
@@ -524,6 +564,7 @@ async function runVideoProcessingJob({
     job.status = "FAILED";
     job.error = err.message || "Unknown video processing error";
     job.updatedAt = new Date().toISOString();
+    savePersistedJobs();
   } finally {
     // Clean up temporary extracted frames directory and input video file
     safeCleanDir(tempDir);
@@ -577,6 +618,7 @@ async function enqueueVideoProcessing({
   };
 
   activeJobs.set(jobId, job);
+  savePersistedJobs();
 
   // Trigger background execution without awaiting
   setImmediate(() => {

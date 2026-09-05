@@ -195,9 +195,14 @@ def _process_single_plate(
 # Main pipeline entry point
 # ---------------------------------------------------------------------------
 
-def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
+def run_pipeline(image_bytes: bytes, include_images: bool = True) -> Dict[str, Any]:
     """
     Full end-to-end pipeline for one uploaded image.
+
+    Parameters:
+        image_bytes: Raw bytes of the uploaded image.
+        include_images: When False (e.g. video processing), skips encoding full-frame
+                        images to base64, significantly reducing CPU time and payload size.
 
     Returns a JSON-serializable result dict.
     """
@@ -218,7 +223,8 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         result["error"] = "Could not decode image. File may be corrupt or unsupported."
         return result
 
-    result["original_image_b64"] = numpy_to_base64(image)
+    if include_images:
+        result["original_image_b64"] = numpy_to_base64(image)
 
     # --- Detection ---
     t0 = time.perf_counter()
@@ -236,7 +242,7 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
 
     if total == 0:
         # No plates — still return a processed image (no annotations needed)
-        result["processed_image_b64"] = result["original_image_b64"]
+        result["processed_image_b64"] = result["original_image_b64"] if include_images else ""
         result["success"] = True
         result["timings"]["total"] = round(time.perf_counter() - pipeline_start, 3)
         return result
@@ -317,9 +323,10 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         p["plate_id"] = idx
 
     # --- Vehicle attribute detection (Feature 2) ---
+    cached_vehicles = None
     for p in valid_plate_results:
         try:
-            attr = detect_vehicle_attributes(image, p["bbox"])
+            attr, cached_vehicles = detect_vehicle_attributes(image, p["bbox"], cached_vehicles)
             p["car_color"] = attr.get("car_color")
             p["car_model"] = attr.get("car_model")
             p["vehicle_bbox"] = attr.get("vehicle_bbox")
@@ -333,20 +340,23 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
     result["timings"]["plate_processing"] = round(time.perf_counter() - t0, 3)
 
     # --- Annotated image (bounding boxes) ---
-    try:
-        annotated = draw_bounding_boxes(image, [
-            {
-                "plate_id": p["plate_id"],
-                "bbox": p["bbox"],
-                "detection_confidence": p["detection_confidence"],
-                "normalized_plate": p.get("normalized_plate", ""),
-            }
-            for p in valid_plate_results
-        ])
-        result["processed_image_b64"] = numpy_to_base64(annotated)
-    except Exception as e:
-        logger.warning(f"Failed to draw bounding boxes: {e}")
-        result["processed_image_b64"] = result["original_image_b64"]
+    if include_images:
+        try:
+            annotated = draw_bounding_boxes(image, [
+                {
+                    "plate_id": p["plate_id"],
+                    "bbox": p["bbox"],
+                    "detection_confidence": p["detection_confidence"],
+                    "normalized_plate": p.get("normalized_plate", ""),
+                }
+                for p in valid_plate_results
+            ])
+            result["processed_image_b64"] = numpy_to_base64(annotated)
+        except Exception as e:
+            logger.warning(f"Failed to draw bounding boxes: {e}")
+            result["processed_image_b64"] = result["original_image_b64"]
+    else:
+        result["processed_image_b64"] = ""
 
     result["plates"] = valid_plate_results
     result["success"] = True

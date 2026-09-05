@@ -323,15 +323,14 @@ def _extract_dominant_color(
 def detect_vehicle_attributes(
     image_bgr: np.ndarray,
     plate_bbox: Dict[str, Any],
-) -> Dict[str, Any]:
+    candidate_vehicles: Optional[List[Tuple]] = None,
+) -> Tuple[Dict[str, Any], List[Tuple]]:
     """
-    Detect vehicle containing the given license plate bounding box.
-    Returns:
-        {
-            "car_color": str | None,
-            "car_model": None,  # Pluggable; null when no classifier is loaded
-            "vehicle_bbox": {"x1": int, "y1": int, "x2": int, "y2": int} | None
-        }
+    Given an image and a plate bounding box:
+    1. Detects vehicle bounding boxes (running YOLO model only if candidate_vehicles is None)
+    2. Matches plate to the containing / closest vehicle
+    3. Extracts vehicle dominant paint color using body sampling
+    4. Returns a tuple (attribute_dict, candidate_vehicles) for caching across plates in the same frame.
     """
     result = {
         "car_color": None,
@@ -340,12 +339,12 @@ def detect_vehicle_attributes(
     }
 
     if image_bgr is None or not plate_bbox:
-        return result
+        return result, candidate_vehicles or []
 
     try:
         model = _get_vehicle_model()
         if model is None:
-            return result
+            return result, candidate_vehicles or []
 
         # Parse plate box
         px1 = int(plate_bbox.get("x1", 0))
@@ -354,35 +353,28 @@ def detect_vehicle_attributes(
         py2 = int(plate_bbox.get("y2", 0))
         plate_box = (px1, py1, px2, py2)
 
-        # Run inference on the full frame
-        preds = model(image_bgr, verbose=False, conf=0.25)
-        if not preds or len(preds) == 0:
-            # Still attempt color extraction from plate surroundings
-            result["car_color"] = _extract_dominant_color(image_bgr, plate_box, None)
-            return result
-
-        boxes = preds[0].boxes
-        if boxes is None or len(boxes) == 0:
-            result["car_color"] = _extract_dominant_color(image_bgr, plate_box, None)
-            return result
-
-        img_h, img_w = image_bgr.shape[:2]
-        candidate_vehicles = []
-
-        for b in boxes:
-            cls_id = int(b.cls[0].item())
-            if cls_id in VEHICLE_CLASSES:
-                xyxy = b.xyxy[0].cpu().numpy().astype(int)
-                vx1 = max(0, min(img_w, int(xyxy[0])))
-                vy1 = max(0, min(img_h, int(xyxy[1])))
-                vx2 = max(0, min(img_w, int(xyxy[2])))
-                vy2 = max(0, min(img_h, int(xyxy[3])))
-                conf = float(b.conf[0].item())
-                candidate_vehicles.append((vx1, vy1, vx2, vy2, VEHICLE_CLASSES[cls_id], conf))
+        # Run vehicle detection model once per image if not already cached
+        if candidate_vehicles is None:
+            candidate_vehicles = []
+            preds = model(image_bgr, verbose=False, conf=0.25)
+            if preds and len(preds) > 0:
+                boxes = preds[0].boxes
+                if boxes is not None and len(boxes) > 0:
+                    img_h, img_w = image_bgr.shape[:2]
+                    for b in boxes:
+                        cls_id = int(b.cls[0].item())
+                        if cls_id in VEHICLE_CLASSES:
+                            xyxy = b.xyxy[0].cpu().numpy().astype(int)
+                            vx1 = max(0, min(img_w, int(xyxy[0])))
+                            vy1 = max(0, min(img_h, int(xyxy[1])))
+                            vx2 = max(0, min(img_w, int(xyxy[2])))
+                            vy2 = max(0, min(img_h, int(xyxy[3])))
+                            conf = float(b.conf[0].item())
+                            candidate_vehicles.append((vx1, vy1, vx2, vy2, VEHICLE_CLASSES[cls_id], conf))
 
         if not candidate_vehicles:
             result["car_color"] = _extract_dominant_color(image_bgr, plate_box, None)
-            return result
+            return result, candidate_vehicles
 
         # Step 1: Find candidate that contains plate box
         matched_vehicle = None
@@ -410,8 +402,8 @@ def detect_vehicle_attributes(
                 pc_y = (py1 + py2) / 2.0
                 return ((vc_x - pc_x) ** 2 + (vc_y - pc_y) ** 2) ** 0.5
 
-            candidate_vehicles.sort(key=dist_to_plate)
-            matched_vehicle = candidate_vehicles[0]
+            sorted_candidates = sorted(candidate_vehicles, key=dist_to_plate)
+            matched_vehicle = sorted_candidates[0]
 
         vehicle_box_tuple = None
         if matched_vehicle:
@@ -426,4 +418,4 @@ def detect_vehicle_attributes(
     except Exception as e:
         logger.error(f"Error during vehicle attribute detection: {e}", exc_info=True)
 
-    return result
+    return result, candidate_vehicles or []
