@@ -90,5 +90,7 @@ export const anprAPI = {
   updateWatchlistRecord: (id, data) => apiClient.patch(`/anpr/watchlist/${id}`, data),
   deleteWatchlistRecord: (id, hard = false) => apiClient.delete(`/anpr/watchlist/${id}?hard=${hard}`),
   getStats: () => apiClient.get('/anpr/stats'),
+  clearIncidents: () => apiClient.delete('/anpr/incidents'),
 };
+
 

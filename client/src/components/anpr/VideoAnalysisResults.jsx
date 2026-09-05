@@ -34,11 +34,15 @@ export default function VideoAnalysisResults({
     refetch,
   } = useQuery({
     queryKey: ['video-detections', videoId],
-    queryFn: () => anprAPI.getVideoDetections(videoId).then((r) => r.data?.detections || []),
+    queryFn: () => anprAPI.getVideoDetections(videoId).then((r) => r.data || {}),
     enabled: !!videoId,
   });
 
-  const detections = detectionsData || [];
+  const detections = Array.isArray(detectionsData)
+    ? detectionsData
+    : detectionsData?.detections || [];
+  const effectiveVideoUrl =
+    sourceVideoUrl || detectionsData?.source_video_url || `/api/anpr/video/stream/${videoId}`;
 
   // Jump video player to specific second
   const handleSeekTo = (second) => {
@@ -199,9 +203,9 @@ export default function VideoAnalysisResults({
       </div>
 
       {/* ─── Video Player & Keyframe Scrubber ─── */}
-      {sourceVideoUrl && (
+      {effectiveVideoUrl && (
         <div className={`p-4 rounded-2xl border ${
-          isLight ? 'bg-white border-slate-200' : 'bg-[#141929] border-white/10'
+          isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#141929] border-white/10'
         }`}>
           <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
             <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -218,7 +222,7 @@ export default function VideoAnalysisResults({
           <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-80 flex items-center justify-center border border-white/10">
             <video
               ref={videoRef}
-              src={sourceVideoUrl}
+              src={effectiveVideoUrl}
               controls
               className="w-full h-full object-contain"
             />

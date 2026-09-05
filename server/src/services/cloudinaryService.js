@@ -1,11 +1,17 @@
 /**
- * Cloudinary Integration Service for DrishtiGrid ANPR.
- * Handles upload of raw surveillance videos, structured plate crop evidence,
- * and automated deletion of non-matching license plate crops.
+ * Cloudinary Integration Service for DrishtiGrid ANPR & Footage Requisition.
+ * Handles:
+ * 1. Upload of raw surveillance videos and plate crop evidence.
+ * 2. Automated deletion of non-matching license plate crops.
+ * 3. Secure storage and retrieval of AES-256-GCM encrypted evidence binaries with local fallback.
  */
 
 const cloudinary = require("cloudinary").v2;
+const fs = require("fs");
+const path = require("path");
+const axios = require("axios");
 const { Readable } = require("stream");
+const logger = require("../utils/logger");
 
 // Configure Cloudinary from environment variables
 cloudinary.config({
@@ -14,6 +20,16 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
+
+// Local fallback directory for offline safety
+const LOCAL_FALLBACK_DIR = path.join(__dirname, "../../uploads/evidence");
+if (!fs.existsSync(LOCAL_FALLBACK_DIR)) {
+  try {
+    fs.mkdirSync(LOCAL_FALLBACK_DIR, { recursive: true });
+  } catch (e) {
+    logger.warn(`Could not create local fallback dir ${LOCAL_FALLBACK_DIR}: ${e.message}`);
+  }
+}
 
 /**
  * Upload raw video buffer to Cloudinary.
@@ -144,8 +160,127 @@ async function deleteAsset(public_id, resource_type = "image") {
   }
 }
 
+/**
+ * Upload an encrypted buffer to Cloudinary as secure raw resource with local fallback
+ * @param {Buffer} encryptedBuffer
+ * @param {string} ticketId
+ * @param {string} evidenceId
+ * @returns {Promise<{ publicId: string, secureUrl: string, resourceType: string, version?: string, isLocalFallback?: boolean }>}
+ */
+async function uploadEncryptedBuffer(encryptedBuffer, ticketId, evidenceId) {
+  const publicId = `drishtigrid/evidence/${ticketId}_${evidenceId}`;
+
+  // Ensure local directory exists
+  if (!fs.existsSync(LOCAL_FALLBACK_DIR)) {
+    try {
+      fs.mkdirSync(LOCAL_FALLBACK_DIR, { recursive: true });
+    } catch (e) {}
+  }
+
+  return new Promise((resolve, reject) => {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY) {
+      try {
+        const fallbackPath = path.join(LOCAL_FALLBACK_DIR, `${ticketId}_${evidenceId}.bin`);
+        fs.writeFileSync(fallbackPath, encryptedBuffer);
+        logger.info(`Stored encrypted evidence locally: ${fallbackPath}`);
+        return resolve({
+          publicId,
+          secureUrl: `/uploads/evidence/${ticketId}_${evidenceId}.bin`,
+          resourceType: "raw",
+          isLocalFallback: true,
+        });
+      } catch (localErr) {
+        return reject(new Error(`Failed to store encrypted evidence locally: ${localErr.message}`));
+      }
+    }
+
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "raw",
+        public_id: publicId,
+        overwrite: true,
+        folder: "drishtigrid/evidence",
+        tags: ["cctv_evidence", ticketId, evidenceId],
+      },
+      (error, result) => {
+        if (error) {
+          logger.warn(`Cloudinary upload failed: ${error.message}. Storing in secure local fallback archive.`);
+          try {
+            const fallbackPath = path.join(LOCAL_FALLBACK_DIR, `${ticketId}_${evidenceId}.bin`);
+            fs.writeFileSync(fallbackPath, encryptedBuffer);
+            return resolve({
+              publicId,
+              secureUrl: `/uploads/evidence/${ticketId}_${evidenceId}.bin`,
+              resourceType: "raw",
+              isLocalFallback: true,
+            });
+          } catch (localErr) {
+            return reject(new Error(`Failed to store encrypted evidence: ${error.message} && ${localErr.message}`));
+          }
+        }
+
+        logger.info(`Encrypted evidence stored in Cloudinary: ${result.public_id} (${result.secure_url})`);
+        resolve({
+          publicId: result.public_id,
+          secureUrl: result.secure_url,
+          resourceType: result.resource_type || "raw",
+          version: result.version ? String(result.version) : undefined,
+        });
+      }
+    );
+
+    Readable.from(encryptedBuffer).pipe(uploadStream);
+  });
+}
+
+/**
+ * Fetch raw encrypted buffer from Cloudinary URL or local fallback
+ * @param {string} secureUrl 
+ * @param {string} publicId 
+ * @returns {Promise<Buffer>}
+ */
+async function fetchEncryptedBuffer(secureUrl, publicId) {
+  // 1. Check if it's explicitly a local fallback path
+  if (secureUrl && secureUrl.startsWith("/uploads/evidence/")) {
+    const fileName = path.basename(secureUrl);
+    const localPath = path.join(LOCAL_FALLBACK_DIR, fileName);
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+  }
+
+  // 2. Also check if local fallback file exists under ticketId_evidenceId
+  if (publicId) {
+    const cleanId = publicId.split("/").pop();
+    const localPath = path.join(LOCAL_FALLBACK_DIR, `${cleanId}.bin`);
+    if (fs.existsSync(localPath)) {
+      return fs.readFileSync(localPath);
+    }
+  }
+
+  // 3. Fetch from remote Cloudinary URL via axios
+  if (secureUrl && (secureUrl.startsWith("http://") || secureUrl.startsWith("https://"))) {
+    try {
+      const response = await axios.get(secureUrl, {
+        responseType: "arraybuffer",
+        timeout: 30000,
+        maxRedirects: 5,
+      });
+      return Buffer.from(response.data);
+    } catch (err) {
+      logger.error(`[Cloudinary] Error fetching encrypted buffer from URL ${secureUrl}: ${err.message}`);
+      throw new Error(`Failed to fetch encrypted asset from Cloudinary: ${err.message}`);
+    }
+  }
+
+  throw new Error(`No valid URL or local fallback found for evidence asset: ${publicId || secureUrl}`);
+}
+
 module.exports = {
   uploadVideo,
   uploadPlateCrop,
   deleteAsset,
+  uploadEncryptedBuffer,
+  fetchEncryptedBuffer,
+  cloudinary,
 };

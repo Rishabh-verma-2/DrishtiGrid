@@ -10,7 +10,7 @@ const path = require("path");
 const mongoose = require("mongoose");
 const StoredPlate = require("../models/StoredPlate");
 
-const DATA_DIR = path.resolve(__dirname, "../../data");
+const DATA_DIR = path.resolve(__dirname, "../../../storage_data");
 const STORED_PLATES_JSON = path.join(DATA_DIR, "stored_number_plates.json");
 const STORED_PLATES_TXT = path.join(DATA_DIR, "stored_number_plates.txt");
 
@@ -221,10 +221,29 @@ function getStorageFilePaths() {
   };
 }
 
+function clearAllStoredPlates() {
+  ensureDataDir();
+  try {
+    fs.writeFileSync(STORED_PLATES_JSON, JSON.stringify([], null, 2), "utf8");
+    const header = [
+      "# ===========================================================================",
+      "# DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES",
+      `# Last Synchronized: ${new Date().toISOString()}`,
+      "# Total Unique Plates: 0",
+      "# ===========================================================================\n",
+    ].join("\n");
+    fs.writeFileSync(STORED_PLATES_TXT, header, "utf8");
+  } catch (err) {
+    console.error("[PlateStorageService] Error clearing local files:", err);
+  }
+}
+
 module.exports = {
   storePlate,
   getAllPlateStrings,
   getStoredPlates,
   getStorageFilePaths,
   updatePlainTextFile,
+  clearAllStoredPlates,
 };
+

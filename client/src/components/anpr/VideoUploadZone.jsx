@@ -54,7 +54,7 @@ export default function VideoUploadZone({ onAnalysisComplete, activeRecordsCount
           setIsUploading(false);
           toast.success(`Video surveillance analysis complete! Found ${job.platesDetected || 0} unique vehicle(s).`);
           if (onAnalysisComplete) {
-            onAnalysisComplete(activeJobId, activeVideoId);
+            onAnalysisComplete(activeJobId, activeVideoId, job.sourceVideoUrl || videoPreviewUrl);
           }
         } else if (job.status === 'FAILED') {
           clearInterval(pollTimerRef.current);
@@ -252,7 +252,7 @@ export default function VideoUploadZone({ onAnalysisComplete, activeRecordsCount
                 <video src={videoPreviewUrl} controls className="w-full h-full object-contain max-h-64" />
               </div>
 
-              <div className="text-xs font-bold text-slate-300 truncate">
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
                 {selectedVideo.name}
               </div>
             </div>
@@ -344,7 +344,7 @@ export default function VideoUploadZone({ onAnalysisComplete, activeRecordsCount
               <div className="space-y-3 pt-3 border-t border-white/10">
                 {isUploading && (
                   <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-300">
+                    <div className="flex justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
                       <span className="flex items-center gap-1.5">
                         <RefreshCw className="w-3 h-3 text-blue-400 animate-spin" />
                         <span>
@@ -355,7 +355,7 @@ export default function VideoUploadZone({ onAnalysisComplete, activeRecordsCount
                       </span>
                       <span>{processedPct}%</span>
                     </div>
-                    <div className="h-2 rounded-full bg-slate-700 overflow-hidden">
+                    <div className="h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
                       <div
                         className="h-full bg-blue-500 transition-all duration-300"
                         style={{ width: `${processedPct}%` }}

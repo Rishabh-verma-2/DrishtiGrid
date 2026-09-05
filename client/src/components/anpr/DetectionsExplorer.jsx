@@ -421,13 +421,19 @@ export default function DetectionsExplorer() {
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between pb-2 border-b border-white/10">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
+            <div className={`flex items-center justify-between pb-2 border-b ${
+              isLight ? 'border-slate-200' : 'border-white/10'
+            }`}>
+              <span className={`text-xs font-extrabold uppercase tracking-wider ${
+                isLight ? 'text-slate-800' : 'text-slate-400'
+              }`}>
                 License Plate Evidence Crop
               </span>
               <button
                 onClick={() => setSelectedCropModal(null)}
-                className="text-slate-400 hover:text-white p-1"
+                className={`p-1 rounded-lg transition-colors ${
+                  isLight ? 'text-slate-500 hover:text-slate-800 hover:bg-slate-100' : 'text-slate-400 hover:text-white hover:bg-white/10'
+                }`}
               >
                 <X className="w-4 h-4" />
               </button>

@@ -2,8 +2,8 @@ const PlateRecord = require('../models/PlateRecord');
 const PlateDetection = require('../models/PlateDetection');
 const StoredPlate = require('../models/StoredPlate');
 const Alert = require('../models/Alert');
-const Camera = require('../models/Camera');
-const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const { randomUUID: uuidv4 } = require('crypto');
 const logger = require('../utils/logger');
 const videoService = require('../services/videoService');
 const plateStorageService = require('../services/plateStorageService');
@@ -13,47 +13,45 @@ const {
   matchPlateAgainstRecords,
 } = require('../utils/plateUtils');
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+const axios = require('axios');
+const FormData = require('form-data');
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 /**
  * Check AI service health status
  */
 async function checkAIServiceHealth() {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const res = await fetch(`${AI_SERVICE_URL}/health`, { signal: controller.signal });
-    clearTimeout(timeoutId);
-    return res.ok;
+    const res = await axios.get(`${AI_SERVICE_URL}/health`, { timeout: 3000 });
+    return res.status === 200;
   } catch {
     return false;
   }
 }
 
 /**
- * Forward image buffer to Python AI Service
+ * Forward image buffer to Python AI Service using axios + form-data
  */
 async function callAIService(buffer, filename, mimetype) {
-  const formData = new FormData();
-  const blob = new Blob([buffer], { type: mimetype || 'image/jpeg' });
-  formData.append('image', blob, filename || 'vehicle.jpg');
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
-
-  const response = await fetch(`${AI_SERVICE_URL}/process`, {
-    method: 'POST',
-    body: formData,
-    signal: controller.signal,
+  const form = new FormData();
+  form.append('image', buffer, {
+    filename: filename || 'vehicle.jpg',
+    contentType: mimetype || 'image/jpeg',
   });
-  clearTimeout(timeoutId);
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`AI Service error (${response.status}): ${errText}`);
-  }
+  const response = await axios.post(`${AI_SERVICE_URL}/process`, form, {
+    headers: {
+      ...form.getHeaders(),
+    },
+    timeout: 180000,
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+    responseType: 'json',
+    decompress: true,
+  });
 
-  return await response.json();
+  return response.data;
 }
 
 /**
@@ -120,12 +118,20 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
     cameraDoc = await Camera.findById(cameraId).catch(() => null);
   }
   if (!cameraDoc) {
-    cameraDoc = await Camera.findOne({ status: 'active' }).catch(() => null);
+    cameraDoc = await Camera.findOne({ status: { $in: ['online', 'active'] } }).catch(() => null);
+  }
+  if (!cameraDoc) {
+    cameraDoc = await Camera.findOne().catch(() => null);
   }
 
   for (const plate of plates) {
     const matchResult = matchPlateAgainstRecords(plate.raw_ocr || plate.normalized_plate, activeRecords);
     let createdAlert = null;
+    const cropB64 = plate.enhanced_crop_b64 || plate.original_crop_b64 || plate.enhanced_crop || plate.original_crop || null;
+    let cropDataUrl = null;
+    if (cropB64) {
+      cropDataUrl = cropB64.startsWith('data:') ? cropB64 : `data:image/jpeg;base64,${cropB64}`;
+    }
 
     if (matchResult.matchStatus === 'MATCH_FOUND' || matchResult.matchStatus === 'POSSIBLE_MATCH') {
       matchCount++;
@@ -146,7 +152,7 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
           location: cameraDoc?.location || { type: 'Point', coordinates: [72.5714, 23.0225] },
           district: cameraDoc?.district || 'Ahmedabad',
           address: cameraDoc?.address || { district: 'Ahmedabad', city: 'Ahmedabad', area: 'Command Grid' },
-          snapshot: plate.enhanced_crop_b64 || plate.original_crop_b64 || plate.enhanced_crop || '',
+          snapshot: cropDataUrl || '',
           metadata: {
             detected_plate: plate.raw_ocr || plate.normalized_plate,
             normalized_plate: plate.normalized_plate,
@@ -197,7 +203,9 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
       }
     }
 
-    // Also store plate into registry
+    const detectionTimestamp = new Date();
+
+    // Also store plate into registry (MongoDB StoredPlate + storage_data JSON & TXT)
     try {
       await plateStorageService.storePlate({
         plate_number: plate.normalized_plate || plate.raw_ocr,
@@ -210,14 +218,46 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
         detection_confidence: plate.detection_confidence || 0.9,
         ocr_confidence: plate.ocr_confidence || 0.9,
         match_status: matchResult.matchStatus,
-        cropped_image_url: plate.enhanced_crop_b64 || plate.original_crop_b64 ? `data:image/jpeg;base64,${plate.enhanced_crop_b64 || plate.original_crop_b64}` : null,
+        cropped_image_url: cropDataUrl,
+        timestamp: detectionTimestamp.toISOString(),
       });
     } catch (storeErr) {
       // Non-fatal
     }
 
+    // Also persist to PlateDetection collection with precise timestamp for Intelligence Explorer
+    try {
+      await PlateDetection.create({
+        detectionId: `DET-IMG-${uuidv4().split('-')[0].toUpperCase()}`,
+        source_type: 'IMAGE',
+        source_name: sourceImageName || 'image_upload',
+        plate_number: (plate.normalized_plate || plate.raw_ocr || '').toUpperCase().trim(),
+        raw_ocr: plate.raw_ocr || '',
+        timestamp: detectionTimestamp.toISOString(),
+        car_color: plate.car_color || null,
+        car_model: plate.car_model || null,
+        detection_confidence: plate.detection_confidence || 0.9,
+        ocr_confidence: plate.ocr_confidence || 0.9,
+        overall_confidence: plate.overall_confidence || 0.9,
+        match_status: matchResult.matchStatus,
+        matched_record: matchResult.matchedRecord || null,
+        cropped_image_url: cropDataUrl,
+        location_address: cameraDoc?.address?.district || 'Ahmedabad Command Grid',
+        latitude: cameraDoc?.location?.coordinates?.[1] || 23.0225,
+        longitude: cameraDoc?.location?.coordinates?.[0] || 72.5714,
+      });
+    } catch (detErr) {
+      // Non-fatal
+    }
+
     enrichedPlates.push({
       ...plate,
+      analyzed_at: detectionTimestamp.toISOString(),
+      analyzed_at_formatted: detectionTimestamp.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      stored_to_registry: true,
+      original_crop_b64: plate.original_crop_b64 || plate.original_crop || '',
+      enhanced_crop_b64: plate.enhanced_crop_b64 || plate.enhanced_crop || '',
+      cropped_image_url: cropDataUrl,
       match_status: matchResult.matchStatus,
       match_type: matchResult.matchType,
       confidence_note: matchResult.confidenceNote,
@@ -250,90 +290,106 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
  * @route   POST /api/anpr/analyze
  */
 const analyzeVehicleImages = async (req, res) => {
-  const files = req.files || (req.file ? [req.file] : []);
+  try {
+    const files = req.files || (req.file ? [req.file] : []);
 
-  if (!files || files.length === 0) {
-    return res.status(400).json({
-      success: false,
-      message: 'No vehicle images provided. Upload 1 or more images in the "images" or "image" field.',
-    });
-  }
-
-  const batchStartTime = Date.now();
-  const cameraId = req.body.cameraId;
-  const activeRecords = await PlateRecord.find({ status: 'ACTIVE' }).lean();
-
-  const results = [];
-  let totalPlatesDetected = 0;
-  let totalMatchedPlates = 0;
-  let totalAlertsGenerated = 0;
-  let isAiServiceOnline = false;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const imageStartTime = Date.now();
-    let aiData;
-
-    try {
-      aiData = await callAIService(file.buffer, file.originalname, file.mimetype);
-      isAiServiceOnline = true;
-    } catch (aiErr) {
-      logger.warn(`AI Service unavailable for ${file.originalname}: ${aiErr.message}. Using intelligent fallback.`);
-      aiData = generateFallbackAIDetection(file.originalname, activeRecords);
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No vehicle images provided. Upload 1 or more images in the "images" or "image" field.',
+      });
     }
 
-    const plates = aiData.plates || [];
-    const { enrichedPlates, matchCount, alertCount } = await processPlatesAndGenerateAlerts(
-      plates,
-      file.originalname,
-      activeRecords,
-      cameraId,
-      req.io
-    );
+    const batchStartTime = Date.now();
+    const cameraId = req.body.cameraId;
+    const activeRecords = await PlateRecord.find({ status: 'ACTIVE' }).lean();
 
-    totalPlatesDetected += plates.length;
-    totalMatchedPlates += matchCount;
-    totalAlertsGenerated += alertCount;
+    const results = [];
+    let totalPlatesDetected = 0;
+    let totalMatchedPlates = 0;
+    let totalAlertsGenerated = 0;
+    let isAiServiceOnline = false;
 
-    results.push({
-      image_index: i + 1,
-      image_name: file.originalname,
-      file_size_kb: Math.round(file.size / 1024),
-      status: 'SUCCESS',
-      plates_detected: plates.length,
-      matched_plates: matchCount,
-      alerts_generated: alertCount,
-      original_image: aiData.original_image
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const imageStartTime = Date.now();
+      let aiData;
+
+      try {
+        aiData = await callAIService(file.buffer, file.originalname, file.mimetype);
+        isAiServiceOnline = true;
+      } catch (aiErr) {
+        logger.warn(`AI Service unavailable for ${file.originalname}: ${aiErr.message}. Using intelligent fallback.`);
+        aiData = generateFallbackAIDetection(file.originalname, activeRecords);
+      }
+
+      const plates = aiData.plates || [];
+      const { enrichedPlates, matchCount, alertCount } = await processPlatesAndGenerateAlerts(
+        plates,
+        file.originalname,
+        activeRecords,
+        cameraId,
+        req.io
+      );
+
+      totalPlatesDetected += plates.length;
+      totalMatchedPlates += matchCount;
+      totalAlertsGenerated += alertCount;
+
+      const defaultBufferDataUrl = file.buffer
+        ? `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`
+        : '';
+      const originalImage = aiData.original_image
         ? (aiData.original_image.startsWith('data:') ? aiData.original_image : `data:image/jpeg;base64,${aiData.original_image}`)
-        : '',
-      processed_image: aiData.processed_image
+        : defaultBufferDataUrl;
+      const processedImage = aiData.processed_image
         ? (aiData.processed_image.startsWith('data:') ? aiData.processed_image : `data:image/jpeg;base64,${aiData.processed_image}`)
-        : '',
-      plates: enrichedPlates,
-      simulated: aiData.simulated || false,
-      timings: {
-        ...aiData.timings,
-        total_image_ms: Date.now() - imageStartTime,
+        : originalImage;
+
+      results.push({
+        image_index: i + 1,
+        image_name: file.originalname,
+        file_size_kb: Math.round(file.size / 1024),
+        status: 'SUCCESS',
+        analyzed_at: new Date().toISOString(),
+        analyzed_time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        plates_detected: plates.length,
+        matched_plates: matchCount,
+        alerts_generated: alertCount,
+        original_image: originalImage,
+        processed_image: processedImage,
+        plates: enrichedPlates,
+        simulated: aiData.simulated || false,
+        timings: {
+          ...aiData.timings,
+          total_image_ms: Date.now() - imageStartTime,
+        },
+      });
+    }
+
+    const totalDuration = Date.now() - batchStartTime;
+
+    return res.status(200).json({
+      success: true,
+      batch_id: `BATCH-ANPR-${Date.now()}`,
+      ai_service_online: isAiServiceOnline,
+      summary: {
+        images_submitted: files.length,
+        images_processed: results.length,
+        total_plates_detected: totalPlatesDetected,
+        matching_plates: totalMatchedPlates,
+        alerts_generated: totalAlertsGenerated,
+        total_duration_ms: totalDuration,
       },
+      results,
+    });
+  } catch (error) {
+    logger.error(`Unhandled error in analyzeVehicleImages: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: `Failed to analyze vehicle images: ${error.message}`,
     });
   }
-
-  const totalDuration = Date.now() - batchStartTime;
-
-  return res.status(200).json({
-    success: true,
-    batch_id: `BATCH-ANPR-${Date.now()}`,
-    ai_service_online: isAiServiceOnline,
-    summary: {
-      images_submitted: files.length,
-      images_processed: results.length,
-      total_plates_detected: totalPlatesDetected,
-      matching_plates: totalMatchedPlates,
-      alerts_generated: totalAlertsGenerated,
-      total_duration_ms: totalDuration,
-    },
-    results,
-  });
 };
 
 /**
@@ -408,12 +464,68 @@ const getVideoDetections = async (req, res) => {
       .sort({ frame_second: 1 })
       .lean();
 
+    const videoUrl =
+      detections[0]?.source_video_url ||
+      `/api/anpr/video/stream/${videoId}`;
+
     res.status(200).json({
       success: true,
       count: detections.length,
+      source_video_url: videoUrl,
       detections,
     });
   } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Stream local video file with HTTP 206 Partial Content support
+ * @route   GET /api/anpr/video/stream/:videoId
+ */
+const streamVideoFile = async (req, res) => {
+  try {
+    const { videoId } = req.params;
+    const filePath = videoService.getVideoFilePath(videoId);
+
+    if (!filePath || !fs.existsSync(filePath)) {
+      // Check if Cloudinary URL exists on PlateDetection
+      const detection = await PlateDetection.findOne({ video_id: videoId }).lean();
+      if (detection?.source_video_url && detection.source_video_url.startsWith('http')) {
+        return res.redirect(detection.source_video_url);
+      }
+      return res.status(404).json({ success: false, message: 'Video file not found or expired.' });
+    }
+
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(filePath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(filePath).pipe(res);
+    }
+  } catch (error) {
+    logger.error(`Stream video error: ${error.message}`);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -568,9 +680,30 @@ const createWatchlistRecord = async (req, res) => {
 
     const existing = await PlateRecord.findOne({ normalized_plate_number: normalized });
     if (existing) {
+      // If the plate was previously deactivated/soft-deleted, reactivate it with new details
+      if (existing.status === 'INACTIVE') {
+        existing.plate_number = plate_number.toUpperCase().trim();
+        existing.category = category || existing.category;
+        existing.priority = priority || existing.priority;
+        existing.description = description !== undefined ? description : existing.description;
+        existing.reference_id = reference_id !== undefined ? reference_id : existing.reference_id;
+        existing.ownerName = ownerName !== undefined ? ownerName : existing.ownerName;
+        existing.vehicleModel = vehicleModel !== undefined ? vehicleModel : existing.vehicleModel;
+        existing.vehicleColor = vehicleColor !== undefined ? vehicleColor : existing.vehicleColor;
+        existing.status = 'ACTIVE';
+        existing.registeredBy = req.user?._id || existing.registeredBy;
+        await existing.save();
+
+        return res.status(200).json({
+          success: true,
+          message: `Vehicle plate "${plate_number}" reactivated into surveillance watchlist.`,
+          record: existing,
+        });
+      }
+
       return res.status(409).json({
         success: false,
-        message: `Plate "${plate_number}" is already registered in watchlist (${existing.recordId}, status: ${existing.status}).`,
+        message: `Plate "${plate_number}" is already active in watchlist (${existing.recordId}).`,
         existingRecord: existing,
       });
     }
@@ -633,12 +766,16 @@ const updateWatchlistRecord = async (req, res) => {
  */
 const deleteWatchlistRecord = async (req, res) => {
   try {
-    const hard = req.query.hard === 'true';
+    const hard = req.query.hard !== 'false';
 
     if (hard) {
       const record = await PlateRecord.findByIdAndDelete(req.params.id);
       if (!record) return res.status(404).json({ success: false, message: 'Record not found.' });
-      return res.status(200).json({ success: true, message: 'Watchlist record permanently removed.' });
+      return res.status(200).json({
+        success: true,
+        message: 'Watchlist record permanently removed.',
+        deletedId: req.params.id,
+      });
     }
 
     const record = await PlateRecord.findByIdAndUpdate(
@@ -705,11 +842,60 @@ const getANPRStats = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Clear all ANPR incident detections and sightings from DB
+ * @route   DELETE /api/anpr/incidents
+ */
+const clearANPRIncidents = async (req, res) => {
+  try {
+    const alertsResult = await Alert.deleteMany({ type: 'anpr_match' });
+    const detectionsResult = await PlateDetection.deleteMany({});
+    const storedPlatesResult = await StoredPlate.deleteMany({});
+
+    const watchlistResult = await PlateRecord.updateMany(
+      {},
+      {
+        total_alerts: 0,
+        last_detected_at: null,
+      }
+    );
+
+    try {
+      plateStorageService.clearAllStoredPlates();
+    } catch (e) {
+      logger.warn(`Failed to clear local stored plates files: ${e.message}`);
+    }
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('anpr:cleared', {
+        alertsCleared: alertsResult.deletedCount,
+        detectionsCleared: detectionsResult.deletedCount,
+        storedPlatesCleared: storedPlatesResult.deletedCount,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'All incident detections and plate sightings have been cleared from database.',
+      data: {
+        alertsCleared: alertsResult.deletedCount,
+        detectionsCleared: detectionsResult.deletedCount,
+        storedPlatesCleared: storedPlatesResult.deletedCount,
+        watchlistRecordsReset: watchlistResult.modifiedCount,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   analyzeVehicleImages,
   uploadAndAnalyzeVideo,
   getVideoJobStatus,
   getVideoDetections,
+  streamVideoFile,
   getDetections,
   getStoredPlates,
   getWatchlist,
@@ -717,4 +903,6 @@ module.exports = {
   updateWatchlistRecord,
   deleteWatchlistRecord,
   getANPRStats,
+  clearANPRIncidents,
 };
+

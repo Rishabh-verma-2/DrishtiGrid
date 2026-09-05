@@ -1,9 +1,11 @@
 /**
  * Video Surveillance Stream & Analysis Pipeline (1-FPS).
  * Samples video footage at 1 frame per second using FFmpeg,
- * runs each frame through ANPR, deduplicates vehicle tracks across time (30s window),
- * extracts consensus vehicle color, uploads evidence to Cloudinary,
+ * runs each frame through ANPR (YOLO + Zero-DCE + PaddleOCR + Vehicle Attributes),
+ * deduplicates vehicle tracks across time (30s temporal window),
+ * extracts consensus vehicle color, uploads evidence to Cloudinary (with local fallback),
  * enforces post-processing privacy cleanup for non-matching vehicles,
+ * emits real-time Socket.IO progress,
  * and records events into PlateDetection and StoredPlate collections.
  */
 
@@ -26,13 +28,23 @@ const {
   matchPlateAgainstRecords,
 } = require("../utils/plateUtils");
 
+// Persistent local video storage directory for video playback streaming
+const VIDEOS_DIR = path.join(__dirname, "../../uploads/videos");
+if (!fs.existsSync(VIDEOS_DIR)) {
+  try {
+    fs.mkdirSync(VIDEOS_DIR, { recursive: true });
+  } catch (e) {
+    console.warn(`[VideoService] Could not create videos dir ${VIDEOS_DIR}:`, e.message);
+  }
+}
+
 // Lazy-load ffmpeg with safe fallback if not yet installed
 let ffmpeg = null;
 let ffmpegAvailable = false;
 try {
   ffmpeg = require("fluent-ffmpeg");
   const ffmpegStatic = require("ffmpeg-static");
-  if (ffmpegStatic) {
+  if (ffmpegStatic && fs.existsSync(ffmpegStatic)) {
     ffmpeg.setFfmpegPath(ffmpegStatic);
     ffmpegAvailable = true;
   }
@@ -42,13 +54,25 @@ try {
   );
 }
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:8000";
 
 // In-memory registry of active video processing jobs
 const activeJobs = new Map();
 
 function getJobStatus(jobId) {
   return activeJobs.get(jobId) || null;
+}
+
+function getVideoFilePath(videoId) {
+  if (!videoId) return null;
+  const safeId = videoId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const candidate = path.join(VIDEOS_DIR, `video_${safeId}.mp4`);
+  if (fs.existsSync(candidate)) return candidate;
+  for (const ext of [".mov", ".avi", ".webm", ".mkv"]) {
+    const p = path.join(VIDEOS_DIR, `video_${safeId}${ext}`);
+    if (fs.existsSync(p)) return p;
+  }
+  return null;
 }
 
 function safeCleanDir(dirPath) {
@@ -77,16 +101,17 @@ function base64ToBuffer(base64Str) {
 
 /**
  * Extract 1 frame per second from a video file into outputDir using ffmpeg.
+ * Caps at maxFrames (default 180 = 3 minutes) to maintain bounded processing latency.
  */
-function extractFramesAt1Fps(videoFilePath, outputDir) {
+function extractFramesAt1Fps(videoFilePath, outputDir, maxFrames = 180) {
   return new Promise((resolve, reject) => {
     if (!ffmpegAvailable || !ffmpeg) {
-      return reject(new Error("FFmpeg is not installed. Please run setup commands."));
+      return reject(new Error("FFmpeg is not installed or available on this host."));
     }
 
     const outputPattern = path.join(outputDir, "frame_%04d.jpg");
     ffmpeg(videoFilePath)
-      .outputOptions(["-vf fps=1", "-q:v 2"])
+      .outputOptions(["-vf fps=1", "-q:v 2", `-vframes ${maxFrames}`])
       .output(outputPattern)
       .on("start", (cmd) => {
         console.log(`[VideoService] FFmpeg started: ${cmd}`);
@@ -111,48 +136,38 @@ function extractFramesAt1Fps(videoFilePath, outputDir) {
 }
 
 /**
- * Send frame image buffer to Python AI service or simulate if AI service offline.
+ * Send frame image buffer to Python AI service with proper 'image' field.
  */
 async function sendFrameToAIService(imageBuffer, frameSecond) {
   try {
     const form = new FormData();
-    form.append("file", imageBuffer, {
+    form.append("image", imageBuffer, {
       filename: `frame_${frameSecond}.jpg`,
       contentType: "image/jpeg",
     });
 
     const response = await axios.post(`${AI_SERVICE_URL}/process`, form, {
       headers: form.getHeaders(),
-      timeout: 20000,
+      timeout: 30000,
     });
 
     return response.data;
   } catch (err) {
-    // Graceful simulated fallback when AI service is offline
+    console.warn(
+      `[VideoService] AI Service frame ${frameSecond} error:`,
+      err.response?.data?.detail || err.message
+    );
     return {
-      success: true,
-      total_plates_detected: 1,
-      plates: [
-        {
-          plate_id: 1,
-          raw_ocr: `GJ01AB${1000 + (frameSecond % 50)}`,
-          normalized_plate: `GJ01AB${1000 + (frameSecond % 50)}`,
-          detection_confidence: 0.94,
-          ocr_confidence: 0.91,
-          overall_confidence: 0.92,
-          car_color: frameSecond % 2 === 0 ? "White" : "Silver / Gray",
-          vehicle_type: "car",
-          original_crop_b64: "",
-          enhanced_crop_b64: "",
-          bbox: { x1: 100, y1: 200, x2: 300, y2: 260 },
-        },
-      ],
+      success: false,
+      total_plates_detected: 0,
+      plates: [],
+      error: err.message,
     };
   }
 }
 
 /**
- * Find matching active vehicle track within 30-second window.
+ * Find matching active vehicle track within 30-second temporal deduplication window.
  */
 function findMatchingTrack(tracks, plateNumber, frameSec) {
   for (const track of tracks) {
@@ -172,7 +187,7 @@ async function runVideoProcessingJob({
   jobId,
   videoId,
   videoFilePath,
-  videoUrl,
+  videoBuffer,
   recordedAt,
   latitude,
   longitude,
@@ -188,18 +203,41 @@ async function runVideoProcessingJob({
     job.status = "PROCESSING";
     job.updatedAt = new Date().toISOString();
 
+    if (io) {
+      io.emit("video:status", {
+        jobId,
+        videoId,
+        status: "PROCESSING",
+        message: "Extracting 1-FPS frames from video...",
+      });
+    }
+
+    // Attempt background Cloudinary video upload in parallel
+    cloudinaryService
+      .uploadVideo(videoBuffer, videoId)
+      .then((cRes) => {
+        if (cRes?.url) {
+          job.sourceVideoUrl = cRes.url;
+          console.log(`[VideoService] Cloudinary video backup complete for ${videoId}: ${cRes.url}`);
+        }
+      })
+      .catch((cErr) => {
+        console.warn(`[VideoService] Cloudinary background video upload notice:`, cErr.message);
+      });
+
     let frameFiles = [];
     if (ffmpegAvailable) {
-      frameFiles = await extractFramesAt1Fps(videoFilePath, tempDir);
+      frameFiles = await extractFramesAt1Fps(videoFilePath, tempDir, 180);
     } else {
-      // If ffmpeg is not yet installed, simulate 5 seconds of footage
       frameFiles = ["frame_0001.jpg", "frame_0002.jpg", "frame_0003.jpg"];
     }
 
     job.totalFrames = frameFiles.length;
-    console.log(`[VideoService] Job ${jobId}: ${frameFiles.length} frame(s) extracted for video ${videoId}.`);
+    console.log(
+      `[VideoService] Job ${jobId}: ${frameFiles.length} frame(s) extracted for video ${videoId}.`
+    );
 
-    // Fetch active watchlist records for matching
+    // Fetch active watchlist records for instant matching
     const activeRecords = await PlateRecord.find({ status: "ACTIVE" }).lean();
 
     // Reverse geocode location if coordinates provided
@@ -215,7 +253,7 @@ async function runVideoProcessingJob({
     const tracks = [];
     const baseTimestamp = recordedAt ? new Date(recordedAt).getTime() : Date.now();
 
-    // Process each frame
+    // Process each 1-FPS frame
     for (let i = 0; i < frameFiles.length; i++) {
       const frameFileName = frameFiles[i];
       const frameSecond = i + 1; // 1-indexed second
@@ -251,7 +289,10 @@ async function runVideoProcessingJob({
           }
           // Update best crop if confidence is higher
           const thisConf = plate.overall_confidence || plate.ocr_confidence || 0;
-          if (thisConf > (existingTrack.bestConf || 0) && (plate.enhanced_crop_b64 || plate.original_crop_b64)) {
+          if (
+            thisConf > (existingTrack.bestConf || 0) &&
+            (plate.enhanced_crop_b64 || plate.original_crop_b64)
+          ) {
             existingTrack.bestCropB64 = plate.enhanced_crop_b64 || plate.original_crop_b64;
             existingTrack.bestConf = thisConf;
             existingTrack.bestCropSec = frameSecond;
@@ -286,6 +327,19 @@ async function runVideoProcessingJob({
       }
 
       job.updatedAt = new Date().toISOString();
+
+      // Emit live frame processing progress
+      if (io) {
+        io.emit("video:progress", {
+          jobId,
+          videoId,
+          currentFrame: frameSecond,
+          totalFrames: frameFiles.length,
+          processedFrames: i + 1,
+          percentage: Math.round(((i + 1) / frameFiles.length) * 100),
+          platesDetectedCount: tracks.length,
+        });
+      }
     }
 
     // Persist deduplicated vehicle tracks & handle Cloudinary evidence & privacy cleanup
@@ -312,13 +366,23 @@ async function runVideoProcessingJob({
             cropPublicId = uploadRes.public_id;
           }
         } catch (upErr) {
-          console.warn(`[VideoService] Cloudinary crop upload failed for ${track.plate_number}:`, upErr.message);
+          console.warn(
+            `[VideoService] Cloudinary crop upload notice for ${track.plate_number}:`,
+            upErr.message
+          );
         }
       }
 
       const isMatch =
         (track.match_status === "MATCH_FOUND" || track.match_status === "POSSIBLE_MATCH") &&
         track.matched_record;
+
+      // Ensure evidence crop is NEVER lost for matched records
+      if (isMatch && !cropUrl && track.bestCropB64) {
+        cropUrl = track.bestCropB64.startsWith("data:")
+          ? track.bestCropB64
+          : `data:image/jpeg;base64,${track.bestCropB64}`;
+      }
 
       if (isMatch) {
         job.matchedCount = (job.matchedCount || 0) + 1;
@@ -363,7 +427,7 @@ async function runVideoProcessingJob({
         }
       }
 
-      // Privacy cleanup: purge Cloudinary crop for NO_MATCH
+      // Privacy cleanup: purge optical crop for NO_MATCH (retain text/metadata only)
       let imageDeleted = false;
       if (track.match_status === "NO_MATCH") {
         if (cropPublicId) {
@@ -399,7 +463,7 @@ async function runVideoProcessingJob({
           location_address: locationAddress,
           cropped_image_url: cropUrl,
           cropped_image_public_id: cropPublicId,
-          source_video_url: videoUrl,
+          source_video_url: job.sourceVideoUrl,
           car_color: consensusColor,
           car_model: track.car_model || null,
           vehicle_type: track.vehicle_type || "car",
@@ -450,28 +514,41 @@ async function runVideoProcessingJob({
     job.cleanedUpCount = deletedImagesCount;
     job.retainedCount = retainedImagesCount;
     job.updatedAt = new Date().toISOString();
+
+    if (io) {
+      io.emit("video:completed", {
+        jobId,
+        videoId,
+        totalFrames: frameFiles.length,
+        platesDetected: detectionDocs.length,
+        matchedCount: job.matchedCount || 0,
+        sourceVideoUrl: job.sourceVideoUrl,
+      });
+    }
+
     console.log(
-      `[VideoService] Job ${jobId} finished successfully. Detections: ${detectionDocs.length}, Deleted: ${deletedImagesCount}, Retained: ${retainedImagesCount}`
+      `[VideoService] Job ${jobId} completed successfully. Detections: ${detectionDocs.length}, Cleaned: ${deletedImagesCount}, Retained: ${retainedImagesCount}`
     );
   } catch (err) {
     console.error(`[VideoService] Error processing video job ${jobId}:`, err);
     job.status = "FAILED";
     job.error = err.message || "Video processing error";
     job.updatedAt = new Date().toISOString();
+
+    if (io) {
+      io.emit("video:failed", {
+        jobId,
+        videoId,
+        error: job.error,
+      });
+    }
   } finally {
     safeCleanDir(tempDir);
-    if (videoFilePath && fs.existsSync(videoFilePath)) {
-      try {
-        fs.unlinkSync(videoFilePath);
-      } catch (e) {
-        // Non-fatal
-      }
-    }
   }
 }
 
 /**
- * Enqueue a new video processing job.
+ * Enqueue a new video processing job with non-blocking local stream and background Cloudinary upload.
  */
 async function enqueueVideoProcessing({
   videoId,
@@ -483,20 +560,18 @@ async function enqueueVideoProcessing({
   io,
 }) {
   const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  const ext = path.extname(originalFilename || ".mp4") || ".mp4";
+  const localVideoPath = path.join(VIDEOS_DIR, `video_${videoId}${ext}`);
 
-  const tempVideoPath = path.join(
-    os.tmpdir(),
-    `upload_${videoId}_${Date.now()}${path.extname(originalFilename || ".mp4")}`
-  );
-  fs.writeFileSync(tempVideoPath, videoBuffer);
+  // Write video to local video storage immediately
+  fs.writeFileSync(localVideoPath, videoBuffer);
 
-  // Upload video to Cloudinary asynchronously
-  const cloudinaryVideo = await cloudinaryService.uploadVideo(videoBuffer, videoId);
+  const localStreamUrl = `/api/anpr/video/stream/${videoId}`;
 
   const job = {
     jobId,
     videoId,
-    sourceVideoUrl: cloudinaryVideo.url,
+    sourceVideoUrl: localStreamUrl,
     status: "QUEUED",
     totalFrames: 0,
     processedFrames: 0,
@@ -512,13 +587,13 @@ async function enqueueVideoProcessing({
 
   activeJobs.set(jobId, job);
 
-  // Run in background
+  // Run 1-FPS frame extraction and AI processing in background
   setImmediate(() => {
     runVideoProcessingJob({
       jobId,
       videoId,
-      videoFilePath: tempVideoPath,
-      videoUrl: cloudinaryVideo.url,
+      videoFilePath: localVideoPath,
+      videoBuffer,
       recordedAt,
       latitude,
       longitude,
@@ -529,7 +604,7 @@ async function enqueueVideoProcessing({
   return {
     jobId,
     videoId,
-    source_video_url: cloudinaryVideo.url,
+    source_video_url: localStreamUrl,
     status: "QUEUED",
   };
 }
@@ -537,4 +612,5 @@ async function enqueueVideoProcessing({
 module.exports = {
   getJobStatus,
   enqueueVideoProcessing,
+  getVideoFilePath,
 };

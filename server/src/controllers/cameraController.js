@@ -1,6 +1,6 @@
 const Camera = require('../models/Camera');
 const Alert = require('../models/Alert');
-const { v4: uuidv4 } = require('uuid');
+const { randomUUID: uuidv4 } = require('crypto');
 const logger = require('../utils/logger');
 
 /**

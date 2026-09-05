@@ -7,6 +7,7 @@ const {
   uploadAndAnalyzeVideo,
   getVideoJobStatus,
   getVideoDetections,
+  streamVideoFile,
   getDetections,
   getStoredPlates,
   getWatchlist,
@@ -14,7 +15,11 @@ const {
   updateWatchlistRecord,
   deleteWatchlistRecord,
   getANPRStats,
+  clearANPRIncidents,
 } = require('../controllers/anprController');
+
+// Public/Media Video Stream route (supports HTTP 206 Range for HTML5 video players)
+router.get('/video/stream/:videoId', streamVideoFile);
 
 // Multer memory storage for vehicle image uploads (up to 30 MB)
 const uploadImage = multer({
@@ -55,16 +60,22 @@ router.use(authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'));
 // Vehicle Image Analysis (single or batch up to 10 images)
 router.post(
   '/analyze',
-  uploadImage.fields([
-    { name: 'images', maxCount: 10 },
-    { name: 'image', maxCount: 1 },
-  ]),
   (req, res, next) => {
-    if (req.files) {
-      const allFiles = [...(req.files['images'] || []), ...(req.files['image'] || [])];
-      req.files = allFiles;
-    }
-    next();
+    uploadImage.fields([
+      { name: 'images', maxCount: 10 },
+      { name: 'image', maxCount: 1 },
+    ])(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
+      } else if (err) {
+        return res.status(400).json({ success: false, message: err.message });
+      }
+      if (req.files) {
+        const allFiles = [...(req.files['images'] || []), ...(req.files['image'] || [])];
+        req.files = allFiles;
+      }
+      next();
+    });
   },
   analyzeVehicleImages
 );
@@ -84,7 +95,9 @@ router.post('/watchlist', createWatchlistRecord);
 router.patch('/watchlist/:id', updateWatchlistRecord);
 router.delete('/watchlist/:id', deleteWatchlistRecord);
 
-// Operational Statistics
+// Operational Statistics & Maintenance
 router.get('/stats', getANPRStats);
+router.delete('/incidents', clearANPRIncidents);
 
 module.exports = router;
+

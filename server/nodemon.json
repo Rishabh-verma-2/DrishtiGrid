@@ -1,0 +1,21 @@
+{
+  "watch": [
+    "src",
+    "index.js"
+  ],
+  "ext": "js,mjs,json",
+  "ignore": [
+    "data/*",
+    "data/**",
+    "logs/*",
+    "logs/**",
+    "uploads/*",
+    "uploads/**",
+    "node_modules/**",
+    "*.log",
+    "*.txt",
+    "stored_number_plates.json",
+    "stored_number_plates.txt"
+  ],
+  "delay": "1000"
+}

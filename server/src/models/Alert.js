@@ -10,7 +10,7 @@ const alertSchema = new mongoose.Schema(
     camera: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Camera',
-      required: true,
+      required: false,
     },
     cameraId: String, // denormalized for quick lookup
     type: {

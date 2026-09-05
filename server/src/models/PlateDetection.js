@@ -124,11 +124,10 @@ const PlateDetectionSchema = new mongoose.Schema(
   }
 );
 
-PlateDetectionSchema.pre("validate", function (next) {
+PlateDetectionSchema.pre("validate", function () {
   if (!this.detectionId) {
     this.detectionId = `DET-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
   }
-  next();
 });
 
 module.exports =

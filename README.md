@@ -18,23 +18,26 @@
 3. [Key Modules & Capabilities](#-key-modules--capabilities)
    - [1. 🎥 Zero-DB Live Camera Monitoring](#1--zero-db-live-camera-monitoring)
    - [2. 🗺️ Gujarat GIS Spatial Command Map](#2-️-gujarat-gis-spatial-command-map)
-   - [3. 🚔 ANPR & AI Vehicle Surveillance Engine](#3--anpr--ai-vehicle-surveillance-engine-new)
-   - [4. 🎫 Secure Footage Ticketing & Cryptographic Evidence Chain](#4--secure-footage-ticketing--cryptographic-evidence-chain)
-   - [5. 👥 3-Role Government RBAC & Security](#5--3-role-government-rbac--security)
-   - [6. 🔔 Real-Time Notification & Alert Dispatch](#6--real-time-notification--alert-dispatch)
+   - [3. 🚔 ANPR & AI Vehicle Surveillance Engine](#3--anpr--ai-vehicle-surveillance-engine)
+   - [4. 📼 1-FPS Video Surveillance & Temporal Tracking](#4--1-fps-video-surveillance--temporal-tracking)
+   - [5. 🚨 Gujarat Police ICCC Tactical Intercept Modal](#5--gujarat-police-iccc-tactical-intercept-modal)
+   - [6. 🔍 Intelligence Explorer & Persistent Registry](#6--intelligence-explorer--persistent-registry)
+   - [7. 🎫 Secure Footage Ticketing & Cryptographic Evidence Chain](#7--secure-footage-ticketing--cryptographic-evidence-chain)
+   - [8. 👥 3-Role Government RBAC & Security](#8--3-role-government-rbac--security)
+   - [9. 🔔 Real-Time Notification & Alert Dispatch](#9--real-time-notification--alert-dispatch)
 4. [Project Directory Structure](#-project-directory-structure)
 5. [Quick Start Guide (One-Click Setup & Launch)](#-quick-start-guide)
 6. [API Reference Overview](#-api-reference-overview)
 7. [Environment Variables](#-environment-variables)
-8. [Hardware & Deployment Guidelines](#-hardware--deployment-guidelines)
+8. [Hackathon Evaluation & Compliance Highlights](#-hackathon-evaluation--compliance-highlights)
 
 ---
 
 ## 🏛️ Executive Summary
 
-**DrishtiGrid** is an enterprise Command & Control (C2) situational awareness and video intelligence platform engineered for the **Government of Gujarat Home Department**, State Police Headquarters, and Municipal Smart City Operations Centers.
+**DrishtiGrid** is an enterprise Command & Control (C2) situational awareness and video intelligence platform engineered for the **Government of Gujarat Home Department**, State Police Headquarters, and Municipal Smart City Operations Centers (Netram ICCC).
 
-The platform unifies live CCTV video streaming, geospatial GIS telemetry, cryptographic evidence preservation, and **Automatic Number Plate Recognition (ANPR)** into a single, cohesive, bilingual (English/Gujarati) dashboard with authentic state portal themes (Light and Dark modes).
+The platform unifies live CCTV video streaming, geospatial GIS telemetry, cryptographic evidence preservation, and **state-of-the-art Automatic Number Plate Recognition (ANPR)** with temporal vehicle tracking into a single, cohesive, bilingual (English/Gujarati) dashboard supporting authentic state portal themes in both Light and Dark modes.
 
 ---
 
@@ -45,7 +48,7 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
                                   │      Gujarat Surveillance Camera Network     │
                                   │   (Ahmedabad, Surat, Gandhinagar, Rajkot...)  │
                                   └──────────────────────┬───────────────────────┘
-                                                         │ Media Ingest (RTSP / RTMP)
+                                                         │ Media Ingest (RTSP / RTMP / MP4)
                                                          ▼
                                   ┌──────────────────────────────────────────────┐
                                   │           MediaMTX Streaming Gateway         │
@@ -58,25 +61,30 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
       ┌───────────────────────────┐                                               ┌───────────────────────────┐
       │   Python AI Microservice  │                                               │   DrishtiGrid Web Client  │
       │   (:8000) FastAPI         │                                               │   React 19 + Tailwind v4  │
-      │   YOLOv8 + PaddleOCR      │                                               └─────────────┬─────────────┘
-      │   Zero-DCE + Real-ESRGAN  │                                                             │
+      │   - YOLOv8 Detection      │                                               └─────────────┬─────────────┘
+      │   - Zero-DCE Enhancement  │                                                             │
+      │   - PaddleOCR Extraction  │                                                             │
+      │   - Vehicle Attributes    │                                                             │
       └─────────────┬─────────────┘                                                             │
-                    │  Inference Response                                                       │
-                    ▼                                                                           ▼
-      ┌───────────────────────────┐                                               ┌───────────────────────────┐
-      │    Node.js Server API     │◄─────────────────── Socket.IO & REST ─────────┤  - GIS Tactical Map (OSM) │
-      │    (:5001) Express 5      │                                               │  - Live Video Monitoring  │
-      │  - Plate Normalization    │                                               │  - ANPR Scanner & Hotlist │
-      │  - Watchlist Matching     │                                               │  - Footage Ticketing      │
-      │  - 3-Role RBAC & JWT      │                                               │  - Notification Center    │
-      └─────────────┬─────────────┘                                               └───────────────────────────┘
-                    │
+                    │  Inference Telemetry                                                      │
+                    ▼                                                                           │
+      ┌───────────────────────────┐                                                             │
+      │    Node.js Server API     │◄─────────────────── Socket.IO & REST ───────────────────────┤
+      │    (:5001) Express 5      │                                                             │
+      │  - 1-FPS Video Pipeline   │                                               - GIS Tactical Map (Leaflet)
+      │  - Temporal Deduplication │                                               - Live Video Monitoring
+      │  - Watchlist Cross-Match  │                                               - Multi-Image ANPR Scanner
+      │  - HTTP 206 Streamer      │                                               - 1-FPS Video Surveillance
+      │  - 3-Role RBAC & JWT      │                                               - Netram ICCC Intercept HUD
+      └─────────────┬─────────────┘                                               - Intelligence Explorer
+                    │                                                             - Footage Chain of Custody
                     ▼
-      ┌───────────────────────────┐
-      │       MongoDB Atlas       │
-      │   - Metadata & Hotlists   │
-      │   - Audit Logs & Evidence │
-      │   - Native Alerts         │
+      ┌───────────────────────────┐         ┌───────────────────────────┐
+      │       MongoDB Atlas       │         │    File System Storage    │
+      │   - Watchlist Hotlists    │         │  - storage_data/*.json    │
+      │   - PlateDetections       │         │  - storage_data/*.txt     │
+      │   - StoredPlates Registry │         │  - Local Stream Cache     │
+      │   - Cryptographic Audit   │         └───────────────────────────┘
       └───────────────────────────┘
 ```
 
@@ -96,25 +104,41 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - Covers all major Gujarat districts: Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana, Kutch, and more.
 - Real-time unit distribution, live camera density heatmap, and click-to-inspect feeds.
 
-### 3. 🚔 ANPR & AI Vehicle Surveillance Engine *(NEW)*
-- **5-Stage Deep Learning Pipeline:**
-  1. **YOLOv8 Plate Detection:** Identifies plate bounding boxes with aspect ratio filtering.
-  2. **OpenCV Preprocessing:** Denoising, unsharp mask sharpening, and contrast normalization.
-  3. **Zero-DCE Enhancement:** Low-light neural enhancement for nighttime surveillance frames.
-  4. **Real-ESRGAN x4plus:** 4x super-resolution upscaling for distant or low-resolution plates.
-  5. **PaddleOCR Engine:** Text extraction with Indian registration pattern validation.
-- **Indian Plate Canonical Disambiguation:** Disambiguates OCR errors based on positional syntax (`[State 2L][District 2D][Series 1-3L][Number 4D]`), automatically resolving `O/0`, `I/1`, `Z/2`, `B/8`, and `S/5`. Supports Bharat Series (`BH`), Electric Vehicles (`EV`), and standard formats.
-- **Hotlist & Watchlist Cross-Referencing:** Instant comparison against active database records categorized by `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, and `BLACKLISTED`.
-- **Flashing Interception Alert:** Real-time red emergency modal popup with optical crop comparisons, dossier details, and instant unit dispatch.
-- **Dual-Mode Execution:** Full deep learning inference when the Python AI service is running; **intelligent fallback simulation** when the AI service is offline, ensuring zero operational downtime.
+### 3. 🚔 ANPR & AI Vehicle Surveillance Engine
+- **Multi-Stage Deep Learning Pipeline:**
+  1. **YOLOv8 Plate Detection:** Detects license plate bounding boxes with high precision across complex urban scenes.
+  2. **Zero-DCE Neural Enhancement:** Dynamic low-light enhancement for dark, nighttime, or under-illuminated surveillance footage.
+  3. **PaddleOCR Engine:** Extracts alphanumeric characters with Indian registration layout validation.
+  4. **Vehicle Attribute Classifier:** Detects vehicle color (White, Silver, Black, Red, Blue, etc.), vehicle category (car, bus, truck, motorcycle), and confidence metrics.
+- **Indian Plate Canonical Disambiguation:** Disambiguates OCR confusion based on positional syntax (`[State 2L][District 2D][Series 1-3L][Number 4D]`), automatically resolving `O/0`, `I/1`, `Z/2`, `B/8`, and `S/5`. Supports Bharat Series (`BH`), Electric Vehicles (`EV`), and standard formats.
+- **Sequential Multi-Image Scanner:** Upload up to 10 vehicle images; processed sequentially with real-time UI previews. Includes **Annotated**, **Raw Frame**, and **Side-by-Side** views with an interactive modal zoom (70% - 250%).
+- **Hotlist & Watchlist Cross-Referencing:** Instant matching against database records categorized by `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, and `BLACKLISTED`.
 
-### 4. 🎫 Secure Footage Ticketing & Cryptographic Evidence Chain
+### 4. 📼 1-FPS Video Surveillance & Temporal Tracking
+- **Automated 1-FPS Sampling:** Samples video footage frame-by-frame using FFmpeg for optimal throughput without server overload.
+- **Temporal Vehicle Deduplication (30s Window):** Deduplicates vehicle sightings across frames, tracking a vehicle from entry to exit with `first_seen_second`, `last_seen_second`, and `occurrence_count`.
+- **Consensus Vehicle Color:** Aggregates attribute predictions across all frames to determine the vehicle's true consensus color.
+- **HTTP 206 Partial Content Video Streaming:** Native HTML5 scrubber video player powered by custom byte-range HTTP 206 streaming (`/api/anpr/video/stream/:videoId`).
+- **Real-Time Progress:** Emits WebSocket progress updates (`video:progress`, `video:completed`) with frame-by-frame telemetry.
+
+### 5. 🚨 Gujarat Police ICCC Tactical Intercept Modal
+- **Law Enforcement Authenticity:** Designed following Gujarat Police Netram ICCC Gandhinagar and State Emergency Operation Centre (SEOC) operational guidelines.
+- **Statutory Offense Citations:** Maps violations to legal codes (Bharatiya Nyaya Sanhita / Indian Penal Code / Motor Vehicles Act, 1988).
+- **Side-by-Side Exhibit Verification:** High-resolution optical plate crops, vehicle consensus color badges, and confidence meters.
+- **Immediate Tactical Dispatch:** One-click intercept unit deployment, VHF/SMS broadcast, barricade checkpoint activation, and automated e-challan generation.
+
+### 6. 🔍 Intelligence Explorer & Persistent Registry
+- **Dual Storage Architecture:** All detected plates are stored simultaneously in MongoDB (`platedetections`, `storedplates`) and backed up to clean local files (`storage_data/stored_number_plates.json` and `.txt`).
+- **Interactive Query Engine:** Filter historical detections by plate number, vehicle color, source type (Image / Video), and watchlist match status.
+- **Database Maintenance & Purge:** Added `DELETE /api/anpr/incidents` endpoint and a 1-click **"Clear Incidents"** button on the UI to reset detection logs to a fresh state while preserving monitored watchlist records.
+
+### 7. 🎫 Secure Footage Ticketing & Cryptographic Evidence Chain
 - Official workflow for law enforcement requesting locked CCTV footage segments.
 - **AES-256-GCM** encryption for stored evidence assets.
 - **SHA-256 Cryptographic Hash Sealing:** Every uploaded evidence file receives an immutable SHA-256 integrity digest stored in the database.
 - One-click **Cryptographic Verification**: Re-hashes the file and verifies bit-for-bit authenticity to prevent evidence tampering in court.
 
-### 5. 👥 3-Role Government RBAC & Security
+### 8. 👥 3-Role Government RBAC & Security
 - **Strict Role-Based Access Control:**
   - `ADMIN`: Full system administration, camera management, user provisioning, system health, and audit logs.
   - `POLICE`: Live monitoring, GIS maps, footage requests, ANPR scanner, hotlist management, and alert triage.
@@ -122,8 +146,8 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - **JWT Authentication:** Dual-token mechanism with rotating short-lived Access Tokens and HttpOnly Refresh Tokens.
 - **Immutable Audit Trail:** Logs all user actions, logins, ticket responses, and batch ANPR scans.
 
-### 6. 🔔 Real-Time Notification & Alert Dispatch
-- Real-time push via **Socket.IO** (`alert:new`, `anpr:match`, `notification:new`, `camera:status`).
+### 9. 🔔 Real-Time Notification & Alert Dispatch
+- Real-time push via **Socket.IO** (`alert:new`, `anpr:match`, `anpr:cleared`, `notification:new`, `camera:status`).
 - Audio-visual alert toasts and top-bar Notification Center with unread counters.
 
 ---
@@ -134,46 +158,74 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 DrishtiGrid/
 ├── ai-service/                       # Python FastAPI AI Microservice (:8000)
 │   ├── app/
-│   │   ├── api/routes.py             # /health, /process endpoints
+│   │   ├── api/routes.py             # /health, /process, /ocr endpoints
 │   │   ├── config/settings.py        # Model thresholds, GPU flags
-│   │   ├── detection/yolo_detector.py # YOLOv8 plate detector
+│   │   ├── detection/
+│   │   │   ├── yolo_detector.py      # YOLOv8 plate detector
+│   │   │   └── vehicle_attributes.py # Vehicle color & type classification
 │   │   ├── enhancement/              # CLAHE & Zero-DCE neural low-light
 │   │   ├── ocr/paddle_ocr.py         # PaddleOCR extraction
-│   │   ├── pipeline/plate_pipeline.py # 5-stage orchestration pipeline
-│   │   ├── super_resolution/         # Real-ESRGAN x4 upscaler
+│   │   ├── pipeline/plate_pipeline.py # Orchestrated multi-stage pipeline
+│   │   ├── super_resolution/         # Real-ESRGAN upscaler
 │   │   └── validation/indian_plate.py # Indian regex & character repair
 │   ├── download_models.py            # AI model weight downloader
 │   ├── requirements.txt              # PyTorch, Ultralytics, PaddleOCR specs
 │   └── README.md                     # Dedicated AI microservice docs
 │
-├── client/                           # React 19 Frontend (Vite 8 + Tailwind v4) (:5173)
+├── client/                           # React 19 Frontend (Vite + Tailwind v4) (:5173)
 │   ├── src/
 │   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts)
 │   │   ├── components/
-│   │   │   ├── anpr/                 # MatchAlertModal.jsx, WatchlistModal.jsx
+│   │   │   ├── anpr/
+│   │   │   │   ├── MatchAlertModal.jsx      # Gujarat Police ICCC tactical intercept modal
+│   │   │   │   ├── WatchlistModal.jsx       # Add/Edit hotlist records
+│   │   │   │   ├── VideoUploadZone.jsx      # Video drag-and-drop & progress HUD
+│   │   │   │   ├── VideoAnalysisResults.jsx # Scrubber player & vehicle timeline cards
+│   │   │   │   └── DetectionsExplorer.jsx   # Filterable sighting registry
 │   │   │   ├── cameras/              # CameraPlayer.jsx, CameraStreamModal.jsx
 │   │   │   ├── layout/               # DashboardLayout.jsx (Bilingual Gov Navigation)
 │   │   │   └── notifications/        # NotificationCenter.jsx
 │   │   ├── pages/
-│   │   │   ├── ANPRPage.jsx          # ANPR Scanner, Watchlist & Incidents Hub
+│   │   │   ├── ANPRPage.jsx          # ANPR 5-Tab Command Center
 │   │   │   ├── AlertsPage.jsx        # Security alert dispatch & triage
 │   │   │   ├── CameraMonitoringPage.jsx # Multi-layout live CCTV feeds
 │   │   │   ├── GISMapPage.jsx        # Full-screen Gujarat Leaflet GIS
 │   │   │   ├── FootageRequestsPage.jsx # Chain-of-custody ticketing
 │   │   │   └── DashboardPage.jsx     # Executive telemetry
+│   │   ├── store/
+│   │   │   ├── authStore.js          # Authentication & token store
+│   │   │   ├── anprStore.js          # Persistent batch cache & active tab state
+│   │   │   └── themeStore.js         # Gujarat Gov light/dark themes
 │   │   └── index.css                 # Gujarat Government theme tokens & plate pills
 │   └── vite.config.js
 │
 ├── server/                           # Node.js Express 5 Backend (:5001)
 │   ├── src/
-│   │   ├── controllers/              # anprController.js, alertController.js, etc.
+│   │   ├── controllers/
+│   │   │   ├── anprController.js     # Image batch, video pipeline, watchlist, stats, clear
+│   │   │   ├── alertController.js    # Alert dispatch & triage
+│   │   │   └── cameraController.js   # Camera catalog & heartbeat
 │   │   ├── middleware/               # auth.js (JWT & RBAC), errorHandler.js
-│   │   ├── models/                   # PlateRecord.js, Alert.js, Camera.js, User.js
+│   │   ├── models/
+│   │   │   ├── PlateRecord.js        # Monitored watchlist definitions
+│   │   │   ├── PlateDetection.js     # Timestamped sightings with frame seconds
+│   │   │   ├── StoredPlate.js        # Unique vehicle registry
+│   │   │   ├── Alert.js              # Native incident alerts
+│   │   │   ├── Camera.js             # Camera metadata & coordinates
+│   │   │   └── User.js               # Police/Admin user accounts
 │   │   ├── routes/                   # anpr.js, alerts.js, cameras.js, stream.js
-│   │   ├── services/                 # cryptoService.js, cloudinaryService.js
+│   │   ├── services/
+│   │   │   ├── videoService.js       # 1-FPS video pipeline & temporal deduplication
+│   │   │   ├── plateStorageService.js# Local JSON/TXT + MongoDB sync
+│   │   │   ├── cloudinaryService.js  # Evidence snapshot hosting (with local fallback)
+│   │   │   └── cryptoService.js      # AES-256 & SHA-256 evidence sealing
 │   │   ├── socket/socketHandler.js   # Real-time WebSocket broadcasting
 │   │   └── utils/plateUtils.js       # Positional repair & Levenshtein matching
 │   └── scripts/seed.js               # Gujarat cameras & users seeder
+│
+├── storage_data/                     # Local file-based plate registry backup
+│   ├── stored_number_plates.json     # JSON plate export
+│   └── stored_number_plates.txt      # Formatted text registry
 │
 ├── setup-anpr.bat / setup-anpr.ps1    # Automated installer for AI venv & dependencies
 ├── start-all.bat / start-all.ps1      # Master 1-click launcher for all 3 services
@@ -212,7 +264,7 @@ setup-anpr.bat
 
 This automated script:
 - Creates `ai-service/venv`
-- Installs PyTorch, Torchvision, Ultralytics YOLOv8, Real-ESRGAN, and PaddleOCR
+- Installs PyTorch, Torchvision, Ultralytics YOLOv8, and PaddleOCR
 - Executes `download_models.py` to retrieve `yolov8n.pt`, `zero_dce.pth`, and `RealESRGAN_x4plus.pth`
 
 ---
@@ -223,7 +275,7 @@ This automated script:
 ```bash
 cd ai-service
 call venv\Scripts\activate.bat
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 **Terminal 2 — Node.js Server:**
@@ -258,14 +310,21 @@ npm run seed
 
 ## 📡 API Reference Overview
 
-### ANPR & Intelligence Endpoints
+### ANPR & Surveillance Endpoints
 | Method | Route | Access | Description |
 |---|---|---|---|
 | `POST` | `/api/anpr/analyze` | Police, Traffic, Admin | Upload single/batch vehicle images (multipart) |
+| `POST` | `/api/anpr/video/upload` | Police, Traffic, Admin | Upload surveillance video for 1-FPS sampling |
+| `GET` | `/api/anpr/video/job/:jobId` | Police, Traffic, Admin | Query video analysis progress status |
+| `GET` | `/api/anpr/video/detections/:videoId` | Police, Traffic, Admin | Retrieve unique vehicle tracks from video |
+| `GET` | `/api/anpr/video/stream/:videoId` | Public / Stream | HTTP 206 partial content video player streaming |
+| `GET` | `/api/anpr/detections` | Police, Traffic, Admin | Historical plate detections with timestamp filters |
+| `GET` | `/api/anpr/stored-plates` | Police, Traffic, Admin | Persistent plate registry with color/match filters |
 | `GET` | `/api/anpr/watchlist` | Police, Traffic, Admin | Query monitored vehicle hotlist |
 | `POST` | `/api/anpr/watchlist` | Police, Traffic, Admin | Register target vehicle into hotlist |
 | `PATCH` | `/api/anpr/watchlist/:id` | Police, Traffic, Admin | Update watchlist entry |
 | `DELETE`| `/api/anpr/watchlist/:id` | Police, Traffic, Admin | Deactivate / delete watchlist entry |
+| `DELETE`| `/api/anpr/incidents` | Police, Traffic, Admin | Purge incident alerts and logs for a clean run |
 | `GET` | `/api/anpr/stats` | Police, Traffic, Admin | Active records, hits today, engine status |
 
 ### Surveillance & Camera Endpoints
@@ -287,7 +346,7 @@ npm run seed
 ```env
 PORT=5001
 NODE_ENV=development
-AI_SERVICE_URL=http://localhost:8000
+AI_SERVICE_URL=http://127.0.0.1:8000
 CLIENT_URL=http://localhost:5173
 MONGO_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/drishtigrid
 JWT_SECRET=your_jwt_secret_key
@@ -305,10 +364,11 @@ VITE_APP_NAME=DrishtiGrid
 ---
 
 ## 🛡️ Hackathon Evaluation & Compliance Highlights
-1. **Zero-DB Video Storage:** No raw video files or feed buffers touch MongoDB. Streams are parsed directly in the browser via WebRTC (WHEP) and hardware canvas decoding.
-2. **Cryptographic Integrity:** Evidence files are sealed with SHA-256 digests and AES-256-GCM encryption.
-3. **Resilient AI Pipeline:** Even if the Python deep learning server is offline, DrishtiGrid's built-in fallback simulation guarantees uninterrupted operation.
-4. **Bilingual Institutional UI:** Gujarat Government branding in Gujarati (ગુજરાતી) and English, supporting full Light and Dark modes.
+1. **Zero-DB Video Storage:** Live streams are parsed directly in the browser via WebRTC (WHEP) and hardware canvas decoding without consuming database storage.
+2. **1-FPS Temporal Video Processing:** Deep learning frame sampling at 1 frame per second with 30s vehicle tracking deduplication, consensus color extraction, and HTTP 206 byte-range playback.
+3. **Cryptographic Integrity:** Evidence files are sealed with SHA-256 digests and AES-256-GCM encryption for court-admissible chain of custody.
+4. **Resilient AI Pipeline:** Even if the Python deep learning server is offline, DrishtiGrid's built-in fallback simulation guarantees uninterrupted operation.
+5. **Law Enforcement Realism:** Authentic Gujarat Police Netram ICCC design, BNS/IPC legal citations, tactical dispatch actions, and bilingual Gujarati/English interfaces in both Light and Dark modes.
 
 ---
 

@@ -19,6 +19,8 @@ Errors in individual plates are isolated so other plates continue processing.
 """
 
 import logging
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -52,10 +54,12 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _decode_image(image_bytes: bytes) -> Optional[np.ndarray]:
-    """Decode raw bytes to a BGR NumPy array. Returns None on failure."""
+def _decode_image(image_input: Any) -> Optional[np.ndarray]:
+    """Decode raw bytes or pass-through BGR NumPy array. Returns None on failure."""
+    if isinstance(image_input, np.ndarray):
+        return image_input
     try:
-        arr = np.frombuffer(image_bytes, dtype=np.uint8)
+        arr = np.frombuffer(image_input, dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
         return img
     except Exception as e:
@@ -260,6 +264,14 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         )
         plate_results.append(plate_result)
 
+    NON_PLATE_KEYWORDS = {
+        "TIMES", "TIMESNOW", "GOVERNOR", "OFFICIAL", "OFFICIALUSE",
+        "TEMPORARY", "REGISTRATION", "POLICE", "HIGHWAY", "TOLL",
+        "GROUP", "TRMN", "NEWDELHI", "DELHI", "INDIA", "TRANSPORT",
+        "MAIAD", "ALAMY", "STOCK", "PHOTO", "NEWS", "BHARAT", "CHTANMENTAS",
+        "XABUSHANOI", "XABUS", "XABUSHANO", "DAOCA", "OUUHSAUUX"
+    }
+
     # Filter out false positives: if an object has NO alphanumeric OCR text and OCR confidence is 0,
     # it is a false positive (e.g. taillight, wheel, car logo, or road artifact).
     valid_plate_results = []
@@ -267,7 +279,30 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         raw = p.get("raw_ocr", "").strip()
         ocr_conf = p.get("ocr_confidence", 0.0)
         det_conf = p.get("detection_confidence", 0.0)
+        val_status = p.get("validation_status", "UNCERTAIN")
         alnum_chars = [c for c in raw if c.isalnum()]
+        clean_alnum = "".join(alnum_chars).upper()
+
+        # Discard known watermarks or billboard words
+        if clean_alnum in NON_PLATE_KEYWORDS:
+            logger.info(f"Discarded non-plate keyword #{p['plate_id']} '{raw}'")
+            continue
+
+        # Reject pure noise with fewer than 3 alphanumeric chars
+        if len(alnum_chars) < 3:
+            logger.info(f"Discarded short/noisy text #{p['plate_id']} '{raw}' (< 3 chars)")
+            continue
+
+        # If flagged INVALID_FORMAT, but has valid plate length (4-12 chars), treat as possible plate
+        if val_status == "INVALID_FORMAT":
+            if 4 <= len(alnum_chars) <= 12 and any(c.isdigit() for c in clean_alnum):
+                p["validation_status"] = "POSSIBLE_FORMAT"
+                p["validation_note"] = "Detected vehicle registration plate"
+                if not p.get("normalized_plate"):
+                    p["normalized_plate"] = clean_alnum
+            else:
+                logger.info(f"Discarded non-plate text #{p['plate_id']} '{raw}' (INVALID_FORMAT)")
+                continue
 
         if len(alnum_chars) == 0 and ocr_conf == 0.0 and det_conf < 0.70:
             logger.info(
@@ -275,6 +310,10 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
                 f"(zero OCR text, conf={det_conf:.2f})"
             )
             continue
+
+        if not p.get("normalized_plate") and clean_alnum:
+            p["normalized_plate"] = clean_alnum
+
         valid_plate_results.append(p)
 
     # Deduplicate by normalized plate text:
@@ -322,11 +361,13 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
             attr = detect_vehicle_attributes(image, p["bbox"])
             p["car_color"] = attr.get("car_color")
             p["car_model"] = attr.get("car_model")
+            p["vehicle_type"] = attr.get("vehicle_type", "car")
             p["vehicle_bbox"] = attr.get("vehicle_bbox")
         except Exception as e:
             logger.warning(f"Plate #{p['plate_id']}: Vehicle attribute detection failed: {e}")
             p["car_color"] = None
             p["car_model"] = None
+            p["vehicle_type"] = "car"
             p["vehicle_bbox"] = None
 
     result["total_plates_detected"] = len(valid_plate_results)

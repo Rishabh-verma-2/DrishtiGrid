@@ -30,10 +30,15 @@ from typing import Dict, Tuple
 # Standard BH (Bharat) series: 23BH1234AA
 BH_PATTERN = re.compile(r"^\d{2}BH\d{4}[A-HJ-NP-Z]{1,2}$")
 
-# Standard state-coded format: GJ01AB1234 (state 2 chars, district 2 digits,
+# Standard state-coded format: GJ01AB1234 or DL1CA0001 (state 2 chars, district 1-2 digits,
 # series 1-3 alpha, number 1-4 digits)
 STANDARD_PATTERN = re.compile(
-    r"^[A-Z]{2}\d{2}[A-Z]{1,3}\d{1,4}$"
+    r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}$"
+)
+
+# Temporary registration plate format: DL12TEMP1234, MH01TR1234, etc.
+TEMP_PATTERN = re.compile(
+    r"^[A-Z]{2}\d{1,2}(?:TEMP|TR|TMP)\d{1,4}$"
 )
 
 # Old-style: MH12 E 1234 → after normalization → MH12E1234
@@ -43,7 +48,7 @@ OLD_STYLE_PATTERN = re.compile(
 
 # Electric vehicle suffix pattern: GJ01AB1234E
 EV_PATTERN = re.compile(
-    r"^[A-Z]{2}\d{2}[A-Z]{1,3}\d{1,4}E$"
+    r"^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{1,4}E$"
 )
 
 KNOWN_STATE_CODES = {
@@ -71,12 +76,24 @@ def normalize_plate_text(raw: str) -> str:
     cleaned = re.sub(r"[^A-Z0-9]", "", cleaned)
 
     # Strip embossed 'IND' badge text if present at beginning of plate
-    if cleaned.startswith("IND") and len(cleaned) >= 11:
+    for badge in ("IND", "INT", "1ND", "IN0", "LND", "TND", "INO", "JND", "INDIA"):
+        if cleaned.startswith(badge):
+            rem = cleaned[len(badge):]
+            if len(rem) >= 6 and (rem[:2] in KNOWN_STATE_CODES or any(rem[i:i+2] in KNOWN_STATE_CODES for i in range(2))):
+                cleaned = rem
+                break
+            elif len(cleaned) >= 11:
+                cleaned = rem
+                break
+
+    # Also strip if first 3 characters are junk/badge and characters 3:5 is a known state code
+    if len(cleaned) >= 8 and cleaned[:2] not in KNOWN_STATE_CODES and cleaned[3:5] in KNOWN_STATE_CODES:
         cleaned = cleaned[3:]
 
     # Smart Indian license plate canonical character correction
     # Format: [2 State Letters][1-2 District Digits][1-3 Series Letters][1-4 Number Digits]
-    if 8 <= len(cleaned) <= 11:
+    # Only apply if starts with a known Indian state code to avoid corrupting other valid plates
+    if 8 <= len(cleaned) <= 11 and (cleaned[:2] in KNOWN_STATE_CODES or any(cleaned.startswith(s) for s in ("DL", "GJ", "MH", "HR", "UP", "KA", "TN", "WB", "RJ", "MP"))):
         chars = list(cleaned)
         # Position 0 & 1 must be state letters
         for i in (0, 1):
@@ -142,6 +159,11 @@ def validate_indian_plate(normalized: str) -> Tuple[str, str]:
     # Check EV plates
     if EV_PATTERN.match(normalized):
         return "VALID_FORMAT", "Electric vehicle plate"
+
+    # Check temporary registration plates
+    if TEMP_PATTERN.match(normalized):
+        state = normalized[:2]
+        return "VALID_FORMAT", f"Temporary registration plate, state: {state}"
 
     # Check standard format
     if STANDARD_PATTERN.match(normalized):

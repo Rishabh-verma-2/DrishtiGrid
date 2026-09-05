@@ -90,17 +90,22 @@ const PlateRecordSchema = new mongoose.Schema(
   }
 );
 
-// Auto-generate recordId (PR-0001, PR-0002, etc.) if not set
-PlateRecordSchema.pre('validate', async function (next) {
+// Auto-generate unique recordId (PR-0001, PR-0002, etc.) if not set
+PlateRecordSchema.pre('validate', async function () {
   if (this.plate_number && !this.normalized_plate_number) {
     this.normalized_plate_number = this.plate_number.toUpperCase().replace(/[^A-Z0-9]/g, '');
   }
 
   if (!this.recordId) {
     const count = await mongoose.model('PlateRecord').countDocuments();
-    this.recordId = `PR-${String(count + 1).padStart(4, '0')}`;
+    let num = count + 1;
+    let candidate = `PR-${String(num).padStart(4, '0')}`;
+    while (await mongoose.model('PlateRecord').exists({ recordId: candidate })) {
+      num += 1;
+      candidate = `PR-${String(num).padStart(4, '0')}`;
+    }
+    this.recordId = candidate;
   }
-  next();
 });
 
 module.exports = mongoose.model('PlateRecord', PlateRecordSchema);

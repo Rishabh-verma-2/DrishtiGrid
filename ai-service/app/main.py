@@ -3,8 +3,11 @@ FastAPI application entry point.
 Models are loaded once at startup via lifespan events.
 """
 
-import logging
+import os
 import sys
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI

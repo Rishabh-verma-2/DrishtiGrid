@@ -41,6 +41,14 @@ ai-service/.venv/
 .pytest_cache/
 ai-service/model_weights/*.pt
 ai-service/model_weights/*.pth
+ai-service/*.pt
+*.pt
+server/data/
+server/uploads/videos/*
+!server/uploads/videos/.gitkeep
+server/uploads/evidence/*
+!server/uploads/evidence/.gitkeep
 !ai-service/model_weights/.gitkeep
 ai-service/temp/*
 !ai-service/temp/.gitkeep
+

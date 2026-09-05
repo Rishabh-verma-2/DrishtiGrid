@@ -330,12 +330,14 @@ def detect_vehicle_attributes(
         {
             "car_color": str | None,
             "car_model": None,  # Pluggable; null when no classifier is loaded
+            "vehicle_type": str | None,
             "vehicle_bbox": {"x1": int, "y1": int, "x2": int, "y2": int} | None
         }
     """
     result = {
         "car_color": None,
         "car_model": None,
+        "vehicle_type": "car",
         "vehicle_bbox": None,
     }
 
@@ -347,11 +349,15 @@ def detect_vehicle_attributes(
         if model is None:
             return result
 
-        # Parse plate box
-        px1 = int(plate_bbox.get("x1", 0))
-        py1 = int(plate_bbox.get("y1", 0))
-        px2 = int(plate_bbox.get("x2", 0))
-        py2 = int(plate_bbox.get("y2", 0))
+        # Parse plate box (supports both {x1, y1, x2, y2} and {x, y, width, height})
+        px1 = int(plate_bbox.get("x1", plate_bbox.get("x", 0)))
+        py1 = int(plate_bbox.get("y1", plate_bbox.get("y", 0)))
+        if "x2" in plate_bbox and "y2" in plate_bbox:
+            px2 = int(plate_bbox.get("x2", 0))
+            py2 = int(plate_bbox.get("y2", 0))
+        else:
+            px2 = px1 + int(plate_bbox.get("width", 0))
+            py2 = py1 + int(plate_bbox.get("height", 0))
         plate_box = (px1, py1, px2, py2)
 
         # Run inference on the full frame
@@ -417,6 +423,7 @@ def detect_vehicle_attributes(
         if matched_vehicle:
             vx1, vy1, vx2, vy2, v_type, v_conf = matched_vehicle
             result["vehicle_bbox"] = {"x1": vx1, "y1": vy1, "x2": vx2, "y2": vy2}
+            result["vehicle_type"] = v_type
             vehicle_box_tuple = (vx1, vy1, vx2, vy2)
 
         # Extract dominant vehicle paint color using body patches
