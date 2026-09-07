@@ -6,7 +6,9 @@ import logging
 import time
 from typing import Optional
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+import cv2
+import numpy as np
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
 from app.config.settings import MODEL_CONFIG
@@ -123,3 +125,101 @@ async def process_image(image: UploadFile = File(...)):
     }
 
     return JSONResponse(content=response)
+
+
+@router.post("/crowd")
+async def crowd_detection(
+    image: UploadFile = File(...),
+    camera_id: str = Form(default="default"),
+    conf_threshold: float = Form(default=0.30),
+    grid_rows: int = Form(default=3),
+    grid_cols: int = Form(default=4),
+):
+    """
+    Crowd Detection & Density Analysis endpoint.
+
+    Accepts a JPEG/PNG image frame from a CCTV camera and runs:
+    - YOLOv8 person detection (COCO class 0)
+    - Spatial density grid analysis
+    - Crowd level classification (LOW / MEDIUM / HIGH / CRITICAL)
+    - Crowd surge detection (vs. per-camera rolling baseline)
+    - Annotated image with heatmap overlay and summary panel
+
+    Parameters
+    ----------
+    image          : Uploaded image file (JPG/PNG, max 20 MB)
+    camera_id      : Unique camera identifier for surge baseline tracking
+    conf_threshold : YOLO detection confidence threshold (default 0.30)
+    grid_rows      : Density grid row divisions (default 3)
+    grid_cols      : Density grid column divisions (default 4)
+
+    Returns
+    -------
+    JSON with crowd metrics, zone breakdown, detections list,
+    surge info, and annotated image (base64).
+    """
+    # ---- Validate file type ----
+    content_type = (image.content_type or "").lower()
+    filename = (image.filename or "").lower()
+    import os
+    _, ext = os.path.splitext(filename)
+    if ext not in ALLOWED_EXT and content_type not in ALLOWED_TYPES:
+        raise HTTPException(
+            status_code=415,
+            detail=f"Unsupported file type '{ext or content_type}'. Only JPG/JPEG/PNG accepted.",
+        )
+
+    # ---- Read bytes ----
+    image_bytes = await image.read()
+    if len(image_bytes) == 0:
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+    if len(image_bytes) > MAX_SIZE:
+        max_mb = MAX_SIZE // (1024 * 1024)
+        raise HTTPException(status_code=413, detail=f"File too large. Max {max_mb} MB.")
+
+    # ---- Decode image ----
+    if not validate_image_bytes(image_bytes):
+        raise HTTPException(status_code=422, detail="File is not a valid or readable image.")
+
+    arr = np.frombuffer(image_bytes, dtype=np.uint8)
+    frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    if frame is None:
+        raise HTTPException(status_code=422, detail="Could not decode image.")
+
+    # ---- Run crowd detection ----
+    logger.info(
+        f"[Crowd] Analyzing frame from camera='{camera_id}' "
+        f"({len(image_bytes)/1024:.1f} KB)"
+    )
+
+    try:
+        from app.detection.crowd_detector import detect_crowd
+        crowd_result = detect_crowd(
+            image=frame,
+            camera_id=camera_id,
+            conf_threshold=max(0.15, min(0.95, conf_threshold)),
+            grid_rows=max(1, min(8, grid_rows)),
+            grid_cols=max(1, min(8, grid_cols)),
+        )
+    except Exception as e:
+        logger.error(f"[Crowd] Detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Crowd detection failed: {e}")
+
+    if not crowd_result.get("success") and crowd_result.get("error"):
+        raise HTTPException(status_code=500, detail=crowd_result["error"])
+
+    return JSONResponse(content=crowd_result)
+
+
+@router.post("/crowd/reset/{camera_id}")
+async def crowd_reset_baseline(camera_id: str):
+    """
+    Reset the in-memory surge detection baseline for a specific camera.
+    Call this when a camera is reconfigured or its scene changes significantly.
+    """
+    try:
+        from app.detection.crowd_detector import reset_camera_baseline
+        reset_camera_baseline(camera_id)
+        return {"success": True, "message": f"Baseline reset for camera '{camera_id}'."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

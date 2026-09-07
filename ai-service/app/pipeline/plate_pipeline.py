@@ -265,11 +265,21 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         plate_results.append(plate_result)
 
     NON_PLATE_KEYWORDS = {
+        # News / media watermarks
         "TIMES", "TIMESNOW", "GOVERNOR", "OFFICIAL", "OFFICIALUSE",
         "TEMPORARY", "REGISTRATION", "POLICE", "HIGHWAY", "TOLL",
         "GROUP", "TRMN", "NEWDELHI", "DELHI", "INDIA", "TRANSPORT",
-        "MAIAD", "ALAMY", "STOCK", "PHOTO", "NEWS", "BHARAT", "CHTANMENTAS",
-        "XABUSHANOI", "XABUS", "XABUSHANO", "DAOCA", "OUUHSAUUX"
+        "MAIAD", "ALAMY", "STOCK", "PHOTO", "NEWS", "BHARAT",
+        "CHTANMENTAS", "XABUSHANOI", "XABUS", "XABUSHANO",
+        "DAOCA", "OUUHSAUUX",
+        # Common billboard / storefront text visible in Indian traffic CCTV
+        "SHARMA", "ELECTRONICS", "BANKOFINDIA", "BANKOFIND",
+        "CAFE", "DELIGHT", "CAFEDELIGHT", "BANDRA", "JUNCTION",
+        "SUPERMARKET", "HOSPITAL", "SCHOOL", "COLLEGE", "UNIVERSITY",
+        "PETROL", "DIESEL", "PUMP", "FILLING", "STATION",
+        "RESTAURANT", "HOTEL", "LODGE", "MALL", "PLAZA", "TOWER",
+        "POLICE", "MUNICIPAL", "CORPORATION", "NAGAR", "NIGAM",
+        "BHAVAN", "BHAWAN", "MANDIR", "MASJID", "CHURCH", "GURUDWARA",
     }
 
     # Filter out false positives: if an object has NO alphanumeric OCR text and OCR confidence is 0,

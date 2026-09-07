@@ -84,6 +84,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Vehicle model preloading failed (non-fatal): {e}")
 
+    # 6. Crowd Detector warm-up (reuses the already-loaded YOLO model)
+    try:
+        from app.detection.crowd_detector import detect_crowd
+        import numpy as np
+        dummy_frame = np.zeros((480, 640, 3), dtype=np.uint8)
+        detect_crowd(dummy_frame, camera_id="__warmup__")
+        logger.info("Crowd detector warmed up successfully.")
+    except Exception as e:
+        logger.warning(f"Crowd detector warm-up failed (non-fatal): {e}")
+
     logger.info("=== All models loaded. Ready to serve requests. ===")
 
     yield  # --- Application runs here ---

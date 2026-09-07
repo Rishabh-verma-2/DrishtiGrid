@@ -8,6 +8,7 @@
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38BDF8.svg?logo=tailwindcss)](https://tailwindcss.com)
 [![WebRTC](https://img.shields.io/badge/Streaming-WebRTC%20%7C%20WHEP%20%7C%20HLS-FF6B00.svg)](https://webrtc.org)
 [![Leaflet](https://img.shields.io/badge/GIS-Leaflet%20%7C%20OpenStreetMap-199900.svg?logo=leaflet)](https://leafletjs.com)
+[![YOLOv8](https://img.shields.io/badge/AI-YOLOv8%20%7C%20PaddleOCR%20%7C%20Soft--NMS-blueviolet.svg)](https://ultralytics.com)
 [![License](https://img.shields.io/badge/License-Government%20Internal%20Use-red.svg)](#)
 
 ---
@@ -25,6 +26,7 @@
    - [7. 🎫 Secure Footage Ticketing & Cryptographic Evidence Chain](#7--secure-footage-ticketing--cryptographic-evidence-chain)
    - [8. 👥 3-Role Government RBAC & Security](#8--3-role-government-rbac--security)
    - [9. 🔔 Real-Time Notification & Alert Dispatch](#9--real-time-notification--alert-dispatch)
+   - [10. 🧠 Crowd Detection & Scene Object Inventory](#10--crowd-detection--scene-object-inventory)
 4. [Project Directory Structure](#-project-directory-structure)
 5. [Quick Start Guide (One-Click Setup & Launch)](#-quick-start-guide)
 6. [API Reference Overview](#-api-reference-overview)
@@ -104,15 +106,22 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - Covers all major Gujarat districts: Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana, Kutch, and more.
 - Real-time unit distribution, live camera density heatmap, and click-to-inspect feeds.
 
-### 3. 🚔 ANPR & AI Vehicle Surveillance Engine
-- **Multi-Stage Deep Learning Pipeline:**
-  1. **YOLOv8 Plate Detection:** Detects license plate bounding boxes with high precision across complex urban scenes.
-  2. **Zero-DCE Neural Enhancement:** Dynamic low-light enhancement for dark, nighttime, or under-illuminated surveillance footage.
-  3. **PaddleOCR Engine:** Extracts alphanumeric characters with Indian registration layout validation.
-  4. **Vehicle Attribute Classifier:** Detects vehicle color (White, Silver, Black, Red, Blue, etc.), vehicle category (car, bus, truck, motorcycle), and confidence metrics.
-- **Indian Plate Canonical Disambiguation:** Disambiguates OCR confusion based on positional syntax (`[State 2L][District 2D][Series 1-3L][Number 4D]`), automatically resolving `O/0`, `I/1`, `Z/2`, `B/8`, and `S/5`. Supports Bharat Series (`BH`), Electric Vehicles (`EV`), and standard formats.
-- **Sequential Multi-Image Scanner:** Upload up to 10 vehicle images; processed sequentially with real-time UI previews. Includes **Annotated**, **Raw Frame**, and **Side-by-Side** views with an interactive modal zoom (70% - 250%).
-- **Hotlist & Watchlist Cross-Referencing:** Instant matching against database records categorized by `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, and `BLACKLISTED`.
+### 3. 🚔 ANPR & AI Vehicle Surveillance Engine — *Industry-Grade Multi-Pass Edition*
+- **6-Pass License Plate Detection Pipeline** (no new installs — reuses existing models):
+  1. **Pass 1 — Full-frame direct** at base confidence.
+  2. **Pass 2 — Multi-scale inference** at 1.25× and 1.75× to resolve small/distant plates.
+  3. **Pass 3 — Vehicle-region cascade**: COCO model locates vehicles → lower-40% crop upscaled to ≥320 px → LP detection on each ROI individually. Each plate appears 3–5× larger to YOLO.
+  4. **Pass 4 — Horizontal tile scan**: 3–4 overlapping 50%-overlap tiles for plates near frame edges.
+  5. **Pass 5 — OCR-guided localization**: PaddleOCR finds registration text, derives plate bounding box directly from character geometry.
+  6. **Pass 6 — Contour heuristic** (fallback only, returns up to 8 candidates vs. 1 before).
+- **Global Soft-NMS (IoU 0.30)**: All candidates from all 6 passes pooled and de-duplicated without merging genuine side-by-side plates.
+- **OCR Confidence Boosting**: YOLO candidates confirmed by OCR get +0.15 confidence before NMS, ensuring confirmed plates always survive.
+- **Relaxed Geometry**: Aspect 0.80–9.00, min 18×6 px — catches overhead-camera plates and two-line plates previously discarded.
+- **Zero-DCE Neural Enhancement:** Dynamic low-light enhancement for nighttime footage.
+- **PaddleOCR Engine:** Alphanumeric extraction with Indian registration layout validation.
+- **Vehicle Attribute Classifier:** Color (White/Silver/Black/Red/Blue), category, confidence.
+- **Indian Plate Canonical Disambiguation:** `O/0`, `I/1`, `Z/2`, `B/8`, `S/5` resolved positionally. BH (Bharat) and EV series supported.
+- **Hotlist & Watchlist Cross-Referencing:** `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, `BLACKLISTED`.
 
 ### 4. 📼 1-FPS Video Surveillance & Temporal Tracking
 - **Automated 1-FPS Sampling:** Samples video footage frame-by-frame using FFmpeg for optimal throughput without server overload.
@@ -147,8 +156,45 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - **Immutable Audit Trail:** Logs all user actions, logins, ticket responses, and batch ANPR scans.
 
 ### 9. 🔔 Real-Time Notification & Alert Dispatch
-- Real-time push via **Socket.IO** (`alert:new`, `anpr:match`, `anpr:cleared`, `notification:new`, `camera:status`).
+- Real-time push via **Socket.IO** (`alert:new`, `anpr:match`, `anpr:cleared`, `notification:new`, `camera:status`, `crowd:analysis`, `crowd:alert`).
 - Audio-visual alert toasts and top-bar Notification Center with unread counters.
+
+### 10. 🧠 Crowd Detection & Scene Object Inventory
+
+A fully integrated, zero-new-install crowd intelligence module built on the existing YOLOv8 + OpenCV stack.
+
+**Person counting — maximum accuracy techniques:**
+
+| Technique | What it solves |
+|-----------|---------------|
+| **4-pass multi-scale inference** (full-frame + 1.25× + 3×3 tiles 40% overlap + all-class) | Small/distant people, persons near tile edges, deep-crowd resolution |
+| **Gaussian Soft-NMS** (Bodla et al.) | Preserves partially-occluded people that hard NMS deletes |
+| **Occlusion correction estimator** | Estimates hidden persons behind front rows based on packing density |
+| **Gaussian KDE heatmap** | Smooth continuous density map from person centroids (JET colourmap overlay) |
+| **Blended density score** (count-based 55% + area-based 45%) | More accurate density vs. naive count/area ratio |
+
+**Output fields:**
+- `detected_count` — persons YOLO directly found
+- `occluded_est` — hidden persons estimated by the occlusion corrector
+- `total_count` — `detected_count + occluded_est` (the number shown in the panel)
+- `crowd_level` — `LOW` (0–9) / `MEDIUM` (10–29) / `HIGH` (30–59) / `CRITICAL` (60+)
+- `density_score` — blended 0–1 float
+- `zones` — 4×4 density grid with `clear` / `moderate` / `dense` / `critical` per cell
+- `object_inventory` — full COCO 80-class scene inventory:
+  ```json
+  {
+    "vehicles": { "car": 6, "motorcycle": 2, "bus": 1 },
+    "vehicle_total": 9,
+    "other_objects": { "bench": 3, "umbrella": 1 },
+    "detections": [ { "class": "car", "count": 6, "boxes": [...] } ]
+  }
+  ```
+- `surge` — detected when count exceeds 30-frame rolling baseline by ≥40%
+- `annotated_image_b64` — richly annotated frame: JET KDE heatmap overlay, per-person boxes coloured by zone density, vehicle boxes (blue), dual info panels
+
+**Alert integration:** `HIGH` or `CRITICAL` crowd or a surge event creates a `crowd_surge` MongoDB Alert and emits `crowd:analysis` / `crowd:alert` / `alert:new` via Socket.IO (60-second per-camera cooldown).
+
+**API:** `POST /api/crowd/analyze` · `GET /api/crowd/alerts` · `GET /api/crowd/stats` · `POST /api/crowd/reset/:camId`
 
 ---
 
@@ -158,10 +204,12 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 DrishtiGrid/
 ├── ai-service/                       # Python FastAPI AI Microservice (:8000)
 │   ├── app/
-│   │   ├── api/routes.py             # /health, /process, /ocr endpoints
+│   │   ├── api/routes.py             # /health, /process, /ocr, /crowd, /crowd/reset endpoints
 │   │   ├── config/settings.py        # Model thresholds, GPU flags
 │   │   ├── detection/
-│   │   │   ├── yolo_detector.py      # YOLOv8 plate detector
+│   │   │   ├── yolo_detector.py      # 6-pass industry-grade LP detector (Soft-NMS, multi-scale, tiles)
+│   │   │   ├── crowd_detector.py     # High-accuracy crowd + object inventory engine
+│   │   │   ├── CROWD_DETECTION_IMPL.md # Crowd detection implementation reference
 │   │   │   └── vehicle_attributes.py # Vehicle color & type classification
 │   │   ├── enhancement/              # CLAHE & Zero-DCE neural low-light
 │   │   ├── ocr/paddle_ocr.py         # PaddleOCR extraction
@@ -174,7 +222,7 @@ DrishtiGrid/
 │
 ├── client/                           # React 19 Frontend (Vite + Tailwind v4) (:5173)
 │   ├── src/
-│   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts)
+│   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts, crowd)
 │   │   ├── components/
 │   │   │   ├── anpr/
 │   │   │   │   ├── MatchAlertModal.jsx      # Gujarat Police ICCC tactical intercept modal
@@ -204,18 +252,20 @@ DrishtiGrid/
 │   │   ├── controllers/
 │   │   │   ├── anprController.js     # Image batch, video pipeline, watchlist, stats, clear
 │   │   │   ├── alertController.js    # Alert dispatch & triage
-│   │   │   └── cameraController.js   # Camera catalog & heartbeat
+│   │   │   ├── cameraController.js   # Camera catalog & heartbeat
+│   │   │   └── crowdController.js    # Crowd analysis, alerts, stats, baseline reset
 │   │   ├── middleware/               # auth.js (JWT & RBAC), errorHandler.js
 │   │   ├── models/
 │   │   │   ├── PlateRecord.js        # Monitored watchlist definitions
 │   │   │   ├── PlateDetection.js     # Timestamped sightings with frame seconds
 │   │   │   ├── StoredPlate.js        # Unique vehicle registry
-│   │   │   ├── Alert.js              # Native incident alerts
+│   │   │   ├── Alert.js              # Native incident alerts (ANPR + crowd_surge)
 │   │   │   ├── Camera.js             # Camera metadata & coordinates
 │   │   │   └── User.js               # Police/Admin user accounts
-│   │   ├── routes/                   # anpr.js, alerts.js, cameras.js, stream.js
+│   │   ├── routes/                   # anpr.js, alerts.js, cameras.js, stream.js, crowd.js
 │   │   ├── services/
 │   │   │   ├── videoService.js       # 1-FPS video pipeline & temporal deduplication
+│   │   │   ├── crowdDetectionService.js # Crowd AI bridge, alert creation, Socket.IO events
 │   │   │   ├── plateStorageService.js# Local JSON/TXT + MongoDB sync
 │   │   │   ├── cloudinaryService.js  # Evidence snapshot hosting (with local fallback)
 │   │   │   └── cryptoService.js      # AES-256 & SHA-256 evidence sealing
@@ -227,8 +277,8 @@ DrishtiGrid/
 │   ├── stored_number_plates.json     # JSON plate export
 │   └── stored_number_plates.txt      # Formatted text registry
 │
-├── setup-anpr.bat / setup-anpr.ps1    # Automated installer for AI venv & dependencies
-├── start-all.bat / start-all.ps1      # Master 1-click launcher for all 3 services
+├── setup-anpr.bat / setup-anpr.ps1   # Automated installer for AI venv & dependencies
+├── start-all.bat / start-all.ps1     # Master 1-click launcher for all 3 services
 └── README.md                         # Main platform documentation
 ```
 
@@ -338,6 +388,22 @@ npm run seed
 | `POST` | `/api/footage-tickets` | Authenticated | Submit chain-of-custody footage request |
 | `POST` | `/api/footage-tickets/:id/evidence` | Authenticated | Upload SHA-256 sealed evidence clip |
 
+### Crowd Detection Endpoints
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/crowd/analyze` | Authenticated | Upload frame for crowd + object inventory analysis |
+| `GET` | `/api/crowd/alerts` | Authenticated | Fetch `crowd_surge` alerts (paginated, filterable) |
+| `GET` | `/api/crowd/stats` | Authenticated | Aggregate crowd statistics by camera & severity |
+| `POST` | `/api/crowd/reset/:camId` | Authenticated | Reset per-camera surge baseline & cooldown |
+
+### AI Microservice Direct Endpoints (port 8000)
+| Method | Route | Description |
+|---|---|---|
+| `POST` | `/process` | Full ANPR pipeline (LP detect → enhance → OCR → attributes) |
+| `POST` | `/crowd` | Crowd detection + object inventory on a single frame |
+| `POST` | `/crowd/reset/{camera_id}` | Reset in-memory surge baseline for a camera |
+| `GET` | `/health` | AI service health & model status |
+
 ---
 
 ## 🔐 Environment Variables
@@ -369,6 +435,8 @@ VITE_APP_NAME=DrishtiGrid
 3. **Cryptographic Integrity:** Evidence files are sealed with SHA-256 digests and AES-256-GCM encryption for court-admissible chain of custody.
 4. **Resilient AI Pipeline:** Even if the Python deep learning server is offline, DrishtiGrid's built-in fallback simulation guarantees uninterrupted operation.
 5. **Law Enforcement Realism:** Authentic Gujarat Police Netram ICCC design, BNS/IPC legal citations, tactical dispatch actions, and bilingual Gujarati/English interfaces in both Light and Dark modes.
+6. **Industry-Grade ANPR:** 6-pass multi-scale detection (direct + 1.25× + 1.75× + vehicle-cascade + 50%-overlap tiles + OCR-guided) with Soft-NMS and OCR confidence boosting — detects every visible plate in complex traffic junction scenes.
+7. **High-Accuracy Crowd Intelligence:** Gaussian Soft-NMS + 4-pass tiled inference + occlusion correction estimator + KDE heatmap — counts people in densely packed crowds and additionally provides a full 80-class COCO scene object inventory (cars, trucks, buses, bicycles, etc.).
 
 ---
 

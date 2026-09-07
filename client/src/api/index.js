@@ -109,5 +109,47 @@ export const reportAPI = {
   download: (fileName) => apiClient.get(`/reports/download/${fileName}`, { responseType: 'blob' }),
 };
 
+export const crowdAPI = {
+  /**
+   * Upload a single image frame for on-demand crowd density analysis.
+   * @param {File|Blob} imageFile  - The image file
+   * @param {string}   cameraId   - Camera identifier
+   * @param {Object}   [opts]     - { confThreshold, gridRows, gridCols }
+   *
+   * Response data fields:
+   *   detected_count    {number}  - Persons YOLO directly detected
+   *   occluded_est      {number}  - Estimated hidden/occluded persons
+   *   total_count       {number}  - detected_count + occluded_est
+   *   crowd_level       {string}  - LOW | MEDIUM | HIGH | CRITICAL
+   *   density_score     {number}  - 0-1
+   *   zones             {Array}   - Density grid zones
+   *   person_detections {Array}   - Per-person bbox + confidence
+   *   object_inventory  {Object}  - vehicles: {car,truck,...}, vehicle_total, other_objects
+   *   surge             {Object}  - surge_detected, baseline_avg, surge_percent
+   *   annotated_image_b64 {string}- Annotated frame with heatmap + panels
+   */
+  analyzeFrame: (imageFile, cameraId = 'default', opts = {}) => {
+    const form = new FormData();
+    form.append('image', imageFile);
+    form.append('camera_id', cameraId);
+    form.append('conf_threshold', String(opts.confThreshold ?? 0.30));
+    form.append('grid_rows', String(opts.gridRows ?? 3));
+    form.append('grid_cols', String(opts.gridCols ?? 4));
+    return apiClient.post('/crowd/analyze', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  /** Fetch crowd_surge alerts with optional filters */
+  getAlerts: (params) => apiClient.get('/crowd/alerts', { params }),
+
+  /** Aggregate crowd stats */
+  getStats: () => apiClient.get('/crowd/stats'),
+
+  /** Reset per-camera surge baseline + alert cooldown */
+  resetBaseline: (camId) => apiClient.post(`/crowd/reset/${camId}`),
+};
+
+
 
 
