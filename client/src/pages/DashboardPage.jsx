@@ -8,7 +8,7 @@ import {
   Camera, Wifi, WifiOff, Wrench, AlertTriangle, Activity,
   TrendingUp, MapPin, Clock, Eye, Radio, Users, FileText,
   Shield, CheckCircle2, ArrowRight, ExternalLink, Send,
-  Car, Compass, BarChart3, Plus, ChevronRight, Layers, Lock
+  Car, Compass, BarChart3, Plus, ChevronRight, Layers, Lock, Flame
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { format } from 'date-fns';
@@ -416,6 +416,22 @@ export default function DashboardPage() {
                 </Link>
 
                 <Link
+                  to="/crowd-detection"
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
+                    isLight ? 'bg-indigo-50 hover:bg-indigo-100/70 border-indigo-200 text-indigo-950' : 'bg-indigo-500/10 hover:bg-indigo-500/15 border-indigo-500/25 text-indigo-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Flame className="w-5 h-5 text-indigo-500" />
+                    <div>
+                      <p className="text-xs font-bold">Crowd & Density Surveillance</p>
+                      <p className="text-[10px] text-slate-500">KDE heatmaps, pedestrian counts & surge triage</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-indigo-400" />
+                </Link>
+
+                <Link
                   to="/audit-logs"
                   className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
                     isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
@@ -472,6 +488,22 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
+                </button>
+
+                <button
+                  onClick={() => navigate('/crowd-detection')}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${
+                    isLight ? 'bg-amber-50 hover:bg-amber-100/70 border-amber-200 text-amber-950' : 'bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/25 text-amber-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Flame className="w-5 h-5 text-amber-500" />
+                    <div>
+                      <p className="text-xs font-bold">Crowd & Density AI</p>
+                      <p className="text-[10px] text-slate-400">Heatmaps, congestion pinch points & scene objects</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-amber-400" />
                 </button>
 
                 <button

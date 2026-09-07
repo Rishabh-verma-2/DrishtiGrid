@@ -17,6 +17,7 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ANPRPage from './pages/ANPRPage';
+import CrowdDetectionPage from './pages/CrowdDetectionPage';
 import RoleRoute from './components/auth/RoleRoute';
 
 // Protected route wrapper
@@ -63,6 +64,8 @@ function App() {
         <Route path="reports" element={<ReportsPage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="anpr" element={<ANPRPage />} />
+        <Route path="crowd-detection" element={<CrowdDetectionPage />} />
+        <Route path="crowd" element={<Navigate to="/crowd-detection" replace />} />
 
         {/* Restricted strictly to ADMIN role only */}
         <Route

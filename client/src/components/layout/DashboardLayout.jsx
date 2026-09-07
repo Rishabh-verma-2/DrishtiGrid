@@ -3,7 +3,8 @@ import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Map, Camera, Video, Bell, Settings,
   LogOut, Shield, ChevronLeft, ChevronRight, Activity,
-  Users, Menu, X, Sun, Moon, Landmark, FileText, BarChart3, Lock, Car
+  Users, Menu, X, Sun, Moon, Landmark, FileText, BarChart3, Lock, Car,
+  Flame, UserCog
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSocketStore from '../../store/socketStore';
@@ -16,6 +17,7 @@ const ALL_NAV_ITEMS = [
   { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)',         roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
   { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ',          roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
   { to: '/anpr',                icon: Car,             label: 'ANPR Surveillance',      labelGu: 'નંબર પ્લેટ (ANPR)',  roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
+  { to: '/crowd-detection',     icon: Flame,           label: 'Crowd & Density AI',     labelGu: 'ભીડ વિશ્લેષણ (Crowd)', roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
   { to: '/footage-requests',    icon: FileText,        label: 'Footage Requests',       labelGu: 'ફૂટેજ વિનંતી',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
   { to: '/users',               icon: Users,           label: 'Users & Roles',          labelGu: 'વપરાશકર્તાઓ',        roles: ['ADMIN'] },
   { to: '/camera-management',   icon: Camera,          label: 'Camera Management',      labelGu: 'કેમેરા યાદી',         roles: ['ADMIN'] },
