@@ -20,6 +20,9 @@ const auditLogRoutes = require('./routes/auditLogs');
 const systemHealthRoutes = require('./routes/systemHealth');
 const notificationRoutes = require('./routes/notifications');
 const anprRoutes = require('./routes/anpr');
+const analyticsRoutes = require('./routes/analytics');
+const departmentRoutes = require('./routes/departments');
+const reportRoutes = require('./routes/reports');
 
 const createApp = () => {
   const app = express();
@@ -83,7 +86,7 @@ const createApp = () => {
   }
 
   // ─── Static Uploads ───────────────────────────────────────────
-  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads'), { dotfiles: 'allow' }));
 
   // ─── Health Check ─────────────────────────────────────────────
   app.get('/api/health', (req, res) => {
@@ -106,6 +109,9 @@ const createApp = () => {
   app.use('/api/system-health', systemHealthRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/anpr', anprRoutes);
+  app.use('/api/analytics', analyticsRoutes);
+  app.use('/api/departments', departmentRoutes);
+  app.use('/api/reports', reportRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────
   app.use(notFound);

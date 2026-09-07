@@ -93,4 +93,21 @@ export const anprAPI = {
   clearIncidents: () => apiClient.delete('/anpr/incidents'),
 };
 
+export const analyticsAPI = {
+  getCameraHealth: (id, params) => apiClient.get(`/analytics/camera-health/${id}`, { params }),
+  getCoverageGaps: (params) => apiClient.get('/analytics/coverage-gaps', { params }),
+  getSearchSuggestions: (params) => apiClient.get('/analytics/search-suggestions', { params }),
+};
+
+export const departmentAPI = {
+  getAll: () => apiClient.get('/departments'),
+};
+
+export const reportAPI = {
+  dispatch: (data) => apiClient.post('/reports/dispatch', data),
+  getHistory: () => apiClient.get('/reports/history'),
+  download: (fileName) => apiClient.get(`/reports/download/${fileName}`, { responseType: 'blob' }),
+};
+
+
 

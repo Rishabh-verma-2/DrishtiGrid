@@ -1,0 +1,143 @@
+=== DRISHTIGRID GUJARAT STATE SURVEILLANCE AUDIT ===
+Report Type,COVERAGE_GAP
+Jurisdiction District,Ahmedabad
+Generated Timestamp,2026-09-07T08:12:39.480Z
+Total Monitored Cameras,124
+Operational Online,85
+Total Jurisdiction Area (sq km),460
+Optical Coverage Area (sq km),2.98
+Estimated Blind Spot Rate (%),88%
+Surveillance Density (cams/sq km),0.27
+
+=== PRIORITY COVERAGE BLIND SPOTS & RECOMMENDATIONS ===
+Hotspot ID,Corridor / Area,District,Severity,Recommended CCTV Units,Nearest Police Station,Strategic Rationale
+"GAP-AHM-01","Ahmedabad Outer Ring Road & Radial Extension Corridor","Ahmedabad","CRITICAL","+6 Units","Ahmedabad Highway Division Traffic PS","High vehicle volume arterial junction with zero visual overlapping buffers beyond 400m"
+"GAP-AHM-02","Ahmedabad Bus Stand Road Freight Line","Ahmedabad","HIGH","+4 Units","Ahmedabad Industrial Area Police Station","Heavy commercial transit corridor lacking night-vision ANPR units and cross-lane surveillance"
+"GAP-AHM-03","Ahmedabad Rajkot Highway Pedestrian Chokepoint","Ahmedabad","MEDIUM","+3 Units","Ahmedabad City Central Police Station","Dense pedestrian choke-point with single direction PTZ blind angle during peak commercial hours"
+
+=== REGISTERED SURVEILLANCE UNITS IN JURISDICTION ===
+Camera ID,Name,District,Taluka,Type,Status,Uptime 30d %,Police Station,Latitude,Longitude
+"GJ-DEMO-CAM-0201","Ahmedabad Junction Cam 18 - Ahmedabad Junction","Ahmedabad","Ahmedabad City","PTZ","maintenance","96.5","",23.019227,72.553811
+"GJ-DEMO-CAM-0219","Sanand Public Place Cam 02 - Sanand Central Library","Ahmedabad","Sanand","PTZ","maintenance","96.5","",23.009277,72.368638
+"GJ-DEMO-CAM-0507","Ahmedabad Highway Cam 13 - Vasna Town Bypass","Ahmedabad","Ahmedabad City","Dome","maintenance","96.5","",22.989109,72.552243
+"GJ-DEMO-CAM-0510","Ahmedabad Junction Cam 16 - Vasna Old Junction","Ahmedabad","Ahmedabad City","Bullet","maintenance","96.5","",22.985339,72.553861
+"GJ-DEMO-CAM-0514","Ahmedabad Junction Cam 20 - Nava Vadaj Panchayat Junction","Ahmedabad","Ahmedabad City","Dome","maintenance","96.5","",23.066267,72.576088
+"GJ-DEMO-CAM-0528","Ahmedabad Market Cam 34 - Ghatlodia Cloth Market","Ahmedabad","Ahmedabad City","Fixed","maintenance","96.5","",23.065913,72.538945
+"GJ-DEMO-CAM-0539","Ahmedabad Highway Cam 45 - Bodakdev Town Bypass","Ahmedabad","Ahmedabad City","Dome","maintenance","96.5","",23.039166,72.507912
+"GJ-DEMO-CAM-0558","Ahmedabad Circle Cam 64 - Vejalpur Naka Circle","Ahmedabad","Ahmedabad City","Dome","maintenance","96.5","",22.991758,72.510194
+"GJ-DEMO-CAM-0563","Ahmedabad Market Cam 69 - Bodakdev Sabzi Mandi","Ahmedabad","Ahmedabad City","PTZ","maintenance","96.5","",23.039593,72.502519
+"GJ-DEMO-CAM-0568","Ahmedabad Public Place Cam 74 - Juhapura Taluka Panchayat Office","Ahmedabad","Ahmedabad City","Fixed","maintenance","96.5","",22.980179,72.530585
+"GJ-DEMO-CAM-0572","Ahmedabad Junction Cam 78 - Law Garden Panchayat Junction","Ahmedabad","Ahmedabad City","Bullet","maintenance","96.5","",23.012561,72.559708
+"GJ-DEMO-CAM-0575","Ahmedabad Market Cam 81 - South Bopal Cloth Market","Ahmedabad","Ahmedabad City","Fixed","maintenance","96.5","",23.009777,72.472054
+"GJ-DEMO-CAM-0813","Sanand Bridge Cam 22 - Sanand River Bridge","Ahmedabad","Sanand","PTZ","maintenance","96.5","",22.992645,72.379921
+"GJ-DEMO-CAM-0830","Dhandhuka Railway Station Cam 39 - Dhandhuka Old Railway Station","Ahmedabad","Dhandhuka","Dome","maintenance","96.5","",22.383871,71.959691
+"GJ-DEMO-CAM-0833","Dhandhuka Highway Cam 42 - Dhandhuka Weighbridge Point","Ahmedabad","Dhandhuka","PTZ","maintenance","96.5","",22.396212,72.000086
+"GJ-DEMO-CAM-0003","Ahmedabad Highway Cam 03 - Sabarmati Riverfront","Ahmedabad","Ahmedabad City","PTZ","offline","96.5","",23.034774,72.544149
+"GJ-DEMO-CAM-0338","Sanand Road Cam 03 - Sanand Central Avenue","Ahmedabad","Sanand","Bullet","offline","96.5","",22.979501,72.388002
+"GJ-DEMO-CAM-0457","Sanand Railway Station Cam 19 - Sanand Railway Crossing","Ahmedabad","Sanand","Fixed","offline","96.5","",22.998528,72.393011
+"GJ-DEMO-CAM-0458","Dholka Junction Cam 10 - Dholka Circle Junction","Ahmedabad","Dholka","Dome","offline","96.5","",22.707211,72.495076
+"GJ-DEMO-CAM-0459","Bavla Bridge Cam 04 - Bavla Canal Bridge","Ahmedabad","Bavla","Fixed","offline","96.5","",22.841145,72.364222
+"GJ-DEMO-CAM-0504","Ahmedabad Highway Cam 10 - Ranip Highway Toll Plaza","Ahmedabad","Ahmedabad City","PTZ","offline","96.5","",23.078919,72.586137
+"GJ-DEMO-CAM-0508","Ahmedabad Circle Cam 14 - Nava Vadaj Char Rasta Circle","Ahmedabad","Ahmedabad City","Dome","offline","96.5","",23.071756,72.578807
+"GJ-DEMO-CAM-0525","Ahmedabad Road Cam 31 - South Bopal Hospital Road Stretch","Ahmedabad","Ahmedabad City","PTZ","offline","96.5","",22.9981,72.475818
+"GJ-DEMO-CAM-0535","Ahmedabad Public Place Cam 41 - Sabarmati Collector Office","Ahmedabad","Ahmedabad City","PTZ","offline","96.5","",23.06886,72.587086
+"GJ-DEMO-CAM-0537","Ahmedabad Road Cam 43 - Sabarmati College Road Stretch","Ahmedabad","Ahmedabad City","Bullet","offline","96.5","",23.073097,72.59478
+"GJ-DEMO-CAM-0538","Ahmedabad Road Cam 44 - Isanpur Hospital Road Stretch","Ahmedabad","Ahmedabad City","Bullet","offline","96.5","",22.975226,72.600671
+"GJ-DEMO-CAM-0546","Ahmedabad Road Cam 52 - Satellite Hospital Road Stretch","Ahmedabad","Ahmedabad City","Fixed","offline","96.5","",23.025982,72.511976
+"GJ-DEMO-CAM-0557","Ahmedabad Public Place Cam 63 - Law Garden District Hospital","Ahmedabad","Ahmedabad City","Bullet","offline","96.5","",23.028754,72.573001
+"GJ-DEMO-CAM-0559","Ahmedabad Junction Cam 65 - Ghatlodia Panchayat Junction","Ahmedabad","Ahmedabad City","Dome","offline","96.5","",23.074456,72.532906
+"GJ-DEMO-CAM-0560","Ahmedabad Market Cam 66 - Ranip APMC Market Yard","Ahmedabad","Ahmedabad City","Dome","offline","96.5","",23.077209,72.576402
+"GJ-DEMO-CAM-0565","Ahmedabad Market Cam 71 - Law Garden Main Bazaar","Ahmedabad","Ahmedabad City","Bullet","offline","96.5","",23.026386,72.562258
+"GJ-DEMO-CAM-0570","Ahmedabad Public Place Cam 76 - Vejalpur ST Bus Depot","Ahmedabad","Ahmedabad City","Bullet","offline","96.5","",22.98663,72.517015
+"GJ-DEMO-CAM-0571","Ahmedabad Circle Cam 77 - CG Road Ambaji Circle","Ahmedabad","Ahmedabad City","Dome","offline","96.5","",23.027435,72.563929
+"GJ-DEMO-CAM-0576","Ahmedabad Bridge Cam 82 - SG Highway Makarba River Bridge","Ahmedabad","Ahmedabad City","Fixed","offline","96.5","",23.000616,72.490636
+"GJ-DEMO-CAM-0577","Ahmedabad Market Cam 83 - Juhapura Sabzi Mandi","Ahmedabad","Ahmedabad City","Dome","offline","96.5","",22.978228,72.529287
+"GJ-DEMO-CAM-0815","Sanand Circle Cam 24 - Sanand Naka Circle","Ahmedabad","Sanand","PTZ","offline","96.5","",22.9854,72.362101
+"GJ-DEMO-CAM-0829","Viramgam Public Place Cam 38 - Viramgam District Hospital","Ahmedabad","Viramgam","Dome","offline","96.5","",23.12668,72.031614
+"GJ-DEMO-CAM-0835","Detroj Circle Cam 44 - Detroj Char Rasta Circle","Ahmedabad","Detroj-Rampura","Fixed","offline","96.5","",23.038992,71.881546
+"GJ-DEMO-CAM-0836","Detroj Bridge Cam 45 - Detroj Old Bridge","Ahmedabad","Detroj-Rampura","Fixed","offline","96.5","",23.019734,71.867993
+"GJ-DEMO-CAM-0001","Ahmedabad Bridge Cam 01 - Maninagar Railway Station","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.026175,72.584361
+"GJ-DEMO-CAM-0002","Ahmedabad Market Cam 02 - Sardar Patel Stadium","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",22.998065,72.547203
+"GJ-DEMO-CAM-0051","Sanand Bridge Cam 01 - Sanand Bridge","Ahmedabad","Sanand","Bullet","online","96.5","",22.992327,72.373985
+"GJ-DEMO-CAM-0052","Sanand Market Cam 02 - Sanand Main Market","Ahmedabad","Sanand","Dome","online","96.5","",22.992007,72.384495
+"GJ-DEMO-CAM-0053","Dholka Road Cam 01 - Dholka Main Road","Ahmedabad","Dholka","Fixed","online","96.5","",22.712993,72.474514
+"GJ-DEMO-CAM-0054","Dholka Bridge Cam 02 - Dholka Bridge","Ahmedabad","Dholka","PTZ","online","96.5","",22.713312,72.482455
+"GJ-DEMO-CAM-0055","Bavla Railway Station Cam 01 - Bavla Railway Station","Ahmedabad","Bavla","Bullet","online","96.5","",22.840632,72.349
+"GJ-DEMO-CAM-0056","Bavla Junction Cam 02 - Bavla Junction","Ahmedabad","Bavla","Dome","online","96.5","",22.823264,72.352104
+"GJ-DEMO-CAM-0220","Dholka Road Cam 18 - Dholka Main Road","Ahmedabad","Dholka","Bullet","online","96.5","",22.718364,72.487688
+"GJ-DEMO-CAM-0221","Bavla Public Place Cam 14 - Bavla District Court","Ahmedabad","Bavla","PTZ","online","96.5","",22.854016,72.3523
+"GJ-DEMO-CAM-0320","Ahmedabad Bridge Cam 18 - Ahmedabad River Bridge","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.019471,72.560794
+"GJ-DEMO-CAM-0339","Dholka Railway Station Cam 13 - Dholka Railway Crossing","Ahmedabad","Dholka","Dome","online","96.5","",22.69546,72.479939
+"GJ-DEMO-CAM-0340","Bavla Junction Cam 15 - Bavla Circle Junction","Ahmedabad","Bavla","PTZ","online","96.5","",22.851519,72.340815
+"GJ-DEMO-CAM-0439","Ahmedabad Bridge Cam 03 - Ahmedabad Canal Bridge","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.033225,72.546136
+"GJ-DEMO-CAM-0501","Ahmedabad Market Cam 07 - Gota APMC Market Yard","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.103023,72.531884
+"GJ-DEMO-CAM-0502","Ahmedabad Junction Cam 08 - Ghatlodia Cross Roads Junction","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.061132,72.547349
+"GJ-DEMO-CAM-0503","Ahmedabad Railway Station Cam 09 - CG Road Old Railway Station","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.036454,72.563395
+"GJ-DEMO-CAM-0505","Ahmedabad Bridge Cam 11 - Gota Canal Bridge","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.101821,72.534612
+"GJ-DEMO-CAM-0506","Ahmedabad Circle Cam 12 - Ranip Petrol Pump Circle","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.071809,72.581145
+"GJ-DEMO-CAM-0509","Ahmedabad Public Place Cam 15 - Vejalpur Collector Office","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",22.99068,72.521927
+"GJ-DEMO-CAM-0511","Ahmedabad Public Place Cam 17 - Law Garden Gram Panchayat Office","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.034168,72.569351
+"GJ-DEMO-CAM-0512","Ahmedabad Junction Cam 18 - CG Road Cross Roads Junction","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.035582,72.569147
+"GJ-DEMO-CAM-0513","Ahmedabad Highway Cam 19 - SG Highway Makarba Town Bypass","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.018122,72.498937
+"GJ-DEMO-CAM-0515","Ahmedabad Market Cam 21 - Ranip APMC Market Yard","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.079425,72.582517
+"GJ-DEMO-CAM-0516","Ahmedabad Market Cam 22 - Navrangpura Cloth Market","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.03359,72.558652
+"GJ-DEMO-CAM-0517","Ahmedabad Road Cam 23 - Vastrapur Lake Hospital Road Stretch","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.043169,72.529381
+"GJ-DEMO-CAM-0518","Ahmedabad Road Cam 24 - Ellisbridge Hospital Road Stretch","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.026089,72.565532
+"GJ-DEMO-CAM-0519","Ahmedabad Highway Cam 25 - Bodakdev Weighbridge Point","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.040359,72.503599
+"GJ-DEMO-CAM-0520","Ahmedabad Market Cam 26 - Kankaria Lake Sabzi Mandi","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.013404,72.601921
+"GJ-DEMO-CAM-0521","Ahmedabad Highway Cam 27 - Vasna Truck Terminus","Ahmedabad","Ahmedabad City","Dome","online","96.5","",22.991215,72.554718
+"GJ-DEMO-CAM-0522","Ahmedabad Public Place Cam 28 - Naranpura Gram Panchayat Office","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.042075,72.5468
+"GJ-DEMO-CAM-0523","Ahmedabad Highway Cam 29 - Chandkheda Town Bypass","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.107226,72.588884
+"GJ-DEMO-CAM-0524","Ahmedabad Highway Cam 30 - Naranpura Weighbridge Point","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.054441,72.560295
+"GJ-DEMO-CAM-0526","Ahmedabad Public Place Cam 32 - Prahlad Nagar Government High School","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.013135,72.507061
+"GJ-DEMO-CAM-0527","Ahmedabad Public Place Cam 33 - South Bopal Collector Office","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.005069,72.4832
+"GJ-DEMO-CAM-0529","Ahmedabad Public Place Cam 35 - Paldi Government High School","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.016568,72.559623
+"GJ-DEMO-CAM-0530","Ahmedabad Bridge Cam 36 - Satellite Old Bridge","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.031924,72.521714
+"GJ-DEMO-CAM-0531","Ahmedabad Highway Cam 37 - Juhapura Town Bypass","Ahmedabad","Ahmedabad City","Dome","online","96.5","",22.973194,72.510932
+"GJ-DEMO-CAM-0532","Ahmedabad Market Cam 38 - Sabarmati Grain Market","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.077377,72.572383
+"GJ-DEMO-CAM-0533","Ahmedabad Junction Cam 39 - CG Road Old Junction","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.02492,72.557517
+"GJ-DEMO-CAM-0534","Ahmedabad Highway Cam 40 - Vasna Town Bypass","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",22.981994,72.556358
+"GJ-DEMO-CAM-0536","Ahmedabad Railway Station Cam 42 - Prahlad Nagar Railway Station","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.009931,72.509436
+"GJ-DEMO-CAM-0540","Ahmedabad Junction Cam 46 - Navrangpura Panchayat Junction","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.042185,72.549277
+"GJ-DEMO-CAM-0541","Ahmedabad Circle Cam 47 - CG Road Petrol Pump Circle","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.03409,72.566933
+"GJ-DEMO-CAM-0542","Ahmedabad Road Cam 48 - Nava Vadaj Hospital Road Stretch","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.052936,72.578466
+"GJ-DEMO-CAM-0543","Ahmedabad Public Place Cam 49 - Prahlad Nagar Taluka Panchayat Office","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.017801,72.494783
+"GJ-DEMO-CAM-0544","Ahmedabad Bridge Cam 50 - Juhapura River Bridge","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",22.969508,72.509173
+"GJ-DEMO-CAM-0545","Ahmedabad Bridge Cam 51 - Naranpura Canal Bridge","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.054994,72.560891
+"GJ-DEMO-CAM-0547","Ahmedabad Market Cam 53 - Vejalpur Grain Market","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",22.992266,72.5149
+"GJ-DEMO-CAM-0548","Ahmedabad Circle Cam 54 - Gota Panchayat Circle","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.093934,72.536542
+"GJ-DEMO-CAM-0549","Ahmedabad Railway Station Cam 55 - Juhapura Railway Station","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",22.983814,72.519844
+"GJ-DEMO-CAM-0550","Ahmedabad Market Cam 56 - Sabarmati Main Bazaar","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.064956,72.582955
+"GJ-DEMO-CAM-0551","Ahmedabad Bridge Cam 57 - Shahibaug River Bridge","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.043941,72.605039
+"GJ-DEMO-CAM-0552","Ahmedabad Junction Cam 58 - Ranip Panchayat Junction","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.075335,72.569174
+"GJ-DEMO-CAM-0553","Ahmedabad Market Cam 59 - Thaltej Cloth Market","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.05304,72.499968
+"GJ-DEMO-CAM-0554","Ahmedabad Public Place Cam 60 - CG Road Taluka Panchayat Office","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.02714,72.564408
+"GJ-DEMO-CAM-0555","Ahmedabad Circle Cam 61 - Satellite Char Rasta Circle","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.040432,72.523348
+"GJ-DEMO-CAM-0556","Ahmedabad Public Place Cam 62 - Juhapura District Hospital","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",22.980224,72.524703
+"GJ-DEMO-CAM-0561","Ahmedabad Junction Cam 67 - Ghatlodia Old Junction","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.057207,72.545922
+"GJ-DEMO-CAM-0562","Ahmedabad Circle Cam 68 - Satellite Ambaji Circle","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.026744,72.506372
+"GJ-DEMO-CAM-0564","Ahmedabad Highway Cam 70 - Kankaria Lake Highway Toll Plaza","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.013647,72.606886
+"GJ-DEMO-CAM-0566","Ahmedabad Junction Cam 72 - Law Garden Old Junction","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.026009,72.562672
+"GJ-DEMO-CAM-0567","Ahmedabad Public Place Cam 73 - CG Road ST Bus Depot","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.034668,72.562273
+"GJ-DEMO-CAM-0569","Ahmedabad Public Place Cam 75 - South Bopal Government High School","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",23.000992,72.45886
+"GJ-DEMO-CAM-0573","Ahmedabad Market Cam 79 - Prahlad Nagar Sabzi Mandi","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.017465,72.512741
+"GJ-DEMO-CAM-0574","Ahmedabad Road Cam 80 - Gota Hospital Road Stretch","Ahmedabad","Ahmedabad City","PTZ","online","96.5","",23.102311,72.52815
+"GJ-DEMO-CAM-0578","Ahmedabad Junction Cam 84 - Ellisbridge Cross Roads Junction","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.030885,72.554922
+"GJ-DEMO-CAM-0579","Ahmedabad Road Cam 85 - Satellite Main Road Stretch","Ahmedabad","Ahmedabad City","Dome","online","96.5","",23.032715,72.516018
+"GJ-DEMO-CAM-0814","Sanand Bridge Cam 23 - Sanand Old Bridge","Ahmedabad","Sanand","Bullet","online","96.5","",22.995372,72.364975
+"GJ-DEMO-CAM-0816","Sanand Circle Cam 25 - Sanand Char Rasta Circle","Ahmedabad","Sanand","Dome","online","96.5","",22.991351,72.379701
+"GJ-DEMO-CAM-0817","Sanand Public Place Cam 26 - Sanand District Hospital","Ahmedabad","Sanand","Fixed","online","96.5","",22.987945,72.383028
+"GJ-DEMO-CAM-0818","Sanand Road Cam 27 - Sanand Hospital Road Stretch","Ahmedabad","Sanand","Bullet","online","96.5","",23.006567,72.377634
+"GJ-DEMO-CAM-0819","Sanand Highway Cam 28 - Sanand Highway Toll Plaza","Ahmedabad","Sanand","PTZ","online","96.5","",23.005892,72.361246
+"GJ-DEMO-CAM-0820","Dholka Junction Cam 29 - Dholka Panchayat Junction","Ahmedabad","Dholka","Dome","online","96.5","",22.736116,72.450488
+"GJ-DEMO-CAM-0821","Dholka Road Cam 30 - Dholka Main Road Stretch","Ahmedabad","Dholka","Bullet","online","96.5","",22.720154,72.472531
+"GJ-DEMO-CAM-0822","Dholka Road Cam 31 - Dholka Hospital Road Stretch","Ahmedabad","Dholka","Fixed","online","96.5","",22.719579,72.463776
+"GJ-DEMO-CAM-0823","Dholka Circle Cam 32 - Dholka Char Rasta Circle","Ahmedabad","Dholka","Fixed","online","96.5","",22.713567,72.457725
+"GJ-DEMO-CAM-0824","Dholka Junction Cam 33 - Dholka Old Junction","Ahmedabad","Dholka","Bullet","online","96.5","",22.699381,72.463309
+"GJ-DEMO-CAM-0825","Viramgam Circle Cam 34 - Viramgam Naka Circle","Ahmedabad","Viramgam","Fixed","online","96.5","",23.115179,72.034656
+"GJ-DEMO-CAM-0826","Viramgam Market Cam 35 - Viramgam Grain Market","Ahmedabad","Viramgam","PTZ","online","96.5","",23.11597,72.023042
+"GJ-DEMO-CAM-0827","Viramgam Road Cam 36 - Viramgam College Road Stretch","Ahmedabad","Viramgam","Fixed","online","96.5","",23.117427,72.030167
+"GJ-DEMO-CAM-0828","Viramgam Highway Cam 37 - Viramgam Highway Toll Plaza","Ahmedabad","Viramgam","Dome","online","96.5","",23.108871,72.018622
+"GJ-DEMO-CAM-0831","Dhandhuka Public Place Cam 40 - Dhandhuka Bus Stand","Ahmedabad","Dhandhuka","Bullet","online","96.5","",22.391696,71.989263
+"GJ-DEMO-CAM-0832","Dhandhuka Circle Cam 41 - Dhandhuka Panchayat Circle","Ahmedabad","Dhandhuka","Dome","online","96.5","",22.385322,71.980436
+"GJ-DEMO-CAM-0834","Detroj Road Cam 43 - Detroj Main Road Stretch","Ahmedabad","Detroj-Rampura","Bullet","online","96.5","",23.023825,71.878619

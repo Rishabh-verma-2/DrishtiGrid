@@ -1,0 +1,319 @@
+=== DRISHTIGRID GUJARAT STATE SURVEILLANCE AUDIT ===
+Report Type,COVERAGE_GAP
+Jurisdiction District,All Districts
+Generated Timestamp,2026-09-07T08:12:30.814Z
+Total Monitored Cameras,300
+Operational Online,201
+Total Jurisdiction Area (sq km),6283
+Optical Coverage Area (sq km),7.38
+Estimated Blind Spot Rate (%),88%
+Surveillance Density (cams/sq km),0.05
+
+=== PRIORITY COVERAGE BLIND SPOTS & RECOMMENDATIONS ===
+Hotspot ID,Corridor / Area,District,Severity,Recommended CCTV Units,Nearest Police Station,Strategic Rationale
+"GAP-GJ-01","Statewide Outer Ring Road & Radial Extension Corridor","Statewide","CRITICAL","+6 Units","Statewide Highway Division Traffic PS","High vehicle volume arterial junction with zero visual overlapping buffers beyond 400m"
+"GAP-GJ-02","Statewide Ring Road Freight Line","Statewide","HIGH","+4 Units","Statewide Industrial Area Police Station","Heavy commercial transit corridor lacking night-vision ANPR units and cross-lane surveillance"
+"GAP-GJ-03","Statewide Income Tax Circle Road Pedestrian Chokepoint","Statewide","MEDIUM","+3 Units","Statewide City Central Police Station","Dense pedestrian choke-point with single direction PTZ blind angle during peak commercial hours"
+
+=== REGISTERED SURVEILLANCE UNITS IN JURISDICTION ===
+Camera ID,Name,District,Taluka,Type,Status,Uptime 30d %,Police Station,Latitude,Longitude
+"GJ-DEMO-CAM-0001","Ahmedabad Bridge Cam 01 - Maninagar Railway Station","Ahmedabad","Ahmedabad City","Bullet","online","96.5","",23.026175,72.584361
+"GJ-DEMO-CAM-0002","Ahmedabad Market Cam 02 - Sardar Patel Stadium","Ahmedabad","Ahmedabad City","Fixed","online","96.5","",22.998065,72.547203
+"GJ-DEMO-CAM-0003","Ahmedabad Highway Cam 03 - Sabarmati Riverfront","Ahmedabad","Ahmedabad City","PTZ","offline","96.5","",23.034774,72.544149
+"GJ-DEMO-CAM-0004","Gandhinagar Road Cam 01 - Akshardham Temple","Gandhinagar","Gandhinagar","PTZ","online","96.5","",23.227709,72.647913
+"GJ-DEMO-CAM-0005","Gandhinagar Highway Cam 02 - Indroda Nature Park","Gandhinagar","Gandhinagar","PTZ","maintenance","96.5","",23.234908,72.655203
+"GJ-DEMO-CAM-0006","Gandhinagar Railway Station Cam 03 - Mahatma Mandir","Gandhinagar","Gandhinagar","Bullet","online","96.5","",23.200398,72.640582
+"GJ-DEMO-CAM-0007","Surat Market Cam 01 - Ring Road Market","Surat","Surat City","Fixed","online","96.5","",21.175985,72.824186
+"GJ-DEMO-CAM-0008","Surat Road Cam 02 - Sardar Patel Museum","Surat","Surat City","Fixed","offline","96.5","",21.140395,72.844426
+"GJ-DEMO-CAM-0009","Surat Market Cam 03 - Surat Railway Station","Surat","Surat City","PTZ","online","96.5","",21.176137,72.830416
+"GJ-DEMO-CAM-0010","Vadodara Railway Station Cam 01 - Sursagar Lake","Vadodara","Vadodara City","PTZ","maintenance","96.5","",22.334011,73.161108
+"GJ-DEMO-CAM-0011","Vadodara Bridge Cam 02 - Sursagar Lake","Vadodara","Vadodara City","PTZ","online","96.5","",22.290682,73.171485
+"GJ-DEMO-CAM-0012","Vadodara Circle Cam 03 - Sursagar Lake","Vadodara","Vadodara City","PTZ","offline","96.5","",22.290054,73.159139
+"GJ-DEMO-CAM-0013","Rajkot Railway Station Cam 01 - Rajkot Race Course","Rajkot","Rajkot City","Dome","offline","96.5","",22.314302,70.83125
+"GJ-DEMO-CAM-0014","Rajkot Highway Cam 02 - Rajkot Railway Station","Rajkot","Rajkot City","Fixed","online","96.5","",22.288888,70.827596
+"GJ-DEMO-CAM-0015","Rajkot Market Cam 03 - Rajkot Race Course","Rajkot","Rajkot City","Bullet","online","96.5","",22.328047,70.782078
+"GJ-DEMO-CAM-0016","Bhavnagar Road Cam 01 - Takhteshwar Temple","Bhavnagar","Bhavnagar City","Fixed","maintenance","96.5","",21.779379,72.12533
+"GJ-DEMO-CAM-0017","Bhavnagar Public Place Cam 02 - Nilambag Palace","Bhavnagar","Bhavnagar City","Dome","online","96.5","",21.769235,72.124284
+"GJ-DEMO-CAM-0018","Bhavnagar Highway Cam 03 - Nilambag Palace","Bhavnagar","Bhavnagar City","Fixed","online","96.5","",21.790241,72.178044
+"GJ-DEMO-CAM-0019","Jamnagar Market Cam 01 - Darbargadh","Jamnagar","Jamnagar","Fixed","maintenance","96.5","",22.477401,70.086934
+"GJ-DEMO-CAM-0020","Jamnagar Circle Cam 02 - Ranmal Lake","Jamnagar","Jamnagar","Dome","maintenance","96.5","",22.452916,70.065754
+"GJ-DEMO-CAM-0021","Junagadh Junction Cam 01 - Junagadh Railway Station","Junagadh","Junagadh City","Fixed","online","96.5","",21.501895,70.45441
+"GJ-DEMO-CAM-0022","Junagadh Bridge Cam 02 - Uparkot Fort","Junagadh","Junagadh City","PTZ","online","96.5","",21.546139,70.475667
+"GJ-DEMO-CAM-0023","Junagadh Bridge Cam 03 - Girnar Ropeway","Junagadh","Junagadh City","Dome","online","96.5","",21.493687,70.472094
+"GJ-DEMO-CAM-0024","Anand Junction Cam 01 - Anand Railway Station","Anand","Anand","PTZ","online","96.5","",22.552811,72.946621
+"GJ-DEMO-CAM-0025","Anand Market Cam 02 - Vallabh Vidyanagar Circle","Anand","Anand","Fixed","online","96.5","",22.590854,72.905821
+"GJ-DEMO-CAM-0026","Anand Bridge Cam 03 - Amul Dairy","Anand","Anand","Dome","online","96.5","",22.549783,72.941427
+"GJ-DEMO-CAM-0027","Bharuch Bridge Cam 01 - Ankleshwar GIDC Gate","Bharuch","Bharuch","Bullet","online","96.5","",21.694671,73.007733
+"GJ-DEMO-CAM-0028","Bharuch Public Place Cam 02 - Ankleshwar GIDC Gate","Bharuch","Bharuch","Bullet","online","96.5","",21.692315,72.991693
+"GJ-DEMO-CAM-0029","Mehsana Bridge Cam 01 - Mehsana Railway Station","Mehsana","Mehsana","PTZ","online","96.5","",23.563603,72.39642
+"GJ-DEMO-CAM-0030","Mehsana Road Cam 02 - Radhanpur Circle","Mehsana","Mehsana","Fixed","offline","96.5","",23.601101,72.362339
+"GJ-DEMO-CAM-0031","Mehsana Public Place Cam 03 - Urban Health Center","Mehsana","Mehsana","Bullet","online","96.5","",23.566,72.367179
+"GJ-DEMO-CAM-0032","Valsad Circle Cam 01 - Valsad Railway Station","Valsad","Valsad","Fixed","online","96.5","",20.615149,72.935478
+"GJ-DEMO-CAM-0033","Valsad Circle Cam 02 - Auro Point","Valsad","Valsad","Bullet","online","96.5","",20.611585,72.908054
+"GJ-DEMO-CAM-0034","Valsad Bridge Cam 03 - Auro Point","Valsad","Valsad","Bullet","online","96.5","",20.587117,72.927599
+"GJ-DEMO-CAM-0035","Bhuj Junction Cam 01 - Bhujio Hillock","Kutch","Bhuj","Bullet","online","96.5","",23.26243,69.692072
+"GJ-DEMO-CAM-0036","Bhuj Market Cam 02 - Hamirsar Lake","Kutch","Bhuj","Bullet","online","96.5","",23.231641,69.664182
+"GJ-DEMO-CAM-0037","Bhuj Road Cam 03 - Bhuj Railway Station","Kutch","Bhuj","PTZ","online","96.5","",23.257254,69.693877
+"GJ-DEMO-CAM-0038","Navsari Junction Cam 01 - Sayaji Library Circle","Navsari","Navsari","Dome","online","96.5","",20.963368,72.931826
+"GJ-DEMO-CAM-0039","Navsari Junction Cam 02 - Purna River Bridge","Navsari","Navsari","Dome","online","96.5","",20.922814,72.968349
+"GJ-DEMO-CAM-0040","Porbandar Railway Station Cam 01 - Chowpatty Circle","Porbandar","Porbandar","PTZ","online","96.5","",21.637711,69.621031
+"GJ-DEMO-CAM-0041","Porbandar Circle Cam 02 - Kirti Mandir","Porbandar","Porbandar","PTZ","offline","96.5","",21.631038,69.61403
+"GJ-DEMO-CAM-0042","Patan Junction Cam 01 - Sahastralinga Talav","Patan","Patan","PTZ","online","96.5","",23.83972,72.149419
+"GJ-DEMO-CAM-0043","Patan Public Place Cam 02 - Patan Bus Stand","Patan","Patan","Bullet","online","96.5","",23.824883,72.109896
+"GJ-DEMO-CAM-0044","Patan Highway Cam 03 - Patan Bus Stand","Patan","Patan","PTZ","online","96.5","",23.834384,72.103839
+"GJ-DEMO-CAM-0045","Godhra Market Cam 01 - Godhra Bus Stand","Panchmahal","Godhra","Fixed","maintenance","96.5","",22.759566,73.584449
+"GJ-DEMO-CAM-0046","Godhra Circle Cam 02 - Godhra Railway Station","Panchmahal","Godhra","Fixed","offline","96.5","",22.777523,73.604042
+"GJ-DEMO-CAM-0047","Godhra Bridge Cam 03 - Godhra Bus Stand","Panchmahal","Godhra","Bullet","online","96.5","",22.753911,73.598491
+"GJ-DEMO-CAM-0048","Morbi Highway Cam 01 - Machhu Dam","Morbi","Morbi","PTZ","online","96.5","",22.844155,70.820267
+"GJ-DEMO-CAM-0049","Morbi Bridge Cam 02 - Morbi Railway Station","Morbi","Morbi","Dome","offline","96.5","",22.801189,70.850217
+"GJ-DEMO-CAM-0050","Morbi Market Cam 03 - Green Chowk","Morbi","Morbi","Bullet","online","96.5","",22.791585,70.817755
+"GJ-DEMO-CAM-0051","Sanand Bridge Cam 01 - Sanand Bridge","Ahmedabad","Sanand","Bullet","online","96.5","",22.992327,72.373985
+"GJ-DEMO-CAM-0052","Sanand Market Cam 02 - Sanand Main Market","Ahmedabad","Sanand","Dome","online","96.5","",22.992007,72.384495
+"GJ-DEMO-CAM-0053","Dholka Road Cam 01 - Dholka Main Road","Ahmedabad","Dholka","Fixed","online","96.5","",22.712993,72.474514
+"GJ-DEMO-CAM-0054","Dholka Bridge Cam 02 - Dholka Bridge","Ahmedabad","Dholka","PTZ","online","96.5","",22.713312,72.482455
+"GJ-DEMO-CAM-0055","Bavla Railway Station Cam 01 - Bavla Railway Station","Ahmedabad","Bavla","Bullet","online","96.5","",22.840632,72.349
+"GJ-DEMO-CAM-0056","Bavla Junction Cam 02 - Bavla Junction","Ahmedabad","Bavla","Dome","online","96.5","",22.823264,72.352104
+"GJ-DEMO-CAM-0057","Kalol Railway Station Cam 01 - Kalol Railway Station","Gandhinagar","Kalol","Fixed","online","96.5","",23.24203,72.491525
+"GJ-DEMO-CAM-0058","Kalol Junction Cam 02 - Kalol Junction","Gandhinagar","Kalol","PTZ","online","96.5","",23.244021,72.505149
+"GJ-DEMO-CAM-0059","Dehgam Circle Cam 01 - Dehgam Circle","Gandhinagar","Dehgam","Bullet","maintenance","96.5","",23.156345,72.806331
+"GJ-DEMO-CAM-0060","Dehgam Railway Station Cam 02 - Dehgam Railway Station","Gandhinagar","Dehgam","Dome","online","96.5","",23.170773,72.81224
+"GJ-DEMO-CAM-0061","Umreth Junction Cam 01 - Umreth Junction","Anand","Umreth","Fixed","online","96.5","",22.689279,73.109376
+"GJ-DEMO-CAM-0062","Umreth Market Cam 02 - Umreth Main Market","Anand","Umreth","PTZ","maintenance","96.5","",22.693285,73.116921
+"GJ-DEMO-CAM-0063","Borsad Public Place Cam 01 - Borsad Town Square","Anand","Borsad","Bullet","online","96.5","",22.419922,72.894336
+"GJ-DEMO-CAM-0064","Borsad Circle Cam 02 - Borsad Circle","Anand","Borsad","Dome","offline","96.5","",22.408578,72.898604
+"GJ-DEMO-CAM-0065","Petlad Highway Cam 01 - Petlad Bypass Highway","Anand","Petlad","Fixed","maintenance","96.5","",22.463452,72.777094
+"GJ-DEMO-CAM-0066","Petlad Bridge Cam 02 - Petlad Bridge","Anand","Petlad","PTZ","maintenance","96.5","",22.478129,72.774159
+"GJ-DEMO-CAM-0067","Khambhat Circle Cam 01 - Khambhat Circle","Anand","Khambhat","Bullet","offline","96.5","",22.321606,72.611638
+"GJ-DEMO-CAM-0068","Khambhat Junction Cam 02 - Khambhat Junction","Anand","Khambhat","Dome","online","96.5","",22.324205,72.612999
+"GJ-DEMO-CAM-0069","Ankleshwar Railway Station Cam 01 - Ankleshwar Railway Station","Bharuch","Ankleshwar","Fixed","maintenance","96.5","",21.633474,73.014173
+"GJ-DEMO-CAM-0070","Ankleshwar Highway Cam 02 - Ankleshwar Bypass Highway","Bharuch","Ankleshwar","PTZ","online","96.5","",21.616279,73.019642
+"GJ-DEMO-CAM-0071","Jambusar Highway Cam 01 - Jambusar Bypass Highway","Bharuch","Jambusar","Bullet","offline","96.5","",22.053958,72.780399
+"GJ-DEMO-CAM-0072","Jambusar Circle Cam 02 - Jambusar Circle","Bharuch","Jambusar","Dome","online","96.5","",22.053713,72.78246
+"GJ-DEMO-CAM-0073","Vagra Market Cam 01 - Vagra Main Market","Bharuch","Vagra","Fixed","maintenance","96.5","",21.608236,72.889109
+"GJ-DEMO-CAM-0074","Vagra Circle Cam 02 - Vagra Circle","Bharuch","Vagra","PTZ","maintenance","96.5","",21.621203,72.909424
+"GJ-DEMO-CAM-0075","Mahuva Road Cam 01 - Mahuva Main Road","Bhavnagar","Mahuva","Bullet","maintenance","96.5","",21.096709,71.768291
+"GJ-DEMO-CAM-0076","Mahuva Public Place Cam 02 - Mahuva Town Square","Bhavnagar","Mahuva","Dome","online","96.5","",21.079655,71.772664
+"GJ-DEMO-CAM-0077","Palitana Circle Cam 01 - Palitana Circle","Bhavnagar","Palitana","Fixed","offline","96.5","",21.51575,71.831255
+"GJ-DEMO-CAM-0078","Palitana Road Cam 02 - Palitana Main Road","Bhavnagar","Palitana","PTZ","maintenance","96.5","",21.532905,71.815069
+"GJ-DEMO-CAM-0079","Sihor Junction Cam 01 - Sihor Junction","Bhavnagar","Sihor","Bullet","online","96.5","",21.699655,71.964033
+"GJ-DEMO-CAM-0080","Sihor Highway Cam 02 - Sihor Bypass Highway","Bhavnagar","Sihor","Dome","online","96.5","",21.698287,71.975504
+"GJ-DEMO-CAM-0081","Talaja Market Cam 01 - Talaja Main Market","Bhavnagar","Talaja","Fixed","online","96.5","",21.349287,72.055977
+"GJ-DEMO-CAM-0082","Talaja Railway Station Cam 02 - Talaja Railway Station","Bhavnagar","Talaja","PTZ","online","96.5","",21.343725,72.049365
+"GJ-DEMO-CAM-0083","Kalavad Bridge Cam 01 - Kalavad Bridge","Jamnagar","Kalavad","Bullet","online","96.5","",22.120956,70.427696
+"GJ-DEMO-CAM-0084","Kalavad Highway Cam 02 - Kalavad Bypass Highway","Jamnagar","Kalavad","Dome","online","96.5","",22.113033,70.414981
+"GJ-DEMO-CAM-0085","Jodiya Highway Cam 01 - Jodiya Bypass Highway","Jamnagar","Jodiya","Fixed","online","96.5","",22.722311,70.294471
+"GJ-DEMO-CAM-0086","Jodiya Junction Cam 02 - Jodiya Junction","Jamnagar","Jodiya","PTZ","online","96.5","",22.722711,70.284976
+"GJ-DEMO-CAM-0087","Keshod Market Cam 01 - Keshod Main Market","Junagadh","Keshod","Bullet","online","96.5","",21.309123,70.251339
+"GJ-DEMO-CAM-0088","Keshod Road Cam 02 - Keshod Main Road","Junagadh","Keshod","Dome","online","96.5","",21.290233,70.243318
+"GJ-DEMO-CAM-0089","Mangrol Market Cam 01 - Mangrol Main Market","Junagadh","Mangrol","Fixed","online","96.5","",21.107596,70.109322
+"GJ-DEMO-CAM-0090","Mangrol Highway Cam 02 - Mangrol Bypass Highway","Junagadh","Mangrol","PTZ","offline","96.5","",21.113361,70.111954
+"GJ-DEMO-CAM-0091","Visavadar Market Cam 01 - Visavadar Main Market","Junagadh","Visavadar","Bullet","online","96.5","",21.331871,70.742425
+"GJ-DEMO-CAM-0092","Visavadar Junction Cam 02 - Visavadar Junction","Junagadh","Visavadar","Dome","online","96.5","",21.340767,70.760779
+"GJ-DEMO-CAM-0093","Manavadar Railway Station Cam 01 - Manavadar Railway Station","Junagadh","Manavadar","Fixed","offline","96.5","",21.502905,70.135931
+"GJ-DEMO-CAM-0094","Manavadar Highway Cam 02 - Manavadar Bypass Highway","Junagadh","Manavadar","PTZ","online","96.5","",21.497804,70.137845
+"GJ-DEMO-CAM-0095","Gandhidham Circle Cam 01 - Gandhidham Circle","Kutch","Gandhidham","Bullet","offline","96.5","",23.083543,70.139802
+"GJ-DEMO-CAM-0096","Gandhidham Market Cam 02 - Gandhidham Main Market","Kutch","Gandhidham","Dome","online","96.5","",23.090624,70.130011
+"GJ-DEMO-CAM-0097","Mandvi Market Cam 01 - Mandvi Main Market","Kutch","Mandvi","Fixed","online","96.5","",22.839615,69.342205
+"GJ-DEMO-CAM-0098","Mandvi Road Cam 02 - Mandvi Main Road","Kutch","Mandvi","PTZ","online","96.5","",22.829005,69.34051
+"GJ-DEMO-CAM-0099","Anjar Circle Cam 01 - Anjar Circle","Kutch","Anjar","Bullet","online","96.5","",23.125458,70.041098
+"GJ-DEMO-CAM-0100","Anjar Railway Station Cam 02 - Anjar Railway Station","Kutch","Anjar","Dome","online","96.5","",23.12294,70.026185
+"GJ-DEMO-CAM-0101","Bhachau Bridge Cam 01 - Bhachau Bridge","Kutch","Bhachau","Fixed","maintenance","96.5","",23.290237,70.345114
+"GJ-DEMO-CAM-0102","Bhachau Market Cam 02 - Bhachau Main Market","Kutch","Bhachau","PTZ","online","96.5","",23.298963,70.324771
+"GJ-DEMO-CAM-0103","Nakhatrana Market Cam 01 - Nakhatrana Main Market","Kutch","Nakhatrana","Bullet","maintenance","96.5","",23.331918,69.263839
+"GJ-DEMO-CAM-0104","Nakhatrana Railway Station Cam 02 - Nakhatrana Railway Station","Kutch","Nakhatrana","Dome","online","96.5","",23.323605,69.266613
+"GJ-DEMO-CAM-0105","Visnagar Public Place Cam 01 - Visnagar Town Square","Mehsana","Visnagar","Fixed","online","96.5","",23.708981,72.548567
+"GJ-DEMO-CAM-0106","Visnagar Railway Station Cam 02 - Visnagar Railway Station","Mehsana","Visnagar","PTZ","maintenance","96.5","",23.704625,72.553596
+"GJ-DEMO-CAM-0107","Unjha Circle Cam 01 - Unjha Circle","Mehsana","Unjha","Bullet","online","96.5","",23.806249,72.404893
+"GJ-DEMO-CAM-0108","Unjha Junction Cam 02 - Unjha Junction","Mehsana","Unjha","Dome","online","96.5","",23.793861,72.397889
+"GJ-DEMO-CAM-0109","Kadi Road Cam 01 - Kadi Main Road","Mehsana","Kadi","Fixed","maintenance","96.5","",23.29903,72.337304
+"GJ-DEMO-CAM-0110","Kadi Public Place Cam 02 - Kadi Town Square","Mehsana","Kadi","PTZ","online","96.5","",23.304568,72.332264
+"GJ-DEMO-CAM-0111","Vijapur Market Cam 01 - Vijapur Main Market","Mehsana","Vijapur","Bullet","maintenance","96.5","",23.564199,72.738194
+"GJ-DEMO-CAM-0112","Vijapur Bridge Cam 02 - Vijapur Bridge","Mehsana","Vijapur","Dome","online","96.5","",23.570966,72.755302
+"GJ-DEMO-CAM-0113","Tankara Highway Cam 01 - Tankara Bypass Highway","Morbi","Tankara","Fixed","online","96.5","",22.645841,70.747972
+"GJ-DEMO-CAM-0114","Tankara Bridge Cam 02 - Tankara Bridge","Morbi","Tankara","PTZ","online","96.5","",22.657302,70.74924
+"GJ-DEMO-CAM-0115","Wankaner Circle Cam 01 - Wankaner Circle","Morbi","Wankaner","Bullet","online","96.5","",22.620848,70.937436
+"GJ-DEMO-CAM-0116","Wankaner Junction Cam 02 - Wankaner Junction","Morbi","Wankaner","Dome","offline","96.5","",22.61995,70.932442
+"GJ-DEMO-CAM-0117","Bilimora Junction Cam 01 - Bilimora Junction","Navsari","Gandevi","Fixed","maintenance","96.5","",20.764027,72.946904
+"GJ-DEMO-CAM-0118","Bilimora Market Cam 02 - Bilimora Main Market","Navsari","Gandevi","PTZ","online","96.5","",20.771267,72.943214
+"GJ-DEMO-CAM-0119","Gandevi Road Cam 01 - Gandevi Main Road","Navsari","Gandevi","Bullet","maintenance","96.5","",20.809791,72.936648
+"GJ-DEMO-CAM-0120","Gandevi Bridge Cam 02 - Gandevi Bridge","Navsari","Gandevi","Dome","online","96.5","",20.823285,72.940227
+"GJ-DEMO-CAM-0121","Chikhli Public Place Cam 01 - Chikhli Town Square","Navsari","Chikhli","Fixed","online","96.5","",20.852132,73.038379
+"GJ-DEMO-CAM-0122","Chikhli Railway Station Cam 02 - Chikhli Railway Station","Navsari","Chikhli","PTZ","offline","96.5","",20.843317,73.052763
+"GJ-DEMO-CAM-0123","Halol Road Cam 01 - Halol Main Road","Panchmahal","Halol","Bullet","online","96.5","",22.495731,73.45826
+"GJ-DEMO-CAM-0124","Halol Bridge Cam 02 - Halol Bridge","Panchmahal","Halol","Dome","maintenance","96.5","",22.509065,73.467932
+"GJ-DEMO-CAM-0125","Kalol Railway Station Cam 01 - Kalol Railway Station","Panchmahal","Kalol","Fixed","online","96.5","",22.594117,73.460886
+"GJ-DEMO-CAM-0126","Kalol Highway Cam 02 - Kalol Bypass Highway","Panchmahal","Kalol","PTZ","online","96.5","",22.602075,73.451478
+"GJ-DEMO-CAM-0127","Shehra Junction Cam 01 - Shehra Junction","Panchmahal","Shehra","Bullet","online","96.5","",22.749573,73.691635
+"GJ-DEMO-CAM-0128","Shehra Circle Cam 02 - Shehra Circle","Panchmahal","Shehra","Dome","maintenance","96.5","",22.744558,73.689598
+"GJ-DEMO-CAM-0129","Sidhpur Junction Cam 01 - Sidhpur Junction","Patan","Sidhpur","Fixed","online","96.5","",23.915587,72.375078
+"GJ-DEMO-CAM-0130","Sidhpur Road Cam 02 - Sidhpur Main Road","Patan","Sidhpur","PTZ","online","96.5","",23.914876,72.38587
+"GJ-DEMO-CAM-0131","Chanasma Junction Cam 01 - Chanasma Junction","Patan","Chanasma","Bullet","maintenance","96.5","",23.706015,72.109606
+"GJ-DEMO-CAM-0132","Chanasma Road Cam 02 - Chanasma Main Road","Patan","Chanasma","Dome","online","96.5","",23.717482,72.110223
+"GJ-DEMO-CAM-0133","Radhanpur Railway Station Cam 01 - Radhanpur Railway Station","Patan","Radhanpur","Fixed","online","96.5","",23.838328,71.598025
+"GJ-DEMO-CAM-0134","Radhanpur Market Cam 02 - Radhanpur Main Market","Patan","Radhanpur","PTZ","maintenance","96.5","",23.830911,71.589888
+"GJ-DEMO-CAM-0135","Harij Public Place Cam 01 - Harij Town Square","Patan","Harij","Bullet","online","96.5","",23.774261,71.79367
+"GJ-DEMO-CAM-0136","Harij Road Cam 02 - Harij Main Road","Patan","Harij","Dome","online","96.5","",23.770132,71.811677
+"GJ-DEMO-CAM-0137","Ranavav Bridge Cam 01 - Ranavav Bridge","Porbandar","Ranavav","Fixed","online","96.5","",21.833081,69.745082
+"GJ-DEMO-CAM-0138","Ranavav Highway Cam 02 - Ranavav Bypass Highway","Porbandar","Ranavav","PTZ","online","96.5","",21.842715,69.737621
+"GJ-DEMO-CAM-0139","Kutiyana Highway Cam 01 - Kutiyana Bypass Highway","Porbandar","Kutiyana","Bullet","offline","96.5","",21.62673,69.980598
+"GJ-DEMO-CAM-0140","Kutiyana Road Cam 02 - Kutiyana Main Road","Porbandar","Kutiyana","Dome","maintenance","96.5","",21.62207,69.987058
+"GJ-DEMO-CAM-0141","Gondal Circle Cam 01 - Gondal Circle","Rajkot","Gondal","Fixed","offline","96.5","",21.95704,70.807
+"GJ-DEMO-CAM-0142","Gondal Highway Cam 02 - Gondal Bypass Highway","Rajkot","Gondal","PTZ","online","96.5","",21.970744,70.799671
+"GJ-DEMO-CAM-0143","Jetpur Railway Station Cam 01 - Jetpur Railway Station","Rajkot","Jetpur","Bullet","online","96.5","",21.74234,70.621328
+"GJ-DEMO-CAM-0144","Jetpur Circle Cam 02 - Jetpur Circle","Rajkot","Jetpur","Dome","maintenance","96.5","",21.743616,70.61044
+"GJ-DEMO-CAM-0145","Dhoraji Junction Cam 01 - Dhoraji Junction","Rajkot","Dhoraji","Fixed","online","96.5","",21.724622,70.444
+"GJ-DEMO-CAM-0146","Dhoraji Railway Station Cam 02 - Dhoraji Railway Station","Rajkot","Dhoraji","PTZ","maintenance","96.5","",21.724836,70.448499
+"GJ-DEMO-CAM-0147","Upleta Railway Station Cam 01 - Upleta Railway Station","Rajkot","Upleta","Bullet","maintenance","96.5","",21.730298,70.271977
+"GJ-DEMO-CAM-0148","Jasdan Road Cam 01 - Jasdan Main Road","Rajkot","Jasdan","Dome","online","96.5","",22.036068,71.209741
+"GJ-DEMO-CAM-0149","Bardoli Bridge Cam 01 - Bardoli Bridge","Surat","Bardoli","Fixed","online","96.5","",21.114776,73.023754
+"GJ-DEMO-CAM-0150","Kamrej Bridge Cam 01 - Kamrej Bridge","Surat","Kamrej","PTZ","online","96.5","",21.279768,72.934996
+"GJ-DEMO-CAM-0151","Olpad Railway Station Cam 01 - Olpad Railway Station","Surat","Olpad","Bullet","offline","96.5","",21.327388,72.73839
+"GJ-DEMO-CAM-0152","Padra Public Place Cam 01 - Padra Town Square","Vadodara","Padra","Dome","online","96.5","",22.225502,73.089999
+"GJ-DEMO-CAM-0153","Karjan Bridge Cam 01 - Karjan Bridge","Vadodara","Karjan","Fixed","online","96.5","",22.059259,73.178874
+"GJ-DEMO-CAM-0154","Dabhoi Circle Cam 01 - Dabhoi Circle","Vadodara","Dabhoi","PTZ","online","96.5","",22.181787,73.430901
+"GJ-DEMO-CAM-0155","Savli Railway Station Cam 01 - Savli Railway Station","Vadodara","Savli","Bullet","online","96.5","",22.311882,73.225631
+"GJ-DEMO-CAM-0156","Waghodia Road Cam 01 - Waghodia Main Road","Vadodara","Waghodia","Dome","online","96.5","",22.372144,73.376579
+"GJ-DEMO-CAM-0157","Vapi Highway Cam 01 - Vapi Bypass Highway","Valsad","Vapi","Fixed","online","96.5","",20.370974,72.915216
+"GJ-DEMO-CAM-0158","Pardi Road Cam 01 - Pardi Main Road","Valsad","Pardi","PTZ","online","96.5","",20.518474,72.950707
+"GJ-DEMO-CAM-0159","Umbergam Circle Cam 01 - Umbergam Circle","Valsad","Umbergam","Bullet","online","96.5","",20.173299,72.788197
+"GJ-DEMO-CAM-0160","Dharampur Road Cam 01 - Dharampur Main Road","Valsad","Dharampur","Dome","maintenance","96.5","",20.540752,73.194521
+"GJ-DEMO-CAM-0161","Amreli Junction Cam 01 - Amreli Junction","Amreli","Amreli","Fixed","online","96.5","",21.614843,71.22481
+"GJ-DEMO-CAM-0162","Savarkundla Market Cam 01 - Savarkundla Main Market","Amreli","Savarkundla","PTZ","online","96.5","",21.32869,71.305253
+"GJ-DEMO-CAM-0163","Rajula Highway Cam 01 - Rajula Bypass Highway","Amreli","Rajula","Bullet","online","96.5","",21.048383,71.443157
+"GJ-DEMO-CAM-0164","Modasa Market Cam 01 - Modasa Main Market","Aravalli","Modasa","Dome","online","96.5","",23.469941,73.28452
+"GJ-DEMO-CAM-0165","Bayad Circle Cam 01 - Bayad Circle","Aravalli","Bayad","Fixed","online","96.5","",23.344065,73.339805
+"GJ-DEMO-CAM-0166","Palanpur Railway Station Cam 01 - Palanpur Railway Station","Banaskantha","Palanpur","PTZ","online","96.5","",24.171385,72.442827
+"GJ-DEMO-CAM-0167","Deesa Public Place Cam 01 - Deesa Town Square","Banaskantha","Deesa","Bullet","online","96.5","",24.241138,72.180193
+"GJ-DEMO-CAM-0168","Vadgam Market Cam 01 - Vadgam Main Market","Banaskantha","Vadgam","Dome","maintenance","96.5","",24.09204,72.414735
+"GJ-DEMO-CAM-0169","Botad Market Cam 01 - Botad Main Market","Botad","Botad","Fixed","online","96.5","",22.158556,71.677386
+"GJ-DEMO-CAM-0170","Gadhada Bridge Cam 01 - Gadhada Bridge","Botad","Gadhada","PTZ","offline","96.5","",21.948342,71.575879
+"GJ-DEMO-CAM-0171","Chhota Udepur Railway Station Cam 01 - Chhota Udepur Railway Station","Chhota Udepur","Chhota Udepur","Bullet","offline","96.5","",22.315509,74.017897
+"GJ-DEMO-CAM-0172","Bodeli Junction Cam 01 - Bodeli Junction","Chhota Udepur","Bodeli","Dome","online","96.5","",22.266919,73.733302
+"GJ-DEMO-CAM-0173","Dahod Railway Station Cam 01 - Dahod Railway Station","Dahod","Dahod","Fixed","online","96.5","",22.839044,74.245182
+"GJ-DEMO-CAM-0174","Jhalod Circle Cam 01 - Jhalod Circle","Dahod","Jhalod","PTZ","offline","96.5","",22.585309,74.173822
+"GJ-DEMO-CAM-0175","Devgadh Baria Railway Station Cam 01 - Devgadh Baria Railway Station","Dahod","Devgadh Baria","Bullet","online","96.5","",22.72442,73.893813
+"GJ-DEMO-CAM-0176","Ahwa Junction Cam 01 - Ahwa Junction","Dang","Ahwa","Dome","online","96.5","",20.750044,73.685975
+"GJ-DEMO-CAM-0177","Dwarka Highway Cam 01 - Dwarka Bypass Highway","Devbhoomi Dwarka","Dwarka","Fixed","online","96.5","",22.249291,68.964016
+"GJ-DEMO-CAM-0178","Khambhalia Market Cam 01 - Khambhalia Main Market","Devbhoomi Dwarka","Khambhalia","PTZ","online","96.5","",22.204918,69.654566
+"GJ-DEMO-CAM-0179","Okha Market Cam 01 - Okha Main Market","Devbhoomi Dwarka","Okha","Bullet","online","96.5","",22.461603,69.071839
+"GJ-DEMO-CAM-0180","Veraval Circle Cam 01 - Veraval Circle","Gir Somnath","Veraval","Dome","online","96.5","",20.905781,70.360443
+"GJ-DEMO-CAM-0181","Somnath Highway Cam 01 - Somnath Bypass Highway","Gir Somnath","Veraval","Fixed","online","96.5","",20.899148,70.41247
+"GJ-DEMO-CAM-0182","Una Junction Cam 01 - Una Junction","Gir Somnath","Una","PTZ","online","96.5","",20.822428,71.041708
+"GJ-DEMO-CAM-0183","Kodinar Bridge Cam 01 - Kodinar Bridge","Gir Somnath","Kodinar","Bullet","maintenance","96.5","",20.784931,70.690575
+"GJ-DEMO-CAM-0184","Nadiad Public Place Cam 01 - Nadiad Town Square","Kheda","Nadiad","Dome","offline","96.5","",22.699447,72.865259
+"GJ-DEMO-CAM-0185","Kapadvanj Railway Station Cam 01 - Kapadvanj Railway Station","Kheda","Kapadvanj","Fixed","online","96.5","",23.023589,73.07826
+"GJ-DEMO-CAM-0186","Mahemdavad Bridge Cam 01 - Mahemdavad Bridge","Kheda","Mahemdavad","PTZ","online","96.5","",22.836988,72.754626
+"GJ-DEMO-CAM-0187","Kheda Junction Cam 01 - Kheda Junction","Kheda","Kheda","Bullet","online","96.5","",22.760977,72.682776
+"GJ-DEMO-CAM-0188","Lunawada Road Cam 01 - Lunawada Main Road","Mahisagar","Lunawada","Dome","online","96.5","",23.13819,73.606574
+"GJ-DEMO-CAM-0189","Balasinor Junction Cam 01 - Balasinor Junction","Mahisagar","Balasinor","Fixed","online","96.5","",22.951996,73.323483
+"GJ-DEMO-CAM-0190","Santrampur Market Cam 01 - Santrampur Main Market","Mahisagar","Santrampur","PTZ","online","96.5","",23.238522,73.910807
+"GJ-DEMO-CAM-0191","Rajpipla Market Cam 01 - Rajpipla Main Market","Narmada","Rajpipla","Bullet","online","96.5","",21.87562,73.49125
+"GJ-DEMO-CAM-0192","Himatnagar Public Place Cam 01 - Himatnagar Town Square","Sabarkantha","Himatnagar","Dome","online","96.5","",23.592283,72.967594
+"GJ-DEMO-CAM-0193","Idar Railway Station Cam 01 - Idar Railway Station","Sabarkantha","Idar","Fixed","online","96.5","",23.82724,72.996308
+"GJ-DEMO-CAM-0194","Prantij Bridge Cam 01 - Prantij Bridge","Sabarkantha","Prantij","PTZ","online","96.5","",23.435647,72.671579
+"GJ-DEMO-CAM-0195","Surendranagar Market Cam 01 - Surendranagar Main Market","Surendranagar","Surendranagar","Bullet","online","96.5","",22.724279,71.638856
+"GJ-DEMO-CAM-0196","Limbdi Bridge Cam 01 - Limbdi Bridge","Surendranagar","Limbdi","Dome","maintenance","96.5","",22.577464,71.792413
+"GJ-DEMO-CAM-0197","Dhrangadhra Railway Station Cam 01 - Dhrangadhra Railway Station","Surendranagar","Dhrangadhra","Fixed","offline","96.5","",22.974881,71.463735
+"GJ-DEMO-CAM-0198","Chotila Highway Cam 01 - Chotila Bypass Highway","Surendranagar","Chotila","PTZ","online","96.5","",22.410529,71.17618
+"GJ-DEMO-CAM-0199","Vyara Junction Cam 01 - Vyara Junction","Tapi","Vyara","Bullet","online","96.5","",21.122083,73.401412
+"GJ-DEMO-CAM-0200","Songadh Junction Cam 01 - Songadh Junction","Tapi","Songadh","Dome","online","96.5","",21.162419,73.578093
+"GJ-DEMO-CAM-0201","Ahmedabad Junction Cam 18 - Ahmedabad Junction","Ahmedabad","Ahmedabad City","PTZ","maintenance","96.5","",23.019227,72.553811
+"GJ-DEMO-CAM-0202","Gandhinagar Highway Cam 04 - Gandhinagar Bypass Highway","Gandhinagar","Gandhinagar","Fixed","online","96.5","",23.23635,72.655966
+"GJ-DEMO-CAM-0203","Surat Road Cam 10 - Surat Panchvati Chowk","Surat","Surat City","PTZ","offline","96.5","",21.154295,72.848575
+"GJ-DEMO-CAM-0204","Vadodara Highway Cam 06 - Vadodara Highway Toll Naka","Vadodara","Vadodara City","Fixed","online","96.5","",22.348224,73.175767
+"GJ-DEMO-CAM-0205","Rajkot Junction Cam 13 - Rajkot Circle Junction","Rajkot","Rajkot City","PTZ","online","96.5","",22.284066,70.847177
+"GJ-DEMO-CAM-0206","Bhavnagar Junction Cam 04 - Bhavnagar Circle Junction","Bhavnagar","Bhavnagar City","Fixed","maintenance","96.5","",21.788595,72.168639
+"GJ-DEMO-CAM-0207","Jamnagar Highway Cam 11 - Jamnagar Highway Junction","Jamnagar","Jamnagar","Dome","offline","96.5","",22.482499,70.098617
+"GJ-DEMO-CAM-0208","Junagadh Road Cam 01 - Junagadh Old Town Road","Junagadh","Junagadh City","Bullet","maintenance","96.5","",21.493635,70.440736
+"GJ-DEMO-CAM-0209","Anand Market Cam 18 - Anand Cloth Market","Anand","Anand","PTZ","online","96.5","",22.542749,72.922206
+"GJ-DEMO-CAM-0210","Bharuch Highway Cam 19 - Bharuch Bypass Highway","Bharuch","Bharuch","Bullet","online","96.5","",21.685273,73.02263
+"GJ-DEMO-CAM-0211","Mehsana Railway Station Cam 18 - Mehsana Station Yard","Mehsana","Mehsana","PTZ","online","96.5","",23.555205,72.355988
+"GJ-DEMO-CAM-0212","Valsad Circle Cam 02 - Valsad Circle","Valsad","Valsad","Dome","online","96.5","",20.624083,72.950773
+"GJ-DEMO-CAM-0213","Bhuj Railway Station Cam 04 - Bhuj Railway Station","Kutch","Bhuj","Bullet","maintenance","96.5","",23.24077,69.676206
+"GJ-DEMO-CAM-0214","Navsari Road Cam 09 - Navsari Main Road","Navsari","Navsari","Bullet","online","96.5","",20.969454,72.93345
+"GJ-DEMO-CAM-0215","Porbandar Circle Cam 06 - Porbandar Circle","Porbandar","Porbandar","Fixed","online","96.5","",21.622448,69.621894
+"GJ-DEMO-CAM-0216","Patan Public Place Cam 19 - Patan Bus Stand","Patan","Patan","PTZ","online","96.5","",23.858151,72.132623
+"GJ-DEMO-CAM-0217","Godhra Junction Cam 19 - Godhra Circle Junction","Panchmahal","Godhra","Fixed","online","96.5","",22.754822,73.615879
+"GJ-DEMO-CAM-0218","Morbi Bridge Cam 01 - Morbi Bridge","Morbi","Morbi","PTZ","online","96.5","",22.827085,70.808793
+"GJ-DEMO-CAM-0219","Sanand Public Place Cam 02 - Sanand Central Library","Ahmedabad","Sanand","PTZ","maintenance","96.5","",23.009277,72.368638
+"GJ-DEMO-CAM-0220","Dholka Road Cam 18 - Dholka Main Road","Ahmedabad","Dholka","Bullet","online","96.5","",22.718364,72.487688
+"GJ-DEMO-CAM-0221","Bavla Public Place Cam 14 - Bavla District Court","Ahmedabad","Bavla","PTZ","online","96.5","",22.854016,72.3523
+"GJ-DEMO-CAM-0222","Kalol Public Place Cam 08 - Kalol Town Hall","Gandhinagar","Kalol","PTZ","online","96.5","",23.261052,72.494618
+"GJ-DEMO-CAM-0223","Dehgam Bridge Cam 11 - Dehgam Bridge","Gandhinagar","Dehgam","PTZ","online","96.5","",23.169008,72.804743
+"GJ-DEMO-CAM-0224","Umreth Public Place Cam 09 - Umreth Civil Hospital","Anand","Umreth","PTZ","online","96.5","",22.673893,73.128192
+"GJ-DEMO-CAM-0225","Borsad Junction Cam 18 - Borsad Char Rasta","Anand","Borsad","PTZ","online","96.5","",22.428273,72.874404
+"GJ-DEMO-CAM-0226","Petlad Highway Cam 20 - Petlad Highway Junction","Anand","Petlad","Bullet","maintenance","96.5","",22.451126,72.783691
+"GJ-DEMO-CAM-0227","Khambhat Junction Cam 08 - Khambhat Circle Junction","Anand","Khambhat","Bullet","online","96.5","",22.322805,72.610685
+"GJ-DEMO-CAM-0228","Ankleshwar Circle Cam 15 - Ankleshwar Char Rasta Circle","Bharuch","Ankleshwar","Bullet","offline","96.5","",21.62073,73.030382
+"GJ-DEMO-CAM-0229","Jambusar Railway Station Cam 09 - Jambusar Railway Crossing","Bharuch","Jambusar","Dome","maintenance","96.5","",22.056254,72.797098
+"GJ-DEMO-CAM-0230","Vagra Circle Cam 13 - Vagra Water Tank Circle","Bharuch","Vagra","Fixed","offline","96.5","",21.621831,72.880201
+"GJ-DEMO-CAM-0231","Mahuva Highway Cam 01 - Mahuva Highway Toll Naka","Bhavnagar","Mahuva","Dome","offline","96.5","",21.104966,71.75086
+"GJ-DEMO-CAM-0232","Palitana Highway Cam 06 - Palitana Highway Junction","Bhavnagar","Palitana","Bullet","offline","96.5","",21.52485,71.810668
+"GJ-DEMO-CAM-0233","Sihor Road Cam 15 - Sihor Panchvati Chowk","Bhavnagar","Sihor","PTZ","online","96.5","",21.715069,71.994733
+"GJ-DEMO-CAM-0234","Talaja Bridge Cam 01 - Talaja River Bridge","Bhavnagar","Talaja","PTZ","offline","96.5","",21.337225,72.064551
+"GJ-DEMO-CAM-0235","Kalavad Railway Station Cam 19 - Kalavad Station Yard","Jamnagar","Kalavad","Dome","online","96.5","",22.110498,70.426638
+"GJ-DEMO-CAM-0236","Jodiya Railway Station Cam 03 - Jodiya Station Yard","Jamnagar","Jodiya","Bullet","online","96.5","",22.718577,70.293577
+"GJ-DEMO-CAM-0237","Keshod Circle Cam 16 - Keshod Circle","Junagadh","Keshod","Fixed","offline","96.5","",21.270739,70.24012
+"GJ-DEMO-CAM-0238","Mangrol Bridge Cam 07 - Mangrol River Bridge","Junagadh","Mangrol","PTZ","online","96.5","",21.110784,70.121195
+"GJ-DEMO-CAM-0239","Visavadar Bridge Cam 03 - Visavadar Canal Bridge","Junagadh","Visavadar","Bullet","online","96.5","",21.35268,70.754393
+"GJ-DEMO-CAM-0240","Manavadar Bridge Cam 08 - Manavadar Canal Bridge","Junagadh","Manavadar","Fixed","offline","96.5","",21.486668,70.145516
+"GJ-DEMO-CAM-0241","Gandhidham Public Place Cam 18 - Gandhidham Town Hall","Kutch","Gandhidham","Dome","online","96.5","",23.092394,70.132424
+"GJ-DEMO-CAM-0242","Mandvi Bridge Cam 04 - Mandvi Canal Bridge","Kutch","Mandvi","Dome","online","96.5","",22.830587,69.361177
+"GJ-DEMO-CAM-0243","Anjar Road Cam 15 - Anjar Central Avenue","Kutch","Anjar","Fixed","online","96.5","",23.121486,70.024061
+"GJ-DEMO-CAM-0244","Bhachau Bridge Cam 18 - Bhachau Canal Bridge","Kutch","Bhachau","PTZ","maintenance","96.5","",23.31337,70.344372
+"GJ-DEMO-CAM-0245","Nakhatrana Circle Cam 08 - Nakhatrana Char Rasta Circle","Kutch","Nakhatrana","Bullet","online","96.5","",23.318179,69.26018
+"GJ-DEMO-CAM-0246","Visnagar Railway Station Cam 17 - Visnagar Railway Station","Mehsana","Visnagar","Fixed","maintenance","96.5","",23.725317,72.561632
+"GJ-DEMO-CAM-0247","Unjha Highway Cam 15 - Unjha Highway Junction","Mehsana","Unjha","Fixed","online","96.5","",23.791371,72.40181
+"GJ-DEMO-CAM-0248","Kadi Circle Cam 18 - Kadi Circle","Mehsana","Kadi","Fixed","offline","96.5","",23.291828,72.335677
+"GJ-DEMO-CAM-0249","Vijapur Market Cam 07 - Vijapur Main Market","Mehsana","Vijapur","PTZ","maintenance","96.5","",23.562392,72.730775
+"GJ-DEMO-CAM-0250","Tankara Circle Cam 15 - Tankara Water Tank Circle","Morbi","Tankara","PTZ","online","96.5","",22.659271,70.766347
+"GJ-DEMO-CAM-0251","Wankaner Bridge Cam 05 - Wankaner Canal Bridge","Morbi","Wankaner","Fixed","offline","96.5","",22.626756,70.923595
+"GJ-DEMO-CAM-0252","Bilimora Highway Cam 18 - Bilimora Highway Toll Naka","Navsari","Gandevi","Fixed","online","96.5","",20.755077,72.958504
+"GJ-DEMO-CAM-0253","Gandevi Junction Cam 17 - Gandevi Circle Junction","Navsari","Gandevi","Dome","online","96.5","",20.821499,72.933098
+"GJ-DEMO-CAM-0254","Chikhli Circle Cam 03 - Chikhli Circle","Navsari","Chikhli","Dome","online","96.5","",20.858105,73.067731
+"GJ-DEMO-CAM-0255","Halol Highway Cam 15 - Halol Highway Toll Naka","Panchmahal","Halol","Dome","maintenance","96.5","",22.523159,73.482306
+"GJ-DEMO-CAM-0256","Shehra Road Cam 20 - Shehra Old Town Road","Panchmahal","Shehra","Fixed","online","96.5","",22.757333,73.707772
+"GJ-DEMO-CAM-0257","Sidhpur Public Place Cam 10 - Sidhpur Town Hall","Patan","Sidhpur","Fixed","offline","96.5","",23.919664,72.375503
+"GJ-DEMO-CAM-0258","Chanasma Bridge Cam 09 - Chanasma Bridge","Patan","Chanasma","Dome","online","96.5","",23.725095,72.108496
+"GJ-DEMO-CAM-0259","Radhanpur Road Cam 10 - Radhanpur Nehru Chowk","Patan","Radhanpur","Dome","online","96.5","",23.840965,71.605457
+"GJ-DEMO-CAM-0260","Harij Public Place Cam 10 - Harij Bus Stand","Patan","Harij","Fixed","offline","96.5","",23.751467,71.806271
+"GJ-DEMO-CAM-0261","Ranavav Railway Station Cam 19 - Ranavav Railway Station","Porbandar","Ranavav","Bullet","offline","96.5","",21.854884,69.736354
+"GJ-DEMO-CAM-0262","Kutiyana Railway Station Cam 04 - Kutiyana Station Yard","Porbandar","Kutiyana","Dome","online","96.5","",21.634967,70.00467
+"GJ-DEMO-CAM-0263","Gondal Circle Cam 16 - Gondal Circle","Rajkot","Gondal","Bullet","maintenance","96.5","",21.938854,70.788488
+"GJ-DEMO-CAM-0264","Jetpur Market Cam 03 - Jetpur Vegetable Market","Rajkot","Jetpur","Dome","online","96.5","",21.761178,70.60163
+"GJ-DEMO-CAM-0265","Dhoraji Road Cam 20 - Dhoraji Main Road","Rajkot","Dhoraji","Bullet","online","96.5","",21.73029,70.447886
+"GJ-DEMO-CAM-0266","Upleta Public Place Cam 02 - Upleta Civil Hospital","Rajkot","Upleta","Bullet","online","96.5","",21.721389,70.291338
+"GJ-DEMO-CAM-0267","Jasdan Railway Station Cam 02 - Jasdan Railway Crossing","Rajkot","Jasdan","Fixed","maintenance","96.5","",22.045737,71.210784
+"GJ-DEMO-CAM-0268","Bardoli Railway Station Cam 18 - Bardoli Railway Crossing","Surat","Bardoli","Dome","online","96.5","",21.128668,73.020805
+"GJ-DEMO-CAM-0269","Kamrej Bridge Cam 13 - Kamrej River Bridge","Surat","Kamrej","Dome","online","96.5","",21.275004,72.938892
+"GJ-DEMO-CAM-0270","Olpad Market Cam 19 - Olpad Cloth Market","Surat","Olpad","Bullet","offline","96.5","",21.336573,72.730892
+"GJ-DEMO-CAM-0271","Padra Highway Cam 12 - Padra Highway Junction","Vadodara","Padra","Fixed","maintenance","96.5","",22.232303,73.086431
+"GJ-DEMO-CAM-0272","Karjan Junction Cam 06 - Karjan Char Rasta","Vadodara","Karjan","PTZ","maintenance","96.5","",22.043854,73.170017
+"GJ-DEMO-CAM-0273","Dabhoi Public Place Cam 02 - Dabhoi Bus Stand","Vadodara","Dabhoi","Bullet","offline","96.5","",22.18444,73.426932
+"GJ-DEMO-CAM-0274","Savli Railway Station Cam 10 - Savli Railway Crossing","Vadodara","Savli","Dome","offline","96.5","",22.298178,73.230345
+"GJ-DEMO-CAM-0275","Waghodia Junction Cam 14 - Waghodia Char Rasta","Vadodara","Waghodia","PTZ","online","96.5","",22.373221,73.368916
+"GJ-DEMO-CAM-0276","Vapi Junction Cam 13 - Vapi Circle Junction","Valsad","Vapi","Fixed","online","96.5","",20.356141,72.916519
+"GJ-DEMO-CAM-0277","Pardi Market Cam 10 - Pardi Vegetable Market","Valsad","Pardi","Dome","online","96.5","",20.510055,72.946908
+"GJ-DEMO-CAM-0278","Umbergam Railway Station Cam 06 - Umbergam Station Yard","Valsad","Umbergam","PTZ","maintenance","96.5","",20.162162,72.799362
+"GJ-DEMO-CAM-0279","Dharampur Public Place Cam 09 - Dharampur District Court","Valsad","Dharampur","Dome","maintenance","96.5","",20.551161,73.200741
+"GJ-DEMO-CAM-0280","Amreli Circle Cam 07 - Amreli Char Rasta Circle","Amreli","Amreli","PTZ","online","96.5","",21.608921,71.207778
+"GJ-DEMO-CAM-0281","Savarkundla Road Cam 13 - Savarkundla Panchvati Chowk","Amreli","Savarkundla","Fixed","online","96.5","",21.33289,71.305308
+"GJ-DEMO-CAM-0282","Rajula Road Cam 12 - Rajula Old Town Road","Amreli","Rajula","Fixed","online","96.5","",21.059362,71.450313
+"GJ-DEMO-CAM-0283","Modasa Highway Cam 12 - Modasa Bypass Highway","Aravalli","Modasa","PTZ","online","96.5","",23.488649,73.292459
+"GJ-DEMO-CAM-0284","Bayad Circle Cam 06 - Bayad Circle","Aravalli","Bayad","Bullet","online","96.5","",23.331276,73.328373
+"GJ-DEMO-CAM-0285","Palanpur Public Place Cam 07 - Palanpur District Court","Banaskantha","Palanpur","Dome","online","96.5","",24.184639,72.453671
+"GJ-DEMO-CAM-0286","Deesa Circle Cam 12 - Deesa Char Rasta Circle","Banaskantha","Deesa","Dome","maintenance","96.5","",24.24827,72.18301
+"GJ-DEMO-CAM-0287","Vadgam Railway Station Cam 13 - Vadgam Railway Crossing","Banaskantha","Vadgam","Bullet","online","96.5","",24.100496,72.415371
+"GJ-DEMO-CAM-0288","Botad Market Cam 16 - Botad Vegetable Market","Botad","Botad","Fixed","online","96.5","",22.147987,71.697167
+"GJ-DEMO-CAM-0289","Gadhada Road Cam 20 - Gadhada Old Town Road","Botad","Gadhada","Bullet","maintenance","96.5","",21.952956,71.592113
+"GJ-DEMO-CAM-0290","Chhota Udepur Circle Cam 06 - Chhota Udepur Water Tank Circle","Chhota Udepur","Chhota Udepur","PTZ","maintenance","96.5","",22.298021,74.031365
+"GJ-DEMO-CAM-0291","Bodeli Road Cam 19 - Bodeli Panchvati Chowk","Chhota Udepur","Bodeli","PTZ","offline","96.5","",22.267858,73.727726
+"GJ-DEMO-CAM-0292","Dahod Market Cam 02 - Dahod Vegetable Market","Dahod","Dahod","Dome","offline","96.5","",22.82438,74.239274
+"GJ-DEMO-CAM-0293","Jhalod Circle Cam 13 - Jhalod Char Rasta Circle","Dahod","Jhalod","Bullet","online","96.5","",22.602644,74.174437
+"GJ-DEMO-CAM-0294","Devgadh Baria Circle Cam 11 - Devgadh Baria Char Rasta Circle","Dahod","Devgadh Baria","Fixed","online","96.5","",22.743369,73.893661
+"GJ-DEMO-CAM-0295","Ahwa Highway Cam 12 - Ahwa Bypass Highway","Dang","Ahwa","Dome","online","96.5","",20.742304,73.69008
+"GJ-DEMO-CAM-0296","Dwarka Circle Cam 12 - Dwarka Circle","Devbhoomi Dwarka","Dwarka","PTZ","online","96.5","",22.267403,68.949727
+"GJ-DEMO-CAM-0297","Khambhalia Market Cam 15 - Khambhalia Sabzi Mandi","Devbhoomi Dwarka","Khambhalia","Fixed","online","96.5","",22.215441,69.657523
+"GJ-DEMO-CAM-0298","Okha Circle Cam 18 - Okha Circle","Devbhoomi Dwarka","Okha","Bullet","online","96.5","",22.481458,69.063262
+"GJ-DEMO-CAM-0299","Veraval Public Place Cam 05 - Veraval Central Library","Gir Somnath","Veraval","Bullet","online","96.5","",20.921434,70.374497
+"GJ-DEMO-CAM-0300","Somnath Circle Cam 19 - Somnath Water Tank Circle","Gir Somnath","Veraval","Dome","maintenance","96.5","",20.881778,70.408396
