@@ -26,19 +26,25 @@ export default function CameraPlayer({
   const whepLoaderRef = useRef(null);
   const hlsLoaderRef = useRef(null);
   const rtspLoaderRef = useRef(null);
+  const statusRef = useRef('standby');
+
 
   const [status, setStatus] = useState('standby'); // 'standby' | 'connecting' | 'live' | 'reconnecting' | 'error'
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [protocol, setProtocol] = useState('rtsp'); // 'rtsp' | 'whep' | 'hls'
-  const [streamSource, setStreamSource] = useState('sentinel_rtsp'); // 'sentinel_rtsp' | 'sentinel_live' | 'sentinel_whep' | 'fallback_sim'
+  const [protocol, setProtocol] = useState('hls'); // 'rtsp' | 'whep' | 'hls'
+  const [streamSource, setStreamSource] = useState('sentinel_live'); // 'sentinel_rtsp' | 'sentinel_live' | 'sentinel_whep' | 'fallback_sim'
   const [rtspProbeData, setRtspProbeData] = useState(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [currentTime, setCurrentTime] = useState('');
   const [isStarted, setIsStarted] = useState(autoConnect);
   const [nightVision, setNightVision] = useState(false);
+
+  // Keep statusRef in sync with status state (avoids stale closure in watchdog)
+  useEffect(() => { statusRef.current = status; }, [status]);
 
   // Live IST Clock with sub-second precision
   useEffect(() => {
@@ -191,25 +197,37 @@ export default function CameraPlayer({
     if (!videoRef.current) return;
     const video = videoRef.current;
 
-    // 7s failover watchdog for HLS
+    // 25s watchdog — needed because fetching the full Sentinel VOD playlist
+    // and piping it through the live-window transformer can take 8-12 seconds
     watchdogRef.current = setTimeout(() => {
-      console.warn('HLS stream startup timeout, trying WHEP fallback...');
-      whepLoaderRef.current?.();
-    }, 7000);
+      if (statusRef.current !== 'live') {
+        console.warn('HLS stream startup timeout, retrying HLS...');
+        // Retry HLS once more instead of falling back to WHEP
+        hlsLoaderRef.current?.();
+      }
+    }, 25000);
+
 
     if (Hls.isSupported()) {
       const hls = new Hls({
-        maxBufferLength: 10,
-        maxMaxBufferLength: 20,
-        backBufferLength: 8,
-        manifestLoadingTimeOut: 12000,
-        manifestLoadingMaxRetry: 3,
-        fragLoadingTimeOut: 15000,
-        fragLoadingMaxRetry: 4,
-        nudgeMaxRetry: 5,
-        maxBufferHole: 1.0,
-        startPosition: 0,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        backBufferLength: 15,
+        manifestLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 2000,
+        fragLoadingTimeOut: 20000,
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 1000,
+        nudgeMaxRetry: 8,
+        maxBufferHole: 2.0,
+        // -1 = start at the live edge (last segment in the sliding window)
+        startPosition: -1,
         lowLatencyMode: false,
+        // Allow extended key loading for AES-128 decryption
+        levelLoadingTimeOut: 20000,
+        keyLoadingTimeOut: 20000,
+        keyLoadingMaxRetry: 5,
       });
       hlsRef.current = hls;
 
@@ -224,7 +242,7 @@ export default function CameraPlayer({
           clearTimeout(watchdogRef.current);
           watchdogRef.current = null;
         }
-        video.loop = true;
+        // Do NOT set loop — this is a live-style sliding window, not a VOD loop
         video.muted = true;
         video.defaultMuted = true;
         video.play().then(() => {
@@ -265,14 +283,18 @@ export default function CameraPlayer({
           case Hls.ErrorTypes.NETWORK_ERROR:
             setReconnectAttempts((prev) => {
               const nextAttempt = prev + 1;
-              if (nextAttempt <= 3) {
+              if (nextAttempt <= 5) {
                 setStatus('reconnecting');
-                const delay = Math.min(1000 * Math.pow(1.8, nextAttempt), 5000);
+                const delay = Math.min(2000 * Math.pow(1.5, nextAttempt), 10000);
                 reconnectTimeoutRef.current = setTimeout(() => {
                   if (hlsRef.current) hlsRef.current.startLoad();
                 }, delay);
               } else {
-                whepLoaderRef.current?.();
+                // After 5 retries, hard restart the HLS stream
+                setReconnectAttempts(0);
+                reconnectTimeoutRef.current = setTimeout(() => {
+                  startSentinelHlsStream();
+                }, 5000);
               }
               return nextAttempt;
             });
@@ -281,12 +303,15 @@ export default function CameraPlayer({
             hls.recoverMediaError();
             break;
           default:
-            startSimulatedLiveFeed();
+            // For other fatal errors, restart HLS after a delay
+            reconnectTimeoutRef.current = setTimeout(() => {
+              startSentinelHlsStream();
+            }, 4000);
             break;
         }
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.loop = true;
+      // Safari native HLS — load directly
       video.src = sentinelHlsUrl;
       video.addEventListener('loadeddata', () => {
         setIsPlaying(true);
@@ -502,7 +527,7 @@ export default function CameraPlayer({
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black rounded-2xl overflow-hidden border border-slate-800 group ${aspectRatio} ${className}`}
+      className={`relative bg-black rounded-2xl overflow-hidden border border-slate-800 group cctv-player-container ${aspectRatio} ${className}`}
     >
       {/* Real HTML5 Video Element */}
       <video
@@ -517,11 +542,11 @@ export default function CameraPlayer({
       <div className="absolute inset-0 pointer-events-none opacity-20 [background:linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-10" />
 
       {/* Top Left: Camera Information */}
-      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 text-xs text-white shadow-lg">
+      <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 text-xs text-white shadow-lg osd-pill">
         <span className={`w-2 h-2 rounded-full ${status === 'live' ? 'bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]' : 'bg-amber-400'}`} />
-        <span className="font-mono font-bold text-emerald-400">{activeStreamId.toUpperCase()}</span>
-        <span className="text-white/30">|</span>
-        <span className="font-medium text-slate-200 truncate max-w-[190px]">{cameraName}</span>
+        <span className="font-mono font-bold text-emerald-400 drop-shadow-xs">{activeStreamId.toUpperCase()}</span>
+        <span className="text-white/40">|</span>
+        <span className="font-medium text-slate-100 truncate max-w-[190px] drop-shadow-xs">{cameraName}</span>
       </div>
 
       {/* Top Right: Protocol, Sentinel Badge & Live Clock */}
@@ -530,19 +555,19 @@ export default function CameraPlayer({
         <button
           type="button"
           onClick={() => setProtocol(p => p === 'rtsp' ? 'whep' : p === 'whep' ? 'hls' : 'rtsp')}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/80 hover:bg-slate-800/90 backdrop-blur-md border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-400 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/80 hover:bg-slate-800/90 backdrop-blur-md border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-400 transition-colors cursor-pointer osd-pill"
           title="Stream Transport Protocol (RTSP Port 8554 TCP vs WebRTC WHEP vs HLS CDN)"
         >
           <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
           <span>{protocol === 'rtsp' ? 'RTSP 8554 TCP' : protocol === 'whep' ? 'WHEP DIRECT' : 'HLS CDN'}</span>
         </button>
 
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-950/80 backdrop-blur-md border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-300">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-950/90 backdrop-blur-md border border-emerald-500/40 text-[10px] font-mono font-bold text-emerald-300 shadow-md osd-pill-emerald">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
           <span>{streamSource === 'fallback_sim' ? 'TACTICAL LIVE' : 'SENTINEL RTSP LIVE'}</span>
         </div>
 
-        <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 text-[11px] font-mono text-emerald-400 font-bold">
+        <div className="bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/20 text-[11px] font-mono text-emerald-400 font-bold osd-pill">
           {currentTime || 'LIVE'}
         </div>
       </div>
@@ -555,8 +580,8 @@ export default function CameraPlayer({
               <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
                 <Play className="w-6 h-6 fill-current ml-0.5" />
               </div>
-              <p className="text-xs font-bold text-slate-200">Sentinel Direct RTSP Stream</p>
-              <p className="text-[10px] text-slate-400 font-mono">rtsp://103.250.160.189:8554/stream/{activeStreamId}</p>
+              <p className="text-xs font-bold text-slate-100">Sentinel Direct RTSP Stream</p>
+              <p className="text-[10px] text-slate-300 font-mono">rtsp://103.250.160.189:8554/stream/{activeStreamId}</p>
               <button
                 type="button"
                 onClick={() => setIsStarted(true)}
@@ -570,7 +595,7 @@ export default function CameraPlayer({
           {(status === 'connecting' || status === 'reconnecting') && (
             <div className="flex flex-col items-center gap-3">
               <div className="w-10 h-10 border-2 border-white/10 border-t-emerald-500 rounded-full animate-spin" />
-              <p className="text-xs font-semibold text-slate-300">
+              <p className="text-xs font-semibold text-slate-200">
                 {status === 'reconnecting'
                   ? `Reconnecting to Sentinel RTSP ${activeStreamId.toUpperCase()} (attempt ${reconnectAttempts}/3)...`
                   : `Connecting to Sentinel RTSP ${activeStreamId.toUpperCase()} (Port 8554 TCP)...`}
@@ -582,7 +607,7 @@ export default function CameraPlayer({
                 <button
                   type="button"
                   onClick={() => setProtocol(p => p === 'rtsp' ? 'whep' : p === 'whep' ? 'hls' : 'rtsp')}
-                  className="text-[10px] px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-300 rounded-lg transition-colors cursor-pointer"
+                  className="text-[10px] px-2.5 py-1 bg-white/10 hover:bg-white/20 text-slate-200 rounded-lg transition-colors cursor-pointer"
                 >
                   Switch to {protocol === 'rtsp' ? 'WebRTC WHEP' : protocol === 'whep' ? 'HLS CDN' : 'RTSP TCP'}
                 </button>

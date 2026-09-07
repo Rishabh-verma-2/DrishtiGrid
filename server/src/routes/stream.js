@@ -455,10 +455,110 @@ router.get('/sentinel/enc.key', async (req, res) => {
 });
 
 /**
- * @desc    Proxy Sentinel HLS playlist (.m3u8) with authentication
- * @route   GET /api/stream/sentinel/:camId/index.m3u8
+ * Transform a large VOD playlist into a live-window playlist containing only the
+ * most recent `windowSize` segments so HLS.js starts playing immediately from
+ * the latest footage rather than buffering from segment 0.
+ *
+ * @param {string} rawPlaylist  - The full M3U8 text from Sentinel
+ * @param {string} camId        - Camera ID used to build proxy segment URLs
+ * @param {number} windowSize   - Number of recent segments to expose (default 10)
+ * @returns {string} Rewritten M3U8 ready for HLS.js
  */
-router.get('/sentinel/:camId/index.m3u8', async (req, res) => {
+function buildLiveWindowPlaylist(rawPlaylist, camId, windowSize = 10) {
+  const lines = rawPlaylist.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // Collect all segment pairs: { inf, uri }
+  const segments = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith('#EXTINF:')) {
+      const uri = lines[i + 1];
+      if (uri && !uri.startsWith('#')) {
+        segments.push({ inf: lines[i], uri });
+        i++;
+      }
+    }
+  }
+
+  if (segments.length === 0) return rawPlaylist;
+
+  // Take only the last `windowSize` segments
+  const window = segments.slice(-windowSize);
+  const firstSeq = segments.length - window.length;
+
+  // Compute target duration from the window
+  let maxDuration = 8;
+  window.forEach(({ inf }) => {
+    const m = inf.match(/#EXTINF:(\d+(\.\d+)?)/);
+    if (m) maxDuration = Math.max(maxDuration, Math.ceil(parseFloat(m[1])));
+  });
+
+  // Extract and rewrite the encryption key line
+  const keyLine = lines.find((l) => l.startsWith('#EXT-X-KEY:'));
+  const rewrittenKey = keyLine
+    ? keyLine.replace(/URI="(\/)?enc\.key"/g, 'URI="/api/stream/sentinel/enc.key"')
+    : null;
+
+  const out = [
+    '#EXTM3U',
+    '#EXT-X-VERSION:3',
+    `#EXT-X-TARGETDURATION:${maxDuration}`,
+    `#EXT-X-MEDIA-SEQUENCE:${firstSeq}`,
+    // Use EVENT type so HLS.js knows more segments can appear
+    '#EXT-X-PLAYLIST-TYPE:EVENT',
+    '#EXT-X-INDEPENDENT-SEGMENTS',
+  ];
+
+  if (rewrittenKey) out.push(rewrittenKey);
+
+  window.forEach(({ inf, uri }) => {
+    out.push(inf);
+    // Rewrite relative segment URIs to use our proxy endpoint
+    const segName = uri.split('/').pop();
+    out.push(`/api/stream/sentinel/${camId}/${segName}`);
+  });
+
+  return out.join('\n') + '\n';
+}
+
+/**
+ * Fetch full VOD playlist from Sentinel with auth, return raw text or null.
+ */
+async function fetchSentinelPlaylist(camId) {
+  let cookie = await getSentinelCookie();
+  let upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
+    headers: {
+      'Cookie': cookie || '',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Referer': 'https://cctv.corp8.cloud/',
+    },
+    signal: AbortSignal.timeout(12000),
+  });
+
+  if (upstream.status === 401 || upstream.status === 403 || upstream.status === 302) {
+    sentinelCookie = null;
+    cookie = await getSentinelCookie();
+    upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
+      headers: {
+        'Cookie': cookie || '',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Referer': 'https://cctv.corp8.cloud/',
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+  }
+
+  if (!upstream.ok) return null;
+  return upstream.text();
+}
+
+/**
+ * @desc    Proxy Sentinel HLS playlist as a live sliding-window stream.
+ *          Strips the 7000-segment VOD down to the last 10 segments so
+ *          HLS.js starts playing immediately from the most recent footage.
+ * @route   GET /api/stream/sentinel/:camId/index.m3u8
+ * @route   GET /api/stream/sentinel/:camId/live.m3u8
+ */
+const handleSentinelPlaylist = async (req, res) => {
   try {
     let { camId } = req.params;
     if (!/^cam([0-2][0-9]|30)$/i.test(camId)) {
@@ -468,44 +568,28 @@ router.get('/sentinel/:camId/index.m3u8', async (req, res) => {
       camId = `cam${String(channel).padStart(2, '0')}`;
     }
 
-    let cookie = await getSentinelCookie();
-    let upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
-      headers: {
-        'Cookie': cookie || '',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Referer': 'https://cctv.corp8.cloud/',
-      },
-    });
-
-    if (upstream.status === 401 || upstream.status === 403 || upstream.status === 302) {
-      sentinelCookie = null;
-      cookie = await getSentinelCookie();
-      upstream = await fetch(`https://cctv.corp8.cloud/${camId}/index.m3u8`, {
-        headers: {
-          'Cookie': cookie || '',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-          'Referer': 'https://cctv.corp8.cloud/',
-        },
-      });
+    const rawPlaylist = await fetchSentinelPlaylist(camId);
+    if (!rawPlaylist) {
+      return res.status(502).send('Sentinel feed unavailable');
     }
 
-    if (!upstream.ok) {
-      return res.status(upstream.status).send('Sentinel feed unavailable');
-    }
-
-    let playlist = await upstream.text();
-    // Rewrite both URI="/enc.key" and URI="enc.key" to use our backend proxy
-    playlist = playlist.replace(/URI="(\/)?enc\.key"/g, 'URI="/api/stream/sentinel/enc.key"');
+    // Transform into a live-window playlist (last 10 segments ≈ ~60s of footage)
+    const livePlaylist = buildLiveWindowPlaylist(rawPlaylist, camId, 10);
 
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 'no-cache, no-store');
-    res.send(playlist);
+    // Short cache so HLS.js re-polls frequently to simulate live updates
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.send(livePlaylist);
   } catch (err) {
     logger.error('Error proxying Sentinel m3u8:', err.message);
     res.status(500).send(err.message);
   }
-});
+};
+
+router.get('/sentinel/:camId/index.m3u8', handleSentinelPlaylist);
+router.get('/sentinel/:camId/live.m3u8', handleSentinelPlaylist);
 
 /**
  * @desc    Proxy Sentinel HLS video segment (.ts) with authentication & recovery

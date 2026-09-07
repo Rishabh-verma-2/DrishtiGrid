@@ -1012,24 +1012,34 @@ export default function FootageRequestsPage() {
                         <div className="space-y-4">
                           
                           {/* Integrity Seal Card */}
-                          <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 ${
-                            isLight ? 'bg-emerald-50 border-emerald-300' : 'bg-emerald-500/10 border-emerald-500/25'
+                          <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 transition-all ${
+                            isLight
+                              ? 'bg-gradient-to-r from-emerald-50/90 to-teal-50/60 border-emerald-300/90 shadow-xs'
+                              : 'bg-emerald-500/10 border-emerald-500/25'
                           }`}>
                             <div className="flex items-center gap-3.5">
-                              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                              <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+                                isLight
+                                  ? 'bg-emerald-100 border border-emerald-300 text-emerald-800 shadow-xs'
+                                  : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
+                              }`}>
                                 <ShieldCheck className="w-6 h-6" />
                               </div>
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-black text-sm text-emerald-700 dark:text-emerald-400">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`font-black text-sm ${isLight ? 'text-emerald-950' : 'text-emerald-400'}`}>
                                     🟢 Integrity Verified (SHA-256 Validated)
                                   </span>
-                                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold">
+                                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded-md font-bold ${
+                                    isLight
+                                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                      : 'bg-emerald-500/20 text-emerald-300 font-bold'
+                                  }`}>
                                     AES-256-GCM
                                   </span>
                                 </div>
-                                <p className={`text-xs mt-0.5 ${isLight ? 'text-emerald-800' : 'text-slate-300'}`}>
-                                  Evidence ID: <strong className="font-mono font-bold">{selectedTicket.evidence.evidenceId}</strong> · Cloudinary Vault Storage
+                                <p className={`text-xs mt-1 ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+                                  Evidence ID: <strong className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{selectedTicket.evidence.evidenceId}</strong> · <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Cloudinary Vault Storage</span>
                                 </p>
                               </div>
                             </div>
@@ -1039,7 +1049,7 @@ export default function FootageRequestsPage() {
                               disabled={isVerifying}
                               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                                 isLight
-                                  ? 'bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  ? 'bg-white text-slate-800 hover:text-emerald-800 border-slate-300 hover:border-emerald-400 hover:bg-emerald-50/60 shadow-xs'
                                   : 'bg-white/10 hover:bg-white/15 text-slate-200 border-white/10'
                               }`}
                             >
@@ -1060,39 +1070,43 @@ export default function FootageRequestsPage() {
 
                           {/* Cryptographic Parameters */}
                           <div className={`p-4 rounded-2xl border space-y-3 text-xs ${
-                            isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/3 border-white/5'
+                            isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-white/3 border-white/5'
                           }`}>
-                            <p className={`text-xs font-black uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+                            <p className={`text-xs font-black uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-400'}`}>
                               Cryptographic Parameters &amp; Cloudinary Evidence Record
                             </p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div>
-                                <span className="text-slate-500 font-medium">Original Video SHA-256 Checksum:</span>
-                                <div className={`flex items-center gap-2 mt-1 font-mono text-[11px] px-3 py-2 rounded-xl border ${
-                                  isLight ? 'bg-white border-slate-300 text-emerald-700' : 'bg-black/40 border-white/10 text-emerald-400'
+                                <span className={isLight ? 'text-slate-600 font-semibold' : 'text-slate-500 font-medium'}>Original Video SHA-256 Checksum:</span>
+                                <div className={`flex items-center justify-between gap-2 mt-1.5 font-mono text-[11px] px-3 py-2 rounded-xl border ${
+                                  isLight ? 'bg-slate-50 border-slate-200 text-emerald-800' : 'bg-black/40 border-white/10 text-emerald-400'
                                 }`}>
-                                  <span className="truncate">{selectedTicket.evidence.sha256Hash}</span>
-                                  <button onClick={() => copyText(selectedTicket.evidence.sha256Hash, 'sha256')} title="Copy Checksum">
-                                    <Copy className="w-3.5 h-3.5 text-slate-400 hover:text-slate-800 dark:hover:text-white" />
+                                  <span className="truncate font-bold">{selectedTicket.evidence.sha256Hash}</span>
+                                  <button
+                                    onClick={() => copyText(selectedTicket.evidence.sha256Hash, 'sha256')}
+                                    title="Copy Checksum"
+                                    className="p-1 hover:bg-slate-200 dark:hover:bg-white/10 rounded transition-colors"
+                                  >
+                                    <Copy className="w-3.5 h-3.5 text-slate-500 hover:text-slate-900 dark:hover:text-white" />
                                   </button>
                                 </div>
                               </div>
                               <div>
-                                <span className="text-slate-500 font-medium">Cloudinary Public Asset ID:</span>
-                                <div className={`mt-1 font-mono text-[11px] px-3 py-2 rounded-xl border truncate ${
-                                  isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-black/40 border-white/10 text-slate-300'
+                                <span className={isLight ? 'text-slate-600 font-semibold' : 'text-slate-500 font-medium'}>Cloudinary Public Asset ID:</span>
+                                <div className={`mt-1.5 font-mono text-[11px] px-3 py-2 rounded-xl border truncate ${
+                                  isLight ? 'bg-slate-50 border-slate-200 text-slate-800 font-medium' : 'bg-black/40 border-white/10 text-slate-300'
                                 }`}>
                                   {selectedTicket.evidence.cloudinaryAsset?.publicId}
                                 </div>
                               </div>
                             </div>
 
-                            <div className={`grid grid-cols-3 gap-2 pt-2 border-t text-[11px] ${
+                            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2.5 border-t text-[11px] ${
                               isLight ? 'border-slate-200 text-slate-600' : 'border-white/5 text-slate-400'
                             }`}>
-                              <p>Uploaded By: <strong>{selectedTicket.evidence.uploadedByName}</strong></p>
-                              <p>File Size: <strong>{(selectedTicket.evidence.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</strong></p>
-                              <p>Uploaded Date: <strong>{new Date(selectedTicket.evidence.createdAt).toLocaleDateString()}</strong></p>
+                              <p>Uploaded By: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-slate-200 font-bold'}>{selectedTicket.evidence.uploadedByName}</strong></p>
+                              <p>File Size: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-slate-200 font-bold'}>{(selectedTicket.evidence.fileSizeBytes / 1024 / 1024).toFixed(2)} MB</strong></p>
+                              <p>Uploaded Date: <strong className={isLight ? 'text-slate-900 font-bold' : 'text-slate-200 font-bold'}>{new Date(selectedTicket.evidence.createdAt).toLocaleDateString()}</strong></p>
                             </div>
                           </div>
                         </div>

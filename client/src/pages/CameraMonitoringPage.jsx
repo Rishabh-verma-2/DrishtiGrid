@@ -300,7 +300,7 @@ export default function CameraMonitoringPage() {
           </div>
 
           {/* Side Feed List Drawer */}
-          <div className="bg-slate-50 dark:bg-[#141929] border border-slate-200 dark:border-white/5 rounded-2xl p-3 max-h-[600px] overflow-y-auto space-y-2">
+          <div className="bg-slate-50 dark:bg-[#141929] border border-slate-200 dark:border-white/5 rounded-2xl p-3 max-h-[600px] overflow-y-auto space-y-2 custom-sidebar-scrollbar">
             <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200 dark:border-white/5 pb-2 mb-1">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
                 Sentinel Feeds ({filteredFeeds.length})
@@ -363,7 +363,7 @@ export default function CameraMonitoringPage() {
                 <button
                   type="button"
                   onClick={() => setActiveCamera(cam)}
-                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                  className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer shadow-xs"
                 >
                   <Maximize className="w-3 h-3" /> Inspect
                 </button>
@@ -395,7 +395,7 @@ export default function CameraMonitoringPage() {
                 <button
                   type="button"
                   onClick={() => setActiveCamera(cam)}
-                  className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer shadow-xs"
                 >
                   <Maximize className="w-3 h-3" /> Inspect
                 </button>
@@ -415,17 +415,17 @@ export default function CameraMonitoringPage() {
               className="bg-white dark:bg-[#141929] border border-slate-200 dark:border-white/7 rounded-2xl p-3.5 hover:border-blue-500/50 hover:shadow-xl dark:hover:shadow-blue-500/10 transition-all duration-200 group cursor-pointer flex flex-col justify-between shadow-sm"
             >
               {/* Standby CCTV Card Thumbnail (Zero network/GPU load until clicked - matching first commit) */}
-              <div className="relative aspect-video bg-slate-900 dark:bg-[#080c16] rounded-xl overflow-hidden mb-3 border border-slate-800 dark:border-white/5 flex flex-col justify-between p-3 group-hover:border-blue-500/40 transition-colors">
+              <div className="relative aspect-video bg-slate-900 dark:bg-[#080c16] rounded-xl overflow-hidden mb-3 border border-slate-800 dark:border-white/5 flex flex-col justify-between p-3 group-hover:border-blue-500/40 transition-colors camera-card-thumbnail cctv-player-container">
                 {/* Surveillance HUD scanline overlay */}
                 <div className="absolute inset-0 pointer-events-none opacity-25 [background:radial-gradient(ellipse_at_center,#1e3a8a_0%,transparent_70%),repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.4)_2px,rgba(0,0,0,0.4)_4px)]" />
 
                 {/* Top card badges */}
                 <div className="relative z-10 flex items-center justify-between">
-                  <span className="font-mono text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  <span className="font-mono text-[10px] font-bold text-emerald-400 bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 rounded shadow-xs">
                     {cam.id.toUpperCase()}
                   </span>
-                  <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="flex items-center gap-1.5 text-[10px] font-mono font-bold text-emerald-300 bg-emerald-950/90 px-2 py-0.5 rounded border border-emerald-500/40 shadow-xs">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#34d399]" />
                     LIVE
                   </span>
                 </div>
@@ -435,15 +435,15 @@ export default function CameraMonitoringPage() {
                   <div className="w-11 h-11 rounded-full bg-blue-600/30 group-hover:bg-blue-600 border border-blue-500/40 group-hover:border-blue-400 flex items-center justify-center text-blue-400 group-hover:text-white transition-all transform group-hover:scale-110 shadow-lg">
                     <Play className="w-5 h-5 fill-current ml-0.5" />
                   </div>
-                  <span className="text-[10px] font-semibold text-slate-400 group-hover:text-emerald-300 mt-2 transition-colors font-mono">
+                  <span className="text-[10px] font-semibold text-slate-200 group-hover:text-emerald-300 mt-2 transition-colors font-mono">
                     Connect RTSP Feed
                   </span>
                 </div>
 
                 {/* Bottom resolution tag */}
-                <div className="relative z-10 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                <div className="relative z-10 flex items-center justify-between text-[10px] text-slate-200 font-mono">
                   <span className="text-emerald-400 font-bold">1080p · RTSP TCP · 30 FPS</span>
-                  <span>{cam.district}</span>
+                  <span className="text-slate-300">{cam.district}</span>
                 </div>
               </div>
 

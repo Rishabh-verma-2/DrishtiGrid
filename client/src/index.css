@@ -11,6 +11,72 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ─── Global Sleek Custom Scrollbars ────────────── */
+* {
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.6);
+}
+
+/* ─── Dedicated Custom Sidebar Scrollbar ────────── */
+.custom-sidebar-scrollbar {
+  scrollbar-width: thin;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.theme-light .custom-sidebar-scrollbar {
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.theme-light .custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+.theme-light .custom-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+.theme-dark .custom-sidebar-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+.theme-dark .custom-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.theme-dark .custom-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
 /* ─── National Tricolor Ribbon ──────────────────── */
 .gov-tricolor-strip {
   height: 4px;
@@ -226,6 +292,123 @@ body {
   color: #fbbf24 !important;
 }
 
+/* ═════════════════════════════════════════════════
+   🛡️ CCTV, FOOTAGE & LIVE VIDEO OSD OVERLAY SHIELD
+   Video footage feeds and CCTV players always have dark backdrops.
+   Protect all forensic OSD badges, text, and capsules from being
+   inverted into illegible dark colors by light mode.
+   ═════════════════════════════════════════════════ */
+.cctv-player-container,
+.theme-light .cctv-player-container,
+.cctv-dark-scope,
+.theme-light .cctv-dark-scope {
+  background-color: #000000 !important;
+  border-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+/* OSD Badges & Capsules over Footage */
+.cctv-player-container .osd-pill,
+.theme-light .cctv-player-container .osd-pill,
+.cctv-dark-scope .osd-pill,
+.theme-light .cctv-dark-scope .osd-pill {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+.cctv-player-container .osd-pill-emerald,
+.theme-light .cctv-player-container .osd-pill-emerald,
+.cctv-dark-scope .osd-pill-emerald,
+.theme-light .cctv-dark-scope .osd-pill-emerald {
+  background-color: rgba(6, 78, 59, 0.9) !important;
+  border: 1px solid rgba(52, 211, 153, 0.5) !important;
+  color: #34d399 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Force bright forensic HUD text colors in light mode */
+.theme-light .cctv-player-container .text-emerald-400,
+.theme-light .cctv-player-container .text-emerald-300,
+.theme-light .cctv-player-container .text-emerald-500,
+.theme-light .cctv-dark-scope .text-emerald-400,
+.theme-light .cctv-dark-scope .text-emerald-300,
+.theme-light .camera-card-thumbnail .text-emerald-400,
+.theme-light .camera-card-thumbnail .text-emerald-300 {
+  color: #34d399 !important;
+}
+
+.theme-light .cctv-player-container .text-slate-100,
+.theme-light .cctv-player-container .text-slate-200,
+.theme-light .cctv-dark-scope .text-slate-100,
+.theme-light .cctv-dark-scope .text-slate-200,
+.theme-light .camera-card-thumbnail .text-slate-100,
+.theme-light .camera-card-thumbnail .text-slate-200 {
+  color: #f8fafc !important;
+}
+
+.theme-light .cctv-player-container .text-slate-300,
+.theme-light .cctv-dark-scope .text-slate-300,
+.theme-light .camera-card-thumbnail .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.theme-light .cctv-player-container .text-slate-400,
+.theme-light .cctv-player-container .text-slate-500,
+.theme-light .cctv-dark-scope .text-slate-400,
+.theme-light .camera-card-thumbnail .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.theme-light .cctv-player-container .text-white,
+.theme-light .cctv-dark-scope .text-white,
+.theme-light .camera-card-thumbnail .text-white {
+  color: #ffffff !important;
+}
+
+.theme-light .cctv-player-container .text-cyan-400,
+.theme-light .cctv-dark-scope .text-cyan-400 {
+  color: #38bdf8 !important;
+}
+
+.theme-light .cctv-player-container .text-amber-400,
+.theme-light .cctv-dark-scope .text-amber-400 {
+  color: #fbbf24 !important;
+}
+
+/* Maintain dark glass & transparent gradients over video in light mode */
+.theme-light .cctv-player-container [class*="bg-black/"],
+.theme-light .cctv-dark-scope [class*="bg-black/"] {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.theme-light .cctv-player-container [class*="border-white/"],
+.theme-light .cctv-dark-scope [class*="border-white/"],
+.theme-light .camera-card-thumbnail [class*="border-white/"] {
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.theme-light .cctv-player-container [class*="bg-white/"]:not(button:hover),
+.theme-light .cctv-dark-scope [class*="bg-white/"]:not(button:hover) {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+.theme-light .cctv-player-container [class*="bg-emerald-950"],
+.theme-light .cctv-dark-scope [class*="bg-emerald-950"],
+.theme-light .camera-card-thumbnail [class*="bg-emerald-950"] {
+  background-color: rgba(6, 78, 59, 0.92) !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+/* Standby Camera Card Thumbnails in Light Mode */
+.camera-card-thumbnail,
+.theme-light .camera-card-thumbnail {
+  background-color: #0b0f19 !important;
+  border-color: #1e293b !important;
+}
+
 .theme-light .text-slate-500 {
   color: #475569 !important;
 }
@@ -346,8 +529,9 @@ body {
 }
 
 /* Scrollbar in Light Mode */
+.theme-light ::-webkit-scrollbar { width: 6px; height: 6px; }
 .theme-light ::-webkit-scrollbar-track { background: transparent; }
-.theme-light ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+.theme-light ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
 .theme-light ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 
@@ -441,8 +625,9 @@ body {
   background: #141929 !important;
 }
 
+.theme-dark ::-webkit-scrollbar { width: 6px; height: 6px; }
 .theme-dark ::-webkit-scrollbar-track { background: #0f1420; }
-.theme-dark ::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 4px; }
+.theme-dark ::-webkit-scrollbar-thumb { background: #1e2740; border-radius: 9999px; }
 .theme-dark ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
 /* ═════════════════════════════════════════════════

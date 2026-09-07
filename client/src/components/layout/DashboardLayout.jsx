@@ -81,7 +81,7 @@ export default function DashboardLayout() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2">
+      <nav className="flex-1 overflow-y-auto py-4 px-2 custom-sidebar-scrollbar">
         {!collapsed && (
           <div className="px-3 mb-2 flex items-center justify-between">
             <span className={`text-[10px] font-bold uppercase tracking-widest ${
@@ -409,7 +409,7 @@ export default function DashboardLayout() {
           </header>
 
           {/* Page content */}
-          <main className={`flex-1 overflow-y-auto ${isLight ? 'bg-[#f4f6fa]' : 'bg-[#0a0d14]'}`}>
+          <main className={`flex-1 overflow-y-auto custom-sidebar-scrollbar ${isLight ? 'bg-[#f4f6fa]' : 'bg-[#0a0d14]'}`}>
             <Outlet />
           </main>
         </div>
