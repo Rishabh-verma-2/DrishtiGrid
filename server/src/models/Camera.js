@@ -69,6 +69,16 @@ const cameraSchema = new mongoose.Schema(
     recording_history_days: Number,
     // Administrative
     departmentName: String,
+    departmentCode: {
+      type: String,
+      enum: ['POLICE', 'TRAFFIC', 'HOME_DEPT', 'SMART_CITY', 'MUNICIPAL', 'TRANSPORT', 'HIGHWAY_PATROL', 'OTHER'],
+      default: 'POLICE',
+      index: true,
+    },
+    departmentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Department',
+    },
     dataSource: String,
     verified: {
       type: Boolean,
@@ -99,6 +109,15 @@ const cameraSchema = new mongoose.Schema(
     uptime: {
       type: Number, // percentage
       default: 0,
+    },
+    healthMetrics: {
+      uptime24h: { type: Number, default: 98.4 },
+      uptime7d: { type: Number, default: 97.8 },
+      uptime30d: { type: Number, default: 96.5 },
+      lastOfflineAt: Date,
+      totalOutagesCount: { type: Number, default: 0 },
+      longestOutageMinutes: { type: Number, default: 0 },
+      meanTimeToRepairMinutes: { type: Number, default: 28 },
     },
     // Coverage
     coverageAngle: {

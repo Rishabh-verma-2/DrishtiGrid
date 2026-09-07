@@ -17,6 +17,7 @@ const getCameras = async (req, res) => {
       zone,
       type,
       search,
+      department,
       lat,
       lng,
       radius, // in meters
@@ -27,6 +28,17 @@ const getCameras = async (req, res) => {
     if (district) filter.district = district;
     if (zone) filter.zone = zone;
     if (type) filter.type = type;
+    if (department && department !== 'all') {
+      const d = department.toUpperCase();
+      if (['POLICE', 'TRAFFIC', 'HOME_DEPT', 'SMART_CITY', 'MUNICIPAL'].includes(d)) {
+        filter.departmentCode = d;
+      } else {
+        filter.$or = [
+          { departmentCode: d },
+          { departmentName: { $regex: department, $options: 'i' } },
+        ];
+      }
+    }
     if (search) {
       filter.$or = [
         { name: { $regex: search, $options: 'i' } },

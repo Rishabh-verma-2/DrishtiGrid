@@ -141,8 +141,8 @@ function createPopupContent(cam) {
             <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
             Authority & Department
           </div>
-          <div class="meta-row"><span class="label">Managing Dept</span><span class="val font-medium text-slate-200">${cam.departmentName || 'Gujarat Police Command'}</span></div>
-          <div class="meta-row"><span class="label">Data Source</span><span class="val text-slate-400">${cam.dataSource || 'Integrated Gujarat Grid'}</span></div>
+          <div class="meta-row"><span class="label">Managing Dept</span><span class="val font-medium">${cam.departmentName || 'Gujarat Police Command'}</span></div>
+          <div class="meta-row"><span class="label">Data Source</span><span class="val">${cam.dataSource || 'Integrated Gujarat Grid'}</span></div>
         </div>
       </div>
 

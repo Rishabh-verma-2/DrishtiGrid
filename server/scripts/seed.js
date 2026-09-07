@@ -29,6 +29,8 @@ const mapZone = (locType) => {
     'Bridge': 'Traffic',
     'Highway': 'Traffic',
     'Road': 'Traffic',
+    'Circle': 'Traffic',
+    'Junction': 'Traffic',
     'Market': 'Market',
     'Railway Station': 'Public Space',
     'Temple': 'Religious Site',
@@ -37,6 +39,7 @@ const mapZone = (locType) => {
     'School': 'School Zone',
     'Border': 'Border',
     'Industrial': 'Industrial',
+    'Public Place': 'Public Space',
   };
   return map[locType] || 'Public Space';
 };
@@ -129,18 +132,24 @@ async function seed() {
 
     // ─── 2. Seed Cameras from JSON ───────────────────────────────
     console.log('\n📷 Seeding cameras from JSON...');
-    let jsonPath = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras (1).json');
-    if (!fs.existsSync(jsonPath)) {
-      jsonPath = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras.json');
+    const combinedPath = path.join(__dirname, '../src/uploads/gujarat_cctv_1500_cameras.json');
+    const part1Path = path.join(__dirname, '../src/uploads/gujarat_cctv_demo_cameras.json');
+    const part2Path = path.join(__dirname, '../src/uploads/gujarat_cctv_new_1000_only.json');
+
+    let cameras = [];
+    if (fs.existsSync(combinedPath)) {
+      console.log(`   Loading full dataset from: ${path.basename(combinedPath)}`);
+      cameras = JSON.parse(fs.readFileSync(combinedPath, 'utf8'));
+    } else {
+      console.log('   Combining datasets from part 1 and part 2...');
+      const part1 = fs.existsSync(part1Path) ? JSON.parse(fs.readFileSync(part1Path, 'utf8')) : [];
+      const part2 = fs.existsSync(part2Path) ? JSON.parse(fs.readFileSync(part2Path, 'utf8')) : [];
+      cameras = [...part1, ...part2];
     }
-    console.log(`   Loading dataset from: ${path.basename(jsonPath)}`);
-    const rawData = fs.readFileSync(jsonPath, 'utf8');
-    const cameras = JSON.parse(rawData);
 
-    let inserted = 0;
-    let updated = 0;
+    console.log(`   Found ${cameras.length} camera records to seed.`);
 
-    for (const cam of cameras) {
+    const operations = cameras.map((cam) => {
       const cameraDoc = {
         cameraId: cam.cameraId,
         name: cam.cameraName,
@@ -200,21 +209,31 @@ async function seed() {
         isActive: true,
       };
 
-      const res = await Camera.findOneAndUpdate(
-        { cameraId: cam.cameraId },
-        { $set: cameraDoc },
-        { upsert: true, new: true, rawResult: true }
-      );
+      return {
+        updateOne: {
+          filter: { cameraId: cam.cameraId },
+          update: { $set: cameraDoc },
+          upsert: true,
+        },
+      };
+    });
 
-      if (res.lastErrorObject && res.lastErrorObject.updatedExisting) {
-        updated++;
-      } else {
-        inserted++;
-      }
+    const BATCH_SIZE = 500;
+    let totalUpserted = 0;
+    let totalModified = 0;
+    let totalMatched = 0;
+
+    for (let i = 0; i < operations.length; i += BATCH_SIZE) {
+      const batch = operations.slice(i, i + BATCH_SIZE);
+      const res = await Camera.bulkWrite(batch, { ordered: false });
+      totalUpserted += res.upsertedCount || 0;
+      totalModified += res.modifiedCount || 0;
+      totalMatched += res.matchedCount || 0;
+      console.log(`   Processed batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(operations.length / BATCH_SIZE)} (${batch.length} cameras)`);
     }
 
-    console.log(`   ✅ New cameras inserted: ${inserted}`);
-    console.log(`   🔄 Existing cameras updated with rich metadata: ${updated}`);
+    console.log(`   ✅ New cameras inserted: ${totalUpserted}`);
+    console.log(`   🔄 Existing cameras updated/verified: ${totalMatched}`);
 
     // ─── Summary ─────────────────────────────────────────────────
     const totalCameras = await Camera.countDocuments();

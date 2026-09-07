@@ -12,6 +12,10 @@ const startServer = async () => {
   // Connect to MongoDB
   await connectDB();
 
+  // Ensure canonical departments & camera departmentCodes are aligned with metadata
+  const { syncDepartmentsAndCameras } = require('./src/utils/departmentSync');
+  await syncDepartmentsAndCameras().catch((e) => logger.warn('Department sync warning:', e.message));
+
   const app = createApp();
   const server = http.createServer(app);
 
