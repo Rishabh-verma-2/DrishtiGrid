@@ -273,7 +273,7 @@ export default function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Top Header */}
-          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors z-10 ${
+          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors relative z-40 ${
             isLight
               ? 'bg-white border-slate-200 shadow-sm'
               : 'bg-[#0a0d14]/95 border-white/5 backdrop-blur-sm'

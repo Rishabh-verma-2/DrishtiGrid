@@ -2,10 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { MapContainer, TileLayer, ZoomControl, Polygon, useMap, useMapEvents } from 'react-leaflet';
-import { cameraAPI, departmentAPI } from '../api';
+import { cameraAPI, departmentAPI, reportAPI } from '../api';
+import toast from 'react-hot-toast';
 import { useThemeStore } from '../store/themeStore';
 import CameraClusterLayer from '../components/map/CameraClusterLayer';
 import CameraStreamModal from '../components/cameras/CameraStreamModal';
+import ReportToDeptModal from '../components/cameras/ReportToDeptModal';
 import UnifiedSearchBar from '../components/gis/UnifiedSearchBar';
 import GISStatsDrawer from '../components/gis/GISStatsDrawer';
 import CoverageGapModal from '../components/gis/CoverageGapModal';
@@ -116,6 +118,9 @@ export default function GISMapPage() {
   const [reportModalContext, setReportModalContext] = useState({});
   const [streamCamera, setStreamCamera] = useState(null);
   const [showCoverageLayer, setShowCoverageLayer] = useState(false);
+  const [isDeptReportOpen, setIsDeptReportOpen] = useState(false);
+  const [deptReportCamera, setDeptReportCamera] = useState(null);
+  const [isGeneratingAudit, setIsGeneratingAudit] = useState(false);
 
   // Fetch cameras
   const { data: cameras = [], isLoading } = useQuery({
@@ -339,6 +344,58 @@ export default function GISMapPage() {
       maintenance: list.filter((c) => (c.status || '').toLowerCase() === 'maintenance').length,
     };
   }, [cameras, displayedCameras, isFiltered]);
+
+  const handleGenerateAreaAudit = async (districtParam) => {
+    const dist = districtParam && districtParam !== 'all' ? districtParam : (selectedArea || 'Gujarat');
+    const label = dist.toLowerCase() === 'gujarat' || dist.toLowerCase() === 'all' ? 'Gujarat State' : `${dist} District`;
+    try {
+      setIsGeneratingAudit(true);
+      toast.loading(`Generating official Area Compliance & Gap Audit PDF for ${label}...`, { id: 'audit-pdf' });
+
+      const res = await reportAPI.dispatch({
+        reportType: 'COVERAGE_GAP',
+        departmentCode: 'ALL',
+        district: dist,
+        timeframe: '30d',
+        format: 'PDF',
+        sendEmail: false,
+      });
+
+      const fileName = res.data?.data?.fileName;
+      if (fileName) {
+        toast.loading(`Downloading verified audit PDF for ${label}...`, { id: 'audit-pdf' });
+        try {
+          const blobRes = await reportAPI.download(fileName);
+          const blob = new Blob([blobRes.data], { type: 'application/pdf' });
+          const blobUrl = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.setAttribute('download', fileName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+
+          toast.success(`Area Compliance & Gap Audit PDF for ${label} downloaded successfully!`, { id: 'audit-pdf' });
+        } catch (downloadErr) {
+          const link = document.createElement('a');
+          link.href = res.data?.data?.downloadUrl || `/api/reports/download/${fileName}`;
+          link.setAttribute('download', fileName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          toast.success(`Area Compliance & Gap Audit PDF downloaded!`, { id: 'audit-pdf' });
+        }
+      } else {
+        toast.success(`Audit report generated successfully!`, { id: 'audit-pdf' });
+      }
+    } catch (err) {
+      console.error('Audit PDF error:', err);
+      toast.error('Failed to generate Area Compliance & Gap Audit PDF.', { id: 'audit-pdf' });
+    } finally {
+      setIsGeneratingAudit(false);
+    }
+  };
 
   return (
     <div className={`flex flex-col h-full relative overflow-hidden ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'}`}>
@@ -801,9 +858,18 @@ export default function GISMapPage() {
           onOpenStream={(cam) => setStreamCamera(cam)}
           onRequestFootage={(cam) => navigate(`/footage-requests?requestCam=${cam.cameraId}`)}
           onRequestReport={({ camera, district: dist, type }) => {
-            setReportModalContext({ camera, district: dist || selectedArea || 'all' });
-            setIsSendReportModalOpen(true);
+            if (type === 'area') {
+              handleGenerateAreaAudit(dist || selectedArea || 'all');
+            } else {
+              setReportModalContext({ camera, district: dist || selectedArea || 'all' });
+              setIsSendReportModalOpen(true);
+            }
           }}
+          onReportToDept={(cam) => {
+            setDeptReportCamera(cam);
+            setIsDeptReportOpen(true);
+          }}
+          isGeneratingAudit={isGeneratingAudit}
           isLight={isLight}
         />
       </div>
@@ -824,8 +890,15 @@ export default function GISMapPage() {
         onClose={() => setIsSendReportModalOpen(false)}
         targetCamera={reportModalContext.camera}
         targetDistrict={reportModalContext.district || selectedArea || 'all'}
-        departments={departments}
+        departments={departments || []}
         isLight={isLight}
+      />
+
+      {/* Report to Department Modal — Admin only */}
+      <ReportToDeptModal
+        isOpen={isDeptReportOpen}
+        onClose={() => { setIsDeptReportOpen(false); setDeptReportCamera(null); }}
+        camera={deptReportCamera}
       />
 
       {/* Stream Modal */}

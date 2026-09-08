@@ -57,6 +57,10 @@ const notificationSchema = new mongoose.Schema(
         'RESPONSE_ADDED',
         'TICKET_CLOSED',
         'ALERT',
+        // Department Report escalation types
+        'DEPT_REPORT_CREATED',
+        'DEPT_REPORT_REPLY',
+        'DEPT_REPORT_STATUS_CHANGED',
       ],
       required: true,
     },

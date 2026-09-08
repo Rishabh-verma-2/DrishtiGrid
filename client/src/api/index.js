@@ -109,6 +109,21 @@ export const reportAPI = {
   download: (fileName) => apiClient.get(`/reports/download/${fileName}`, { responseType: 'blob' }),
 };
 
+export const deptReportAPI = {
+  /** Create a new dept escalation report — Admin only */
+  create: (data) => apiClient.post('/dept-reports', data),
+  /** Get inbox list (role-filtered server side) */
+  getAll: (params) => apiClient.get('/dept-reports', { params }),
+  /** Get single report with full thread */
+  getById: (reportId) => apiClient.get(`/dept-reports/${reportId}`),
+  /** Reply to a thread */
+  reply: (reportId, data) => apiClient.post(`/dept-reports/${reportId}/reply`, data),
+  /** Update report status */
+  updateStatus: (reportId, data) => apiClient.patch(`/dept-reports/${reportId}/status`, data),
+  /** Get blocked attempt logs (Admin only) */
+  getAttempts: () => apiClient.get('/dept-reports/attempts'),
+};
+
 export const crowdAPI = {
   /**
    * Upload a single image frame for on-demand crowd density analysis.

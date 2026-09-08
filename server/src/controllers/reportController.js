@@ -37,11 +37,13 @@ const dispatchReport = async (req, res) => {
     if (!department) {
       department = {
         code: departmentCode,
-        name: `${departmentCode} Department Surveillance Command`,
+        name: departmentCode === 'ALL'
+          ? 'Gujarat State Multi-Department Surveillance Command'
+          : `${departmentCode} Department Surveillance Command`,
         contactEmail: 'nodal.surveillance@gujarat.gov.in',
         nodalOfficer: {
           name: 'Command Duty Officer',
-          designation: 'Officer on Special Duty',
+          designation: 'Officer on Special Duty (Geospatial Grid)',
         },
       };
     }
@@ -50,32 +52,34 @@ const dispatchReport = async (req, res) => {
 
     // 2. Fetch Cameras matching filter
     const camQuery = { isActive: { $ne: false } };
-    if (district && district !== 'all') {
+    if (district && district !== 'all' && district.toLowerCase() !== 'gujarat') {
       camQuery.district = new RegExp(`^${district}$`, 'i');
     }
     if (departmentCode && departmentCode !== 'ALL') {
       camQuery.departmentCode = departmentCode.toUpperCase();
     }
 
-    let cameras = await Camera.find(camQuery).limit(300);
+    let cameras = await Camera.find(camQuery).limit(500);
     if (cameras.length === 0) {
       // Fallback to all cameras in district if specific department code has 0 assigned
       delete camQuery.departmentCode;
-      cameras = await Camera.find(camQuery).limit(300);
+      cameras = await Camera.find(camQuery).limit(500);
     }
 
+    const isAreaAudit = reportType === 'COVERAGE_GAP' || reportType === 'AREA_COMPLIANCE_GAP';
     const reportTitle =
       reportType === 'HEALTH_AUDIT'
         ? 'SURVEILLANCE HEALTH & DOWNTIME AUDIT'
-        : reportType === 'COVERAGE_GAP'
-        ? 'GEOSPATIAL BLIND SPOT & COVERAGE GAP REPORT'
+        : isAreaAudit
+        ? 'GEOSPATIAL AREA COMPLIANCE & GAP AUDIT'
         : 'COMPREHENSIVE SURVEILLANCE & COMPLIANCE AUDIT';
 
-    const subtitle = `Jurisdiction: ${district && district !== 'all' ? district : 'Gujarat Statewide Grid'} • Timeframe: ${timeframe.toUpperCase()}`;
+    const distLabel = !district || district === 'all' || district.toLowerCase() === 'gujarat' ? 'Gujarat Statewide Grid' : `${district} District`;
+    const subtitle = `Jurisdiction: ${distLabel} • Timeframe: ${timeframe.toUpperCase()}`;
 
     // 2.1 Calculate coverage gap analysis if generating COVERAGE_GAP report
     let gapAnalysis = null;
-    if (reportType === 'COVERAGE_GAP') {
+    if (isAreaAudit) {
       gapAnalysis = calculateCoverageGapMetrics(district, cameras);
     }
 

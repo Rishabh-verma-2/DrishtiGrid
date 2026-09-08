@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useAuthStore from '../../store/authStore';
 import {
   X,
   Camera,
@@ -19,6 +20,7 @@ import {
   Sliders,
   Calendar,
   Zap,
+  Flag,
 } from 'lucide-react';
 
 export default function GISStatsDrawer({
@@ -31,11 +33,16 @@ export default function GISStatsDrawer({
   onOpenStream,
   onRequestFootage,
   onRequestReport,
+  onReportToDept,
+  isGeneratingAudit = false,
   isLight = false,
 }) {
   // 2 changeable options / tabs: 'area-list' vs 'camera-detail'
   const [activeTab, setActiveTab] = useState(selectedCamera ? 'camera-detail' : 'area-list');
   const [areaSearch, setAreaSearch] = useState('');
+  const { user } = useAuthStore();
+  const userRole = String(user?.role || '').toUpperCase();
+  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(userRole);
 
   // Sync tab if user selected camera or area externally
   React.useEffect(() => {
@@ -257,11 +264,22 @@ export default function GISStatsDrawer({
             {/* Quick Action Button for Area */}
             <div className="pt-2">
               <button
+                type="button"
+                disabled={isGeneratingAudit}
                 onClick={() => onRequestReport({ district: selectedArea || 'all', type: 'area' })}
-                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
               >
-                <FileText className="w-4 h-4" />
-                <span>Generate Area Compliance & Gap Audit</span>
+                {isGeneratingAudit ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Compiling Area Compliance & Gap Audit PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4" />
+                    <span>Generate Area Compliance & Gap Audit</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -441,13 +459,28 @@ export default function GISStatsDrawer({
                     </button>
                   </div>
 
-                  {/* Send / Request Report Button For Department */}
+                  {/* Report to Department — ADMIN only, Offline/Maintenance cameras only */}
+                  {isAdmin && ['offline', 'maintenance', 'fault'].includes((selectedCamera.status || '').toLowerCase()) && (
+                    <button
+                      onClick={() => onReportToDept && onReportToDept(selectedCamera)}
+                      className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-500 text-white flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer animate-in fade-in duration-300"
+                    >
+                      <Flag className="w-4 h-4" />
+                      <span>Report to Department</span>
+                    </button>
+                  )}
+
+                  {/* Area compliance report (old behaviour, visible to all) */}
                   <button
                     onClick={() => onRequestReport({ camera: selectedCamera, type: 'camera' })}
-                    className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                    className={`w-full py-2 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      isLight
+                        ? 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        : 'border-white/10 text-slate-400 hover:bg-white/5'
+                    }`}
                   >
-                    <Send className="w-4 h-4" />
-                    <span>Send / Request Report for {selectedCamera.departmentName || 'Handling Dept'}</span>
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Compliance Report for {selectedCamera.departmentName || 'Handling Dept'}</span>
                   </button>
                 </div>
               </>

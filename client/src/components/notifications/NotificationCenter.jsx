@@ -61,6 +61,8 @@ export default function NotificationCenter() {
       queryClient.invalidateQueries(['notifications']);
       queryClient.invalidateQueries(['footage-tickets']);
       queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['dept-reports']);
+      queryClient.invalidateQueries(['dept-reports-stats']);
     };
 
     socket.on('notification:new', handleNewNotification);
@@ -124,6 +126,12 @@ export default function NotificationCenter() {
         return <MessageSquare className="w-4 h-4 text-purple-400" />;
       case 'TICKET_CLOSED':
         return <CheckCheck className="w-4 h-4 text-slate-400" />;
+      case 'DEPT_REPORT_CREATED':
+        return <AlertTriangle className="w-4 h-4 text-amber-400" />;
+      case 'DEPT_REPORT_REPLY':
+        return <MessageSquare className="w-4 h-4 text-cyan-400" />;
+      case 'DEPT_REPORT_STATUS_CHANGED':
+        return <CheckCheck className="w-4 h-4 text-emerald-400" />;
       default:
         return <AlertTriangle className="w-4 h-4 text-amber-400" />;
     }

@@ -4,6 +4,7 @@ import {
   X,
   Send,
   Shield,
+  ShieldCheck,
   FileText,
   Mail,
   CheckCircle2,

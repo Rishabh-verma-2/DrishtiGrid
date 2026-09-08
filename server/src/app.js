@@ -23,6 +23,7 @@ const anprRoutes = require('./routes/anpr');
 const analyticsRoutes = require('./routes/analytics');
 const departmentRoutes = require('./routes/departments');
 const reportRoutes = require('./routes/reports');
+const deptReportRoutes = require('./routes/deptReports');
 const crowdRoutes = require('./routes/crowd');
 
 const createApp = () => {
@@ -113,6 +114,7 @@ const createApp = () => {
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/departments', departmentRoutes);
   app.use('/api/reports', reportRoutes);
+  app.use('/api/dept-reports', deptReportRoutes);
   app.use('/api/crowd', crowdRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────

@@ -48,6 +48,8 @@ server/uploads/videos/*
 !server/uploads/videos/.gitkeep
 server/uploads/evidence/*
 !server/uploads/evidence/.gitkeep
+server/uploads/reports/*
+!server/uploads/reports/.gitkeep
 !ai-service/model_weights/.gitkeep
 ai-service/temp/*
 !ai-service/temp/.gitkeep
