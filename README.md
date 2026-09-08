@@ -106,22 +106,25 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - Covers all major Gujarat districts: Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana, Kutch, and more.
 - Real-time unit distribution, live camera density heatmap, and click-to-inspect feeds.
 
-### 3. 🚔 ANPR & AI Vehicle Surveillance Engine — *Industry-Grade Multi-Pass Edition*
-- **6-Pass License Plate Detection Pipeline** (no new installs — reuses existing models):
-  1. **Pass 1 — Full-frame direct** at base confidence.
-  2. **Pass 2 — Multi-scale inference** at 1.25× and 1.75× to resolve small/distant plates.
-  3. **Pass 3 — Vehicle-region cascade**: COCO model locates vehicles → lower-40% crop upscaled to ≥320 px → LP detection on each ROI individually. Each plate appears 3–5× larger to YOLO.
-  4. **Pass 4 — Horizontal tile scan**: 3–4 overlapping 50%-overlap tiles for plates near frame edges.
-  5. **Pass 5 — OCR-guided localization**: PaddleOCR finds registration text, derives plate bounding box directly from character geometry.
-  6. **Pass 6 — Contour heuristic** (fallback only, returns up to 8 candidates vs. 1 before).
-- **Global Soft-NMS (IoU 0.30)**: All candidates from all 6 passes pooled and de-duplicated without merging genuine side-by-side plates.
-- **OCR Confidence Boosting**: YOLO candidates confirmed by OCR get +0.15 confidence before NMS, ensuring confirmed plates always survive.
-- **Relaxed Geometry**: Aspect 0.80–9.00, min 18×6 px — catches overhead-camera plates and two-line plates previously discarded.
-- **Zero-DCE Neural Enhancement:** Dynamic low-light enhancement for nighttime footage.
-- **PaddleOCR Engine:** Alphanumeric extraction with Indian registration layout validation.
-- **Vehicle Attribute Classifier:** Color (White/Silver/Black/Red/Blue), category, confidence.
-- **Indian Plate Canonical Disambiguation:** `O/0`, `I/1`, `Z/2`, `B/8`, `S/5` resolved positionally. BH (Bharat) and EV series supported.
-- **Hotlist & Watchlist Cross-Referencing:** `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, `BLACKLISTED`.
+### 3. 🚔 ANPR & AI Vehicle Surveillance Engine — *Vehicle-First Multi-Vehicle Architecture*
+- **Strict Vehicle-First Detection Pipeline**:
+  - Localizes vehicles first (cars, motorcycles, buses, trucks, and auto-rickshaws) and searches for license plates strictly inside expanded vehicle ROIs (+8–15% padding), eliminating false detections from roadside signboards, billboards, and background text.
+  - Full-frame global plate detection acts solely as a fallback if 0 vehicles are detected.
+  - Dedicated lower-40% bumper and grille sub-scans for high-clearance commercial trucks and buses.
+- **Global Bipartite Matching (Scipy Hungarian Algorithm)**:
+  - Replaced greedy matching with optimal bipartite assignment (`scipy.optimize.linear_sum_assignment`), incorporating spatial containment, IoU, area ratio, vertical priors (lower 50%), and vehicle ROI identity locks to resolve dense traffic queues without cross-assignment.
+- **Anti-Hallucination Quality Gate**:
+  - Distant, blurry, or occluded plates failing the quality gate (`PlateQualityState.UNREADABLE`) bypass OCR and are recorded as `PLATE_DETECTED_OCR_UNREADABLE`. Prevents OCR text hallucinations while preserving spatial bounding box evidence.
+- **Indian Plate Validation & Disambiguation**:
+  - Validates against all 36 Indian state & UT codes, with first-class support for **Standard** (`GJ01AB1234`), **Bharat Series (BH)** (`22BH1234AA`), **Electric Vehicles (EV)** (`GJ01AB1234E`), and **Commercial** yellow plates.
+  - Positional canonical repair: resolves `O/0`, `I/1`, `Z/2`, `B/8`, `S/5` based on regulatory position syntax.
+- **Forensic Visual Presentation & "ANALYZED VEHICLES" Dashboard**:
+  - Subtle vehicle boxes (`Vehicle #1 • Car | White`) and tight plate boxes with solid contrast pills showing percentage confidence (`GJ01AB1234  92%`) and collision-avoidance label positioning.
+  - Responsive summary table (desktop/tablet) and cards (mobile) below the analyzed viewports showing vehicle index, type, color circle, Indian number plate badge, percentage confidences, and status (`MATCH`, `CLEAR`, `UNREADABLE`, `NO PLATE`).
+  - Interactive hover/click focus tracking with a floating highlight banner over the analyzed image.
+- **Zero-DCE Neural Enhancement:** Dynamic low-light illumination curve estimation for nighttime footage.
+- **Hotlist & Watchlist Cross-Referencing:** Automatic matching against `STOLEN`, `WANTED`, `SUSPECT`, `VIP`, `BLACKLISTED` databases with 1-click tactical dossier access.
+- **60/60 Unit Test Suite:** Full operational coverage across 20 multi-vehicle traffic scenarios in `tests/test_vehicle_first_anpr.py`.
 
 ### 4. 📼 1-FPS Video Surveillance & Temporal Tracking
 - **Automated 1-FPS Sampling:** Samples video footage frame-by-frame using FFmpeg for optimal throughput without server overload.
