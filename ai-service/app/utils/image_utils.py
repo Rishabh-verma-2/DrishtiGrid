@@ -8,7 +8,10 @@ from typing import Optional, Tuple
 
 import cv2
 import numpy as np
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
 
 
 # ---------------------------------------------------------------------------
@@ -19,17 +22,26 @@ def numpy_to_base64(image: np.ndarray, format: str = "JPEG") -> str:
     """Convert a NumPy BGR or grayscale image to a base64-encoded data URI."""
     if image is None or image.size == 0:
         return ""
-    # Convert BGR → RGB for PIL
-    if len(image.shape) == 3 and image.shape[2] == 3:
-        pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    elif len(image.shape) == 3 and image.shape[2] == 4:
-        pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA))
-    else:
-        pil_image = Image.fromarray(image)
 
-    buffer = io.BytesIO()
-    pil_image.save(buffer, format=format, quality=95)
-    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    if Image is not None:
+        # Convert BGR -> RGB for PIL
+        if len(image.shape) == 3 and image.shape[2] == 3:
+            pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+        elif len(image.shape) == 3 and image.shape[2] == 4:
+            pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGRA2RGBA))
+        else:
+            pil_image = Image.fromarray(image)
+
+        buffer = io.BytesIO()
+        pil_image.save(buffer, format=format, quality=95)
+        encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+    else:
+        ext = ".jpg" if format.upper() == "JPEG" else ".png"
+        success, encoded_img = cv2.imencode(ext, image)
+        if not success:
+            return ""
+        encoded = base64.b64encode(encoded_img).decode("utf-8")
+
     mime = "image/jpeg" if format.upper() == "JPEG" else "image/png"
     return f"data:{mime};base64,{encoded}"
 

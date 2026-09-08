@@ -21,7 +21,10 @@ try:
 except Exception:
     pass
 
-from ultralytics import YOLO
+try:
+    from ultralytics import YOLO
+except ImportError:
+    YOLO = None
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +32,14 @@ logger = logging.getLogger(__name__)
 # COCO classes for vehicles: 2: 'car', 3: 'motorcycle', 5: 'bus', 7: 'truck'
 VEHICLE_CLASSES = {2: "car", 3: "motorcycle", 5: "bus", 7: "truck"}
 
-_yolo_vehicle_model: Optional[YOLO] = None
+_yolo_vehicle_model = None
 
 
-def _get_vehicle_model() -> Optional[YOLO]:
+def _get_vehicle_model():
     """Lazy-load the YOLOv8/YOLO11 model for vehicle detection."""
     global _yolo_vehicle_model
+    if YOLO is None:
+        return None
     if _yolo_vehicle_model is None:
         try:
             candidate_paths = [

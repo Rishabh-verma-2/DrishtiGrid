@@ -1,21 +1,20 @@
 """
 Main orchestration pipeline for license plate processing.
+Vehicle-First Evidence-Fusion ANPR Architecture.
 
 Flow per image:
   1. Validate + decode image
-  2. Detect all plates (YOLO)
-  3. For each plate:
-     a. Safe crop from original
-     b. OpenCV preprocessing (denoise, sharpen)
-     c. Zero-DCE (if dark)
-     d. CLAHE (if low contrast)
-     e. Real-ESRGAN upscaling
-     f. PaddleOCR
-     g. Indian plate validation/normalization
-  4. Draw bounding boxes on original → processed image
-  5. Return aggregated JSON result
-
-Errors in individual plates are isolated so other plates continue processing.
+  2. Detect vehicles and plate candidates (Multi-pass YOLO + Cascade)
+  3. Spatial candidate clustering & source reliability weighting
+  4. Geometric Vehicle-to-Plate association
+  5. Plate Quality Gate (GOOD, USABLE, UNREADABLE)
+  6. Controlled multi-variant OCR consensus & evidence fusion
+  7. Constrained Indian plate grammar verification & character repair
+  8. Deterministic multi-factor confidence scoring & state classification
+  9. Vehicle-level candidate grouping & primary plate selection
+  10. Filter unverified/rejected false positives
+  11. Draw bounding boxes on original -> processed image
+  12. Return backward-compatible JSON result (+ optional debug_info)
 """
 
 import logging
@@ -23,20 +22,31 @@ import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
 
 from app.config.settings import MODEL_CONFIG
+from app.detection.association import associate_plates_to_vehicles, AssociationMatch
 from app.detection.vehicle_attributes import detect_vehicle_attributes
-from app.detection.yolo_detector import detect_license_plates
+from app.detection.yolo_detector import detect_license_plates, detect_vehicles
 from app.enhancement.clahe import apply_clahe
 from app.enhancement.zero_dce import enhance_with_zero_dce
+from app.ocr.ocr_fusion import fuse_ocr_variants
 from app.ocr.paddle_ocr import run_ocr_on_crop
+from app.pipeline.confidence_scoring import (
+    PlateResultState,
+    compute_overall_confidence,
+)
 from app.preprocessing.opencv_preprocess import (
     analyze_image_quality,
     preprocess_plate_crop,
+)
+from app.preprocessing.plate_quality import (
+    PlateQualityAssessment,
+    PlateQualityState,
+    evaluate_plate_quality,
 )
 from app.super_resolution.real_esrgan import upscale_plate_crop
 from app.utils.image_utils import (
@@ -45,14 +55,34 @@ from app.utils.image_utils import (
     safe_crop,
     validate_image_bytes,
 )
-from app.validation.indian_plate import process_ocr_result
+from app.validation.indian_plate import (
+    KNOWN_STATE_CODES,
+    clean_ocr_text,
+    process_ocr_result,
+    repair_indian_plate,
+    validate_indian_plate,
+)
 
 logger = logging.getLogger(__name__)
 
+NON_PLATE_KEYWORDS = {
+    # Media / broadcast watermarks
+    "TIMES", "TIMESNOW", "GOVERNOR", "OFFICIAL", "OFFICIALUSE",
+    "TEMPORARY", "REGISTRATION", "POLICE", "HIGHWAY", "TOLL",
+    "GROUP", "TRMN", "NEWDELHI", "DELHI", "INDIA", "TRANSPORT",
+    "MAIAD", "ALAMY", "STOCK", "PHOTO", "NEWS", "BHARAT",
+    "CHTANMENTAS", "XABUSHANOI", "XABUS", "XABUSHANO",
+    "DAOCA", "OUUHSAUUX",
+    # Storefronts / signs
+    "SHARMA", "ELECTRONICS", "BANKOFINDIA", "BANKOFIND",
+    "CAFE", "DELIGHT", "CAFEDELIGHT", "BANDRA", "JUNCTION",
+    "SUPERMARKET", "HOSPITAL", "SCHOOL", "COLLEGE", "UNIVERSITY",
+    "PETROL", "DIESEL", "PUMP", "FILLING", "STATION",
+    "RESTAURANT", "HOTEL", "LODGE", "MALL", "PLAZA", "TOWER",
+    "MUNICIPAL", "CORPORATION", "NAGAR", "NIGAM",
+    "BHAVAN", "BHAWAN", "MANDIR", "MASJID", "CHURCH", "GURUDWARA",
+}
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _decode_image(image_input: Any) -> Optional[np.ndarray]:
     """Decode raw bytes or pass-through BGR NumPy array. Returns None on failure."""
@@ -67,11 +97,6 @@ def _decode_image(image_input: Any) -> Optional[np.ndarray]:
         return None
 
 
-def _compute_overall_confidence(det_conf: float, ocr_conf: float) -> float:
-    """Weighted geometric mean of detection and OCR confidence."""
-    return round((det_conf ** 0.5) * (ocr_conf ** 0.5), 4)
-
-
 # ---------------------------------------------------------------------------
 # Per-plate pipeline
 # ---------------------------------------------------------------------------
@@ -81,11 +106,15 @@ def _process_single_plate(
     original_crop: np.ndarray,
     detection_confidence: float,
     bbox: Dict,
+    association_match: Optional[AssociationMatch] = None,
+    detection_meta: Optional[Dict] = None,
 ) -> Dict[str, Any]:
     """
-    Run the full enhancement + OCR pipeline on one plate crop.
-    Returns a result dict. Errors are caught per-stage and surfaced in the result.
+    Run Quality Gate, Multi-Variant OCR Fusion, and Deterministic Confidence Scoring.
     """
+    meta = detection_meta or {}
+    assoc = association_match
+
     result: Dict[str, Any] = {
         "plate_id": plate_id,
         "bbox": bbox,
@@ -94,103 +123,117 @@ def _process_single_plate(
         "enhanced_crop_b64": "",
         "car_color": None,
         "car_model": None,
+        "vehicle_type": "car",
+        "vehicle_id": assoc.vehicle_id if assoc else None,
+        "vehicle_bbox": None,
+        "association_plausibility": round(assoc.plausibility_score, 3) if assoc else 0.5,
         "raw_ocr": "",
         "normalized_plate": "",
+        "corrected_plate": "",
         "ocr_confidence": 0.0,
         "overall_confidence": 0.0,
+        "result_state": PlateResultState.REVIEW.value,
         "validation_status": "UNCERTAIN",
         "validation_note": "",
         "processing_status": "SUCCESS",
         "processing_error": None,
         "stages_applied": [],
         "timings": {},
+        "quality_assessment": {},
+        "confidence_breakdown": {},
     }
 
     try:
-        # --- Store original crop ---
+        # Store original crop base64
         result["original_crop_b64"] = numpy_to_base64(original_crop)
 
-        enhanced = original_crop.copy()
-
-        # --- Stage 1: OpenCV preprocessing ---
+        # 1. Evaluate Plate Quality Gate
         t0 = time.perf_counter()
-        try:
-            enhanced = preprocess_plate_crop(enhanced)
-            result["stages_applied"].append("opencv_preprocess")
-        except Exception as e:
-            logger.warning(f"Plate {plate_id}: OpenCV preprocess failed: {e}")
-        result["timings"]["preprocess"] = round(time.perf_counter() - t0, 3)
+        quality = evaluate_plate_quality(original_crop)
+        result["quality_assessment"] = quality.to_dict()
+        result["timings"]["quality_gate"] = round(time.perf_counter() - t0, 3)
 
-        # --- Stage 2: Zero-DCE ---
-        t0 = time.perf_counter()
-        try:
-            enhanced, dce_applied = enhance_with_zero_dce(enhanced)
-            if dce_applied:
-                result["stages_applied"].append("zero_dce")
-        except Exception as e:
-            logger.warning(f"Plate {plate_id}: Zero-DCE failed: {e}")
-        result["timings"]["zero_dce"] = round(time.perf_counter() - t0, 3)
+        raw_ocr = ""
+        norm_plate = ""
+        corr_plate = ""
+        ocr_conf = 0.0
+        val_status = "UNCERTAIN"
+        val_note = ""
 
-        # --- Stage 3: CLAHE ---
-        t0 = time.perf_counter()
-        try:
-            enhanced, clahe_applied = apply_clahe(enhanced)
-            if clahe_applied:
-                result["stages_applied"].append("clahe")
-        except Exception as e:
-            logger.warning(f"Plate {plate_id}: CLAHE failed: {e}")
-        result["timings"]["clahe"] = round(time.perf_counter() - t0, 3)
-
-        # --- Stage 4: Real-ESRGAN super-resolution ---
-        t0 = time.perf_counter()
-        try:
-            enhanced, esrgan_applied = upscale_plate_crop(enhanced)
-            if esrgan_applied:
-                result["stages_applied"].append("real_esrgan")
-            else:
-                result["stages_applied"].append("bicubic_upscale")
-        except Exception as e:
-            logger.warning(f"Plate {plate_id}: Real-ESRGAN failed: {e}")
-        result["timings"]["super_resolution"] = round(time.perf_counter() - t0, 3)
-
-        # --- Store enhanced crop ---
-        result["enhanced_crop_b64"] = numpy_to_base64(enhanced)
-
-        # --- Stage 5: PaddleOCR ---
-        t0 = time.perf_counter()
-        ocr_result = run_ocr_on_crop(enhanced)
-        result["timings"]["ocr"] = round(time.perf_counter() - t0, 3)
-
-        if not ocr_result["success"]:
-            result["processing_status"] = "OCR_FAILED"
-            result["processing_error"] = ocr_result.get("error", "Unknown OCR error")
-            logger.warning(
-                f"Plate {plate_id}: OCR failed — {result['processing_error']}"
-            )
+        if quality.state == PlateQualityState.UNREADABLE:
+            # Sub-pixel or severely degraded crop: DO NOT run OCR or hallucinate
+            result["stages_applied"].append("quality_gate_unreadable")
+            val_status = "UNREADABLE"
+            val_note = f"Quality gate: {', '.join(quality.reasons) if quality.reasons else 'Degraded crop'}"
+            enhanced = original_crop.copy()
+            result["enhanced_crop_b64"] = result["original_crop_b64"]
+            logger.info("Plate #%d failed quality gate: %s", plate_id, val_note)
         else:
-            result["stages_applied"].append("paddleocr")
+            # 2. Controlled Multi-Variant OCR Fusion
+            t0 = time.perf_counter()
+            ocr_fused = fuse_ocr_variants(original_crop, run_ocr_on_crop, assessment=quality)
+            result["timings"]["ocr_fusion"] = round(time.perf_counter() - t0, 3)
+            result["stages_applied"].append("ocr_fusion")
 
-        raw_ocr = ocr_result.get("raw_ocr", "")
-        ocr_conf = ocr_result.get("ocr_confidence", 0.0)
+            raw_ocr = ocr_fused.get("raw_ocr", "")
+            norm_plate = ocr_fused.get("normalized_plate", "")
+            corr_plate = ocr_fused.get("corrected_plate", "")
+            ocr_conf = float(ocr_fused.get("ocr_confidence", 0.0))
+            val_status = ocr_fused.get("validation_status", "UNCERTAIN")
+            val_note = ocr_fused.get("validation_note", "")
 
-        # --- Stage 6: Indian plate validation ---
-        plate_info = process_ocr_result(raw_ocr)
-        result["raw_ocr"] = plate_info["raw_ocr"]
-        result["normalized_plate"] = plate_info["normalized_plate"]
-        result["validation_status"] = plate_info["validation_status"]
-        result["validation_note"] = plate_info["validation_note"]
-        result["ocr_confidence"] = round(ocr_conf, 4)
-        result["overall_confidence"] = _compute_overall_confidence(
-            detection_confidence, ocr_conf
+            # Apply standard enhancement for visual inspection
+            enhanced = original_crop.copy()
+            try:
+                enhanced = preprocess_plate_crop(enhanced)
+                enhanced, _ = apply_clahe(enhanced)
+            except Exception:
+                pass
+            result["enhanced_crop_b64"] = numpy_to_base64(enhanced)
+
+        # 3. Deterministic Confidence Scoring & State Classification
+        assoc_score = assoc.plausibility_score if assoc and not assoc.is_orphan else (
+            0.40 if meta.get("sources") and "vehicle_cascade" in meta.get("sources", []) else 0.20
+        )
+        has_state = bool(corr_plate and corr_plate[:2] in KNOWN_STATE_CODES)
+        has_text = bool(corr_plate and len(corr_plate) >= 4)
+
+        conf_breakdown = compute_overall_confidence(
+            detector_confidence=detection_confidence,
+            ocr_confidence=ocr_conf,
+            quality_assessment=quality,
+            validation_status=val_status,
+            association_plausibility=assoc_score,
+            has_state_prefix=has_state,
+            source_count=meta.get("source_count", 1),
+            is_contour_only=meta.get("is_contour_only", False),
+            has_text=has_text,
         )
 
-        if result["processing_status"] == "SUCCESS" and not raw_ocr.strip():
+        result["raw_ocr"] = raw_ocr
+        result["normalized_plate"] = norm_plate
+        result["corrected_plate"] = corr_plate
+        result["ocr_confidence"] = round(ocr_conf, 4)
+        result["overall_confidence"] = conf_breakdown.overall_confidence
+        result["result_state"] = conf_breakdown.result_state.value
+        result["confidence_breakdown"] = conf_breakdown.to_dict()
+        result["validation_status"] = val_status
+        result["validation_note"] = val_note
+
+        if conf_breakdown.result_state == PlateResultState.PLATE_DETECTED_OCR_UNREADABLE:
+            if not result["normalized_plate"]:
+                result["normalized_plate"] = "UNREADABLE"
+            if not result["corrected_plate"]:
+                result["corrected_plate"] = "UNREADABLE"
+
+        if result["processing_status"] == "SUCCESS" and not raw_ocr.strip() and quality.state != PlateQualityState.UNREADABLE:
             result["processing_status"] = "OCR_NO_TEXT"
 
     except Exception as e:
         logger.error(f"Plate {plate_id}: Unexpected pipeline error: {e}", exc_info=True)
         result["processing_status"] = "FAILED"
         result["processing_error"] = str(e)
+        result["result_state"] = PlateResultState.REJECTED.value
 
     return result
 
@@ -199,9 +242,10 @@ def _process_single_plate(
 # Main pipeline entry point
 # ---------------------------------------------------------------------------
 
-def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
+def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
     """
     Full end-to-end pipeline for one uploaded image.
+    Vehicle-first evidence-fusion ANPR architecture.
 
     Returns a JSON-serializable result dict.
     """
@@ -222,137 +266,176 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         result["error"] = "Could not decode image. File may be corrupt or unsupported."
         return result
 
+    img_h, img_w = image.shape[:2]
     result["original_image_b64"] = numpy_to_base64(image)
 
-    # --- Detection ---
+    # --- Detection (Plates + Vehicles) ---
     t0 = time.perf_counter()
     try:
-        detections = detect_license_plates(image)
+        try:
+            det_out = detect_license_plates(image, return_vehicles=True)
+        except TypeError:
+            det_out = detect_license_plates(image)
+
+        if isinstance(det_out, tuple):
+            detections, vehicles = det_out
+        else:
+            detections = det_out
+            vehicles = []
     except Exception as e:
-        logger.error(f"YOLO detection failed: {e}", exc_info=True)
+        logger.error(f"Detection failed: {e}", exc_info=True)
         result["error"] = f"License plate detection failed: {e}"
         return result
+
+    # If no vehicles returned from cascade, attempt vehicle detection directly
+    if not vehicles:
+        try:
+            vehicles = detect_vehicles(image)
+        except Exception as e:
+            logger.debug("Secondary vehicle detection failed: %s", e)
+            vehicles = []
+
     result["timings"]["detection"] = round(time.perf_counter() - t0, 3)
 
-    total = len(detections)
-    result["total_plates_detected"] = total
-    logger.info(f"Pipeline: {total} plate(s) detected.")
+    # --- Vehicle-to-Plate Association ---
+    t0 = time.perf_counter()
+    matches = associate_plates_to_vehicles(vehicles, detections, image_shape=(img_h, img_w))
+    result["timings"]["association"] = round(time.perf_counter() - t0, 3)
 
-    if total == 0:
-        # No plates — still return a processed image (no annotations needed)
-        result["processed_image_b64"] = result["original_image_b64"]
-        result["success"] = True
-        result["timings"]["total"] = round(time.perf_counter() - pipeline_start, 3)
-        return result
+    match_by_plate_idx: Dict[int, AssociationMatch] = {m.plate_index: m for m in matches}
 
-    # --- Process each plate ---
+    # --- Process each candidate plate ---
     t0 = time.perf_counter()
     plate_results: List[Dict] = []
+    rejected_candidates: List[Dict] = []
 
-    for detection in detections:
-        plate_id = detection["plate_id"]
+    for idx, detection in enumerate(detections):
+        plate_id = detection.get("plate_id", idx + 1)
         original_crop = detection["original_crop"]
         bbox = detection["bbox"]
         det_conf = detection["detection_confidence"]
+        assoc_match = match_by_plate_idx.get(idx)
 
-        logger.info(f"Processing plate #{plate_id} (conf={det_conf:.2f}) ...")
+        logger.info(f"Processing candidate #{plate_id} (conf={det_conf:.2f}) ...")
         plate_result = _process_single_plate(
             plate_id=plate_id,
             original_crop=original_crop,
             detection_confidence=det_conf,
             bbox=bbox,
+            association_match=assoc_match,
+            detection_meta=detection,
         )
-        if detection.get("vehicle_bbox"):
+
+        # Attach vehicle bounding box and type if matched
+        if assoc_match and assoc_match.vehicle_index is not None and assoc_match.vehicle_index < len(vehicles):
+            v_obj = vehicles[assoc_match.vehicle_index]
+            vx1, vy1, vx2, vy2 = v_obj["bbox"]
+            plate_result["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vx2 - vx1, "height": vy2 - vy1}
+            plate_result["vehicle_type"] = v_obj.get("vehicle_type", "car")
+        elif detection.get("vehicle_bbox"):
             plate_result["vehicle_bbox"] = detection["vehicle_bbox"]
+
         plate_results.append(plate_result)
 
-    NON_PLATE_KEYWORDS = {
-        # News / media watermarks
-        "TIMES", "TIMESNOW", "GOVERNOR", "OFFICIAL", "OFFICIALUSE",
-        "TEMPORARY", "REGISTRATION", "POLICE", "HIGHWAY", "TOLL",
-        "GROUP", "TRMN", "NEWDELHI", "DELHI", "INDIA", "TRANSPORT",
-        "MAIAD", "ALAMY", "STOCK", "PHOTO", "NEWS", "BHARAT",
-        "CHTANMENTAS", "XABUSHANOI", "XABUS", "XABUSHANO",
-        "DAOCA", "OUUHSAUUX",
-        # Common billboard / storefront text visible in Indian traffic CCTV
-        "SHARMA", "ELECTRONICS", "BANKOFINDIA", "BANKOFIND",
-        "CAFE", "DELIGHT", "CAFEDELIGHT", "BANDRA", "JUNCTION",
-        "SUPERMARKET", "HOSPITAL", "SCHOOL", "COLLEGE", "UNIVERSITY",
-        "PETROL", "DIESEL", "PUMP", "FILLING", "STATION",
-        "RESTAURANT", "HOTEL", "LODGE", "MALL", "PLAZA", "TOWER",
-        "POLICE", "MUNICIPAL", "CORPORATION", "NAGAR", "NIGAM",
-        "BHAVAN", "BHAWAN", "MANDIR", "MASJID", "CHURCH", "GURUDWARA",
-    }
+    result["timings"]["plate_processing"] = round(time.perf_counter() - t0, 3)
 
-    # Filter out distant vehicles & false positives:
-    # Only vehicles whose license plate is clearly visible and readable are retained.
-    # Distant vehicles or vehicles with unreadable/sub-pixel plates are discarded.
-    valid_plate_results = []
+    # --- Candidate Filtering & Vehicle-Level Deduplication ---
+    # 1. Filter out false positives (keywords, watermarks, unverified orphans)
+    clean_candidates: List[Dict] = []
     for p in plate_results:
         raw = p.get("raw_ocr", "").strip()
-        ocr_conf = p.get("ocr_confidence", 0.0)
-        det_conf = p.get("detection_confidence", 0.0)
-        val_status = p.get("validation_status", "UNCERTAIN")
-        alnum_chars = [c for c in raw if c.isalnum()]
-        clean_alnum = "".join(alnum_chars).upper()
+        cleaned_text = clean_ocr_text(raw)
+        result_state = p.get("result_state", PlateResultState.REVIEW.value)
 
         # Discard known watermarks or billboard words
-        if clean_alnum in NON_PLATE_KEYWORDS:
-            logger.info(f"Discarded non-plate keyword #{p['plate_id']} '{raw}'")
+        if cleaned_text in NON_PLATE_KEYWORDS:
+            p["result_state"] = PlateResultState.REJECTED.value
+            p["rejection_reason"] = f"Non-plate billboard/watermark keyword '{cleaned_text}'"
+            rejected_candidates.append(p)
             continue
 
-        # Reject distant vehicles, empty OCR, or unreadable noise (< 3 alphanumeric chars)
-        if len(alnum_chars) < 3 or ocr_conf <= 0.0 or not raw:
-            logger.info(f"Discarded distant vehicle/unreadable plate #{p['plate_id']} '{raw}' (insufficient/no OCR)")
+        # Discard REJECTED state candidates
+        if result_state == PlateResultState.REJECTED.value:
+            p["rejection_reason"] = p.get("confidence_breakdown", {}).get("rejection_reasons") or ["Low overall confidence"]
+            rejected_candidates.append(p)
             continue
 
-        # If flagged INVALID_FORMAT, only retain if it contains both letters and digits and looks like a real plate
-        if val_status == "INVALID_FORMAT":
-            has_letters = any(c.isalpha() for c in clean_alnum)
-            has_digits = any(c.isdigit() for c in clean_alnum)
-            if 4 <= len(alnum_chars) <= 12 and has_letters and has_digits:
-                p["validation_status"] = "POSSIBLE_FORMAT"
-                p["validation_note"] = "Detected vehicle registration plate"
-                if not p.get("normalized_plate"):
-                    p["normalized_plate"] = clean_alnum
-            else:
-                logger.info(f"Discarded invalid non-plate text #{p['plate_id']} '{raw}' (INVALID_FORMAT)")
+        # Special handling for orphan plates (no vehicle associated)
+        assoc_plaus = p.get("association_plausibility", 0.0)
+        has_vehicle = p.get("vehicle_id") is not None
+        if not has_vehicle and assoc_plaus < 0.30:
+            val_stat = p.get("validation_status", "UNCERTAIN")
+            # Orphan candidate must have valid format and reasonable confidence to survive
+            if val_stat not in ("VALID_FORMAT", "POSSIBLE_FORMAT") or p.get("overall_confidence", 0.0) < 0.55:
+                p["result_state"] = PlateResultState.REJECTED.value
+                p["rejection_reason"] = ["Orphan candidate lacking vehicle context and valid format"]
+                rejected_candidates.append(p)
                 continue
 
-        # Drop any leftover distant vehicle or unreadable placeholders
-        if p.get("normalized_plate") in ("DISTANT VEHICLE", "UNREADABLE", "UNREADABLE_OR_DISTANT", ""):
-            logger.info(f"Discarded distant vehicle placeholder #{p['plate_id']}")
-            continue
+        clean_candidates.append(p)
 
-        if p.get("validation_status") == "UNREADABLE_OR_DISTANT":
-            logger.info(f"Discarded unreadable/distant status #{p['plate_id']}")
-            continue
+    # 2. Group candidates by vehicle and select primary plate
+    vehicle_groups: Dict[str, List[Dict]] = {}
+    orphan_plates: List[Dict] = []
 
-        if not p.get("normalized_plate") and clean_alnum:
-            p["normalized_plate"] = clean_alnum
+    for p in clean_candidates:
+        vid = p.get("vehicle_id")
+        if vid:
+            vehicle_groups.setdefault(vid, []).append(p)
+        else:
+            orphan_plates.append(p)
 
-        valid_plate_results.append(p)
+    surviving_plates: List[Dict] = []
 
-    # Deduplicate by normalized plate text
-    seen_texts: dict = {}
-    for p in valid_plate_results:
-        norm = p.get("normalized_plate", "").strip()
-        key = norm if norm else f"__plate_{p['plate_id']}"
-        existing = seen_texts.get(key)
+    for vid, v_plates in vehicle_groups.items():
+        # Sort by overall_confidence descending
+        v_plates.sort(key=lambda item: item.get("overall_confidence", 0.0), reverse=True)
+        primary = v_plates[0]
+        surviving_plates.append(primary)
+
+        # If there are additional plates for this vehicle that are spatially distinct (e.g. front & rear visible),
+        # keep them if IoU with primary is very small (< 0.20)
+        pbox = (primary["bbox"]["x"], primary["bbox"]["y"],
+                primary["bbox"]["x"] + primary["bbox"]["width"],
+                primary["bbox"]["y"] + primary["bbox"]["height"])
+
+        for alt in v_plates[1:]:
+            abox = (alt["bbox"]["x"], alt["bbox"]["y"],
+                    alt["bbox"]["x"] + alt["bbox"]["width"],
+                    alt["bbox"]["y"] + alt["bbox"]["height"])
+
+            from app.detection.candidate_clustering import compute_iou
+            if compute_iou(pbox, abox) < 0.20 and alt.get("overall_confidence", 0.0) >= 0.70:
+                surviving_plates.append(alt)
+            else:
+                alt["result_state"] = PlateResultState.REJECTED.value
+                alt["rejection_reason"] = [f"Suppressed duplicate candidate for vehicle {vid}"]
+                rejected_candidates.append(alt)
+
+    surviving_plates.extend(orphan_plates)
+
+    # Deduplicate across surviving plates by normalized/corrected text
+    seen_texts: Dict[str, Dict] = {}
+    for p in surviving_plates:
+        text_key = p.get("corrected_plate") or p.get("normalized_plate") or f"__plate_{p['plate_id']}"
+        if text_key == "UNREADABLE":
+            text_key = f"__unreadable_{p['plate_id']}"
+
+        existing = seen_texts.get(text_key)
         if existing is None:
-            seen_texts[key] = p
+            seen_texts[text_key] = p
         else:
             if p.get("overall_confidence", 0.0) > existing.get("overall_confidence", 0.0):
-                seen_texts[key] = p
+                seen_texts[text_key] = p
 
-    valid_plate_results = list(seen_texts.values())
+    final_plates = list(seen_texts.values())
 
     # Re-index plate IDs
-    for idx, p in enumerate(valid_plate_results, start=1):
+    for idx, p in enumerate(final_plates, start=1):
         p["plate_id"] = idx
 
-    # --- Vehicle attribute detection (Feature 2) ---
-    for p in valid_plate_results:
+    # --- Vehicle Attribute Detection (Color, Model, Type) ---
+    for p in final_plates:
         try:
             attr = detect_vehicle_attributes(image, p["bbox"])
             p["car_color"] = attr.get("car_color") or p.get("car_color") or "Unknown"
@@ -366,8 +449,8 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
             p["car_model"] = None
             p["vehicle_type"] = p.get("vehicle_type") or "car"
 
-    result["total_plates_detected"] = len(valid_plate_results)
-    result["timings"]["plate_processing"] = round(time.perf_counter() - t0, 3)
+    result["total_plates_detected"] = len(final_plates)
+    result["plates"] = final_plates
 
     # --- Annotated image (bounding boxes for vehicles & plates) ---
     try:
@@ -378,10 +461,10 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
                     "plate_id": p["plate_id"],
                     "bbox": p["bbox"],
                     "detection_confidence": p["detection_confidence"],
-                    "normalized_plate": p.get("normalized_plate", ""),
+                    "normalized_plate": p.get("corrected_plate") or p.get("normalized_plate", ""),
                     "validation_status": p.get("validation_status", "UNCERTAIN"),
                 }
-                for p in valid_plate_results
+                for p in final_plates
             ],
             vehicles=[
                 {
@@ -389,7 +472,7 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
                     "vehicle_type": p.get("vehicle_type", "car"),
                     "car_color": p.get("car_color"),
                 }
-                for p in valid_plate_results if p.get("vehicle_bbox")
+                for p in final_plates if p.get("vehicle_bbox")
             ],
         )
         result["processed_image_b64"] = numpy_to_base64(annotated)
@@ -397,12 +480,40 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         logger.warning(f"Failed to draw bounding boxes: {e}")
         result["processed_image_b64"] = result["original_image_b64"]
 
-    result["plates"] = valid_plate_results
+    # --- Debug Information ---
+    if debug:
+        result["debug_info"] = {
+            "vehicles_detected_count": len(vehicles),
+            "raw_detections_count": len(detections),
+            "surviving_plates_count": len(final_plates),
+            "rejected_candidates_count": len(rejected_candidates),
+            "rejected_candidates": [
+                {
+                    "plate_id": r.get("plate_id"),
+                    "bbox": r.get("bbox"),
+                    "raw_ocr": r.get("raw_ocr"),
+                    "result_state": r.get("result_state"),
+                    "reasons": r.get("rejection_reason"),
+                    "confidence_breakdown": r.get("confidence_breakdown"),
+                }
+                for r in rejected_candidates
+            ],
+            "vehicles": [
+                {
+                    "vehicle_id": v.get("vehicle_id"),
+                    "bbox": v.get("bbox"),
+                    "type": v.get("vehicle_type"),
+                    "confidence": v.get("confidence"),
+                }
+                for v in vehicles
+            ],
+        }
+
     result["success"] = True
     result["timings"]["total"] = round(time.perf_counter() - pipeline_start, 3)
 
     logger.info(
-        f"Pipeline complete — {len(valid_plate_results)} verified plate(s) in "
+        f"Pipeline complete — {len(final_plates)} verified plate(s) in "
         f"{result['timings']['total']:.2f}s"
     )
     return result

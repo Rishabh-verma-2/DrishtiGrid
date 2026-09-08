@@ -47,7 +47,10 @@ async def health_check():
 
 
 @router.post("/process")
-async def process_image(image: UploadFile = File(...)):
+async def process_image(
+    image: UploadFile = File(...),
+    debug: bool = False,
+):
     """
     Receive an uploaded image and run the full ANPR pipeline.
 
@@ -55,6 +58,7 @@ async def process_image(image: UploadFile = File(...)):
 
     Returns a JSON result with all detected plates, crops (base64),
     OCR text, confidence scores, and processing timings.
+    Optional query param ?debug=true attaches diagnostic scene info and candidate rejections.
     """
     # ---- File type validation ----
     content_type = (image.content_type or "").lower()
@@ -96,10 +100,10 @@ async def process_image(image: UploadFile = File(...)):
     # ---- Run pipeline ----
     logger.info(
         f"Processing image: '{image.filename}' "
-        f"({len(image_bytes) / 1024:.1f} KB)"
+        f"({len(image_bytes) / 1024:.1f} KB, debug={debug})"
     )
 
-    pipeline_result = run_pipeline(image_bytes)
+    pipeline_result = run_pipeline(image_bytes, debug=debug)
 
     if not pipeline_result.get("success") and pipeline_result.get("error"):
         raise HTTPException(status_code=500, detail=pipeline_result["error"])
@@ -117,18 +121,24 @@ async def process_image(image: UploadFile = File(...)):
             "car_color": p.get("car_color"),
             "car_model": p.get("car_model"),
             "vehicle_type": p.get("vehicle_type", "car"),
+            "vehicle_id": p.get("vehicle_id"),
             "vehicle_bbox": p.get("vehicle_bbox"),
+            "association_plausibility": p.get("association_plausibility", 0.0),
             "raw_ocr": p.get("raw_ocr", ""),
             "normalized_plate": p.get("normalized_plate", ""),
+            "corrected_plate": p.get("corrected_plate", p.get("normalized_plate", "")),
             "detection_confidence": p.get("detection_confidence", 0.0),
             "ocr_confidence": p.get("ocr_confidence", 0.0),
             "overall_confidence": p.get("overall_confidence", 0.0),
+            "result_state": p.get("result_state", "REVIEW"),
             "validation_status": p.get("validation_status", "UNCERTAIN"),
             "validation_note": p.get("validation_note", ""),
             "processing_status": p.get("processing_status", "FAILED"),
             "processing_error": p.get("processing_error"),
             "stages_applied": p.get("stages_applied", []),
             "timings": p.get("timings", {}),
+            "confidence_breakdown": p.get("confidence_breakdown", {}),
+            "quality_assessment": p.get("quality_assessment", {}),
         })
 
     response = {
@@ -139,6 +149,9 @@ async def process_image(image: UploadFile = File(...)):
         "plates": plates_response,
         "timings": pipeline_result.get("timings", {}),
     }
+
+    if "debug_info" in pipeline_result:
+        response["debug_info"] = pipeline_result["debug_info"]
 
     return JSONResponse(content=to_json_compatible(response))
 

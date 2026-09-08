@@ -18,15 +18,18 @@ function normalizePlateNumber(input) {
   return clean;
 }
 
+const KNOWN_STATE_CODES = new Set([
+  "AN", "AP", "AR", "AS", "BR", "CG", "CH", "DD", "DL", "DN",
+  "GA", "GJ", "HP", "HR", "JH", "JK", "KA", "KL", "LA", "LD",
+  "MH", "ML", "MN", "MP", "MZ", "NL", "OD", "OR", "PB", "PY",
+  "RJ", "SK", "TN", "TR", "TS", "UK", "UP", "WB"
+]);
+
 /**
  * Intelligent Indian license plate canonical normalization.
  * Indian format structure:
  *   [State Code 2L] [District Code 2D] [Series 1-3L] [Number 1-4D]
- * Disambiguates common OCR confusion:
- * - Letters vs Digits based on character position:
- *   - State (0, 1): 0->O, 1->I, 8->B
- *   - District (2, 3): O/Q/D->0, I/L->1, Z->2, B->8, S->5
- *   - Registration Number (last 4 chars): O/Q/D->0, I/L->1, Z->2, B->8, S->5
+ * Disambiguates common OCR confusion conditionally when plate begins with a valid state code.
  */
 function canonicalPlateNumber(input) {
   const norm = normalizePlateNumber(input);
@@ -35,36 +38,85 @@ function canonicalPlateNumber(input) {
   if (norm.length >= 8 && norm.length <= 11) {
     const chars = norm.split('');
 
-    // State code (positions 0 & 1 must be letters)
-    for (let i = 0; i < 2; i++) {
-      if (chars[i] === '0') chars[i] = 'O';
-      if (chars[i] === '1') chars[i] = 'I';
-      if (chars[i] === '8') chars[i] = 'B';
+    // Check if start can form a valid state code
+    const s0 = chars[0] === '0' ? 'O' : chars[0] === '1' ? 'I' : chars[0] === '8' ? 'B' : chars[0];
+    const s1 = chars[1] === '0' ? 'O' : chars[1] === '1' ? 'I' : chars[1] === '8' ? 'B' : chars[1];
+    const candidateState = s0 + s1;
+
+    const isValidState = KNOWN_STATE_CODES.has(candidateState);
+    const isBHSeries = /^\d{2}BH/.test(norm);
+
+    if (!isValidState && !isBHSeries) {
+      // Do not mutate if not a plausible Indian state format
+      return norm;
     }
 
-    // District code (positions 2 & 3 must be digits)
-    for (let i = 2; i < 4; i++) {
-      if (chars[i] === 'O' || chars[i] === 'Q' || chars[i] === 'D') chars[i] = '0';
-      if (chars[i] === 'I' || chars[i] === 'L') chars[i] = '1';
-      if (chars[i] === 'Z') chars[i] = '2';
-      if (chars[i] === 'B') chars[i] = '8';
-      if (chars[i] === 'S') chars[i] = '5';
-    }
+    if (isValidState) {
+      chars[0] = s0;
+      chars[1] = s1;
 
-    // Last registration digits (usually last 4 characters)
-    const endDigits = Math.min(4, chars.length - 5);
-    for (let i = chars.length - endDigits; i < chars.length; i++) {
-      if (chars[i] === 'O' || chars[i] === 'Q' || chars[i] === 'D') chars[i] = '0';
-      if (chars[i] === 'I' || chars[i] === 'L') chars[i] = '1';
-      if (chars[i] === 'Z') chars[i] = '2';
-      if (chars[i] === 'B') chars[i] = '8';
-      if (chars[i] === 'S') chars[i] = '5';
+      // District code (positions 2 & 3 must be digits)
+      for (let i = 2; i < 4; i++) {
+        if (chars[i] === 'O' || chars[i] === 'Q' || chars[i] === 'D') chars[i] = '0';
+        if (chars[i] === 'I' || chars[i] === 'L') chars[i] = '1';
+        if (chars[i] === 'Z') chars[i] = '2';
+        if (chars[i] === 'B') chars[i] = '8';
+        if (chars[i] === 'S') chars[i] = '5';
+      }
+
+      // Last registration digits (usually last 4 characters)
+      const endDigits = Math.min(4, chars.length - 5);
+      for (let i = chars.length - endDigits; i < chars.length; i++) {
+        if (chars[i] === 'O' || chars[i] === 'Q' || chars[i] === 'D') chars[i] = '0';
+        if (chars[i] === 'I' || chars[i] === 'L') chars[i] = '1';
+        if (chars[i] === 'Z') chars[i] = '2';
+        if (chars[i] === 'B') chars[i] = '8';
+        if (chars[i] === 'S') chars[i] = '5';
+      }
     }
 
     return chars.join('');
   }
 
   return norm;
+}
+
+/**
+ * Determine consensus plate number across multiple video frames
+ */
+function computeTemporalConsensusPlate(readings) {
+  if (!readings || readings.length === 0) return { plate: '', confidence: 0, occurrences: 0 };
+  const candidateScores = {};
+  for (const r of readings) {
+    const text = canonicalPlateNumber(r.text || r.plate || '');
+    if (!text) continue;
+    const conf = typeof r.confidence === 'number' ? r.confidence : (r.conf || 0.5);
+    if (!candidateScores[text]) {
+      candidateScores[text] = { count: 0, totalConf: 0, maxConf: 0, text };
+    }
+    candidateScores[text].count += 1;
+    candidateScores[text].totalConf += conf;
+    candidateScores[text].maxConf = Math.max(candidateScores[text].maxConf, conf);
+  }
+
+  let best = null;
+  let bestScore = -1;
+  for (const item of Object.values(candidateScores)) {
+    const avgConf = item.totalConf / item.count;
+    const frequencyBonus = Math.min(0.15, (item.count - 1) * 0.05);
+    const score = Math.min(1.0, avgConf * 0.70 + item.maxConf * 0.30 + frequencyBonus);
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+
+  if (!best) return { plate: readings[0].text || '', confidence: 0, occurrences: 1 };
+  return {
+    plate: best.text,
+    confidence: Math.min(1.0, Number(bestScore.toFixed(4))),
+    occurrences: best.count,
+  };
 }
 
 /**
@@ -256,6 +308,7 @@ function matchPlateAgainstRecords(detectedPlate, allRecords) {
 module.exports = {
   normalizePlateNumber,
   canonicalPlateNumber,
+  computeTemporalConsensusPlate,
   levenshteinDistance,
   findLongestCommonSubstring,
   arePlatesSimilar,

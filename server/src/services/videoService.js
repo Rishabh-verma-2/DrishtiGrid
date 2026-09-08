@@ -24,6 +24,7 @@ const Alert = require("../models/Alert");
 const {
   normalizePlateNumber,
   canonicalPlateNumber,
+  computeTemporalConsensusPlate,
   arePlatesSimilar,
   getConsensusColor,
   matchPlateAgainstRecords,
@@ -168,13 +169,48 @@ async function sendFrameToAIService(imageBuffer, frameSecond) {
 }
 
 /**
- * Find matching active vehicle track within 30-second temporal deduplication window.
+ * Find matching active vehicle track within 30-second temporal deduplication window
+ * using plate text similarity, vehicle bounding box proximity, class, and color.
  */
-function findMatchingTrack(tracks, plateNumber, frameSec) {
+function findMatchingTrack(tracks, plateData, frameSec) {
+  const plateNumber = typeof plateData === "string"
+    ? normalizePlateNumber(plateData)
+    : normalizePlateNumber(plateData.corrected_plate || plateData.normalized_plate || plateData.raw_ocr || "");
+
+  const pVehBbox = typeof plateData === "object" ? plateData.vehicle_bbox : null;
+  const pVehType = typeof plateData === "object" ? (plateData.vehicle_type || "").toLowerCase() : "";
+  const pColor = typeof plateData === "object" ? plateData.car_color : null;
+
   for (const track of tracks) {
-    const isSamePlate = arePlatesSimilar(track.plate_number, plateNumber);
     const withinTimeWindow = Math.abs(frameSec - track.last_seen_second) <= 30;
-    if (isSamePlate && withinTimeWindow) {
+    if (!withinTimeWindow) continue;
+
+    // 1. Text similarity
+    const isSamePlate = arePlatesSimilar(track.plate_number, plateNumber);
+    if (isSamePlate) {
+      return track;
+    }
+
+    // 2. Spatial proximity if vehicle bboxes exist
+    let isSpatialMatch = false;
+    if (track.last_vehicle_bbox && pVehBbox) {
+      const tb = track.last_vehicle_bbox;
+      const tcx = tb.x + tb.width / 2;
+      const tcy = tb.y + tb.height / 2;
+      const pcx = pVehBbox.x + pVehBbox.width / 2;
+      const pcy = pVehBbox.y + pVehBbox.height / 2;
+      const dist = Math.hypot(tcx - pcx, tcy - pcy);
+      const avgDim = (tb.width + tb.height + pVehBbox.width + pVehBbox.height) / 4;
+      if (dist < avgDim * 0.8) {
+        isSpatialMatch = true;
+      }
+    }
+
+    // 3. Class and color consistency
+    const isClassMatch = track.vehicle_type && pVehType && track.vehicle_type.toLowerCase() === pVehType;
+    const isColorMatch = track.colors && pColor && track.colors.includes(pColor);
+
+    if (isSpatialMatch && (isClassMatch || isColorMatch) && Math.abs(frameSec - track.last_seen_second) <= 3) {
       return track;
     }
   }
@@ -273,11 +309,11 @@ async function runVideoProcessingJob({
       const detectedPlates = aiResult?.plates || [];
 
       for (const plate of detectedPlates) {
-        const plateNumber = normalizePlateNumber(plate.normalized_plate || plate.raw_ocr || "");
+        const plateNumber = normalizePlateNumber(plate.corrected_plate || plate.normalized_plate || plate.raw_ocr || "");
         if (!plateNumber || plateNumber.length < 3) continue;
 
         const matchResult = matchPlateAgainstRecords(plateNumber, activeRecords);
-        const existingTrack = findMatchingTrack(tracks, plateNumber, frameSecond);
+        const existingTrack = findMatchingTrack(tracks, plate, frameSecond);
 
         if (existingTrack) {
           existingTrack.occurrence_count += 1;
@@ -288,6 +324,18 @@ async function runVideoProcessingJob({
           if (plate.car_color) {
             existingTrack.colors.push(plate.car_color);
           }
+          if (plate.vehicle_bbox) {
+            existingTrack.last_vehicle_bbox = plate.vehicle_bbox;
+          }
+          if (!existingTrack.readings) {
+            existingTrack.readings = [];
+          }
+          existingTrack.readings.push({
+            text: plateNumber,
+            confidence: plate.overall_confidence || plate.ocr_confidence || 0.85,
+            sec: frameSecond,
+          });
+
           // Update best crop if confidence is higher
           const thisConf = plate.overall_confidence || plate.ocr_confidence || 0;
           if (
@@ -315,6 +363,14 @@ async function runVideoProcessingJob({
             vehicle_type: plate.vehicle_type || "car",
             car_model: plate.car_model || null,
             colors: plate.car_color ? [plate.car_color] : [],
+            last_vehicle_bbox: plate.vehicle_bbox || null,
+            readings: [
+              {
+                text: plateNumber,
+                confidence: plate.overall_confidence || plate.ocr_confidence || 0.85,
+                sec: frameSecond,
+              },
+            ],
             bestCropB64: plate.enhanced_crop_b64 || plate.original_crop_b64 || "",
             bestConf: plate.overall_confidence || 0,
             bestCropSec: frameSecond,
@@ -340,6 +396,23 @@ async function runVideoProcessingJob({
           percentage: Math.round(((i + 1) / frameFiles.length) * 100),
           platesDetectedCount: tracks.length,
         });
+      }
+    }
+
+    // Apply temporal consensus across all vehicle track readings
+    for (const track of tracks) {
+      if (track.readings && track.readings.length > 0) {
+        const consensus = computeTemporalConsensusPlate(track.readings);
+        if (consensus.plate) {
+          track.plate_number = consensus.plate;
+          track.temporal_consensus_count = consensus.occurrences;
+          track.overall_confidence = Math.min(1.0, Math.max(track.overall_confidence, consensus.confidence));
+          // Refresh watchlist matching using the consensus plate number
+          const refreshedMatch = matchPlateAgainstRecords(track.plate_number, activeRecords);
+          track.match_status = refreshedMatch.matchStatus;
+          track.matched_record = refreshedMatch.matchedRecord;
+          track.matchResult = refreshedMatch;
+        }
       }
     }
 
