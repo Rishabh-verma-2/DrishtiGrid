@@ -775,7 +775,7 @@ export default function FootageRequestsPage() {
 
       {/* ─── MODAL: DEDICATED TICKET DETAIL DIALOG (Spacious & Centered) ── */}
       {isDetailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
           <div className={`w-full max-w-5xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] ${
             isLight ? 'bg-white border-slate-300 text-slate-900 shadow-slate-900/30' : 'bg-[#0e1424] border-white/15 text-slate-100 shadow-black/80'
           }`}>
@@ -1289,7 +1289,7 @@ export default function FootageRequestsPage() {
 
       {/* ─── MODAL: CREATE FOOTAGE REQUISITION TICKET (With Requested Dept) ─ */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
           <div className={`w-full max-w-2xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] ${
             isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#101626] border-white/10 text-slate-100'
           }`}>
@@ -1508,7 +1508,7 @@ export default function FootageRequestsPage() {
 
       {/* ─── MODAL: REJECT REQUISITION ───────────────────────────────── */}
       {isRejectModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl ${
             isLight ? 'bg-white border-rose-300 text-slate-900' : 'bg-[#121727] border-rose-500/30 text-slate-100'
           }`}>

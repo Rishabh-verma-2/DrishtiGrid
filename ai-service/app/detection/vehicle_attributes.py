@@ -33,14 +33,17 @@ _yolo_vehicle_model: Optional[YOLO] = None
 
 
 def _get_vehicle_model() -> Optional[YOLO]:
-    """Lazy-load the YOLOv8 model for vehicle detection."""
+    """Lazy-load the YOLOv8/YOLO11 model for vehicle detection."""
     global _yolo_vehicle_model
     if _yolo_vehicle_model is None:
         try:
             candidate_paths = [
-                Path(__file__).resolve().parent.parent.parent / "yolov8n.pt",
+                Path(__file__).resolve().parent.parent.parent / "model_weights" / "yolo11s.pt",
+                Path(__file__).resolve().parent.parent.parent / "model_weights" / "yolo11n.pt",
+                Path(__file__).resolve().parent.parent / "model_weights" / "yolo11s.pt",
+                Path(__file__).resolve().parent.parent / "model_weights" / "yolo11n.pt",
                 Path(__file__).resolve().parent.parent.parent / "model_weights" / "yolov8n.pt",
-                Path(__file__).resolve().parent.parent / "model_weights" / "yolov8n.pt",
+                Path("model_weights/yolo11s.pt"),
                 Path("yolov8n.pt"),
             ]
             model_path = None
@@ -50,13 +53,13 @@ def _get_vehicle_model() -> Optional[YOLO]:
                     break
 
             if model_path:
-                logger.info(f"Loading YOLOv8 vehicle model from: {model_path}")
+                logger.info(f"Loading YOLO vehicle model from: {model_path}")
                 _yolo_vehicle_model = YOLO(model_path)
             else:
-                logger.info("Loading YOLOv8n vehicle model default...")
-                _yolo_vehicle_model = YOLO("yolov8n.pt")
+                logger.info("Loading YOLO11s vehicle model default...")
+                _yolo_vehicle_model = YOLO("model_weights/yolo11s.pt")
         except Exception as e:
-            logger.error(f"Failed to load YOLOv8 vehicle model: {e}")
+            logger.error(f"Failed to load YOLO vehicle model: {e}")
             _yolo_vehicle_model = None
     return _yolo_vehicle_model
 
@@ -360,9 +363,11 @@ def detect_vehicle_attributes(
             px2 = px1 + int(plate_bbox.get("width", 0))
             py2 = py1 + int(plate_bbox.get("height", 0))
         plate_box = (px1, py1, px2, py2)
+        img_h, img_w = image_bgr.shape[:2]
+        imgsz = 1280 if max(img_w, img_h) >= 1200 else 640
 
         # Run inference on the full frame
-        preds = model(image_bgr, verbose=False, conf=0.25)
+        preds = model(image_bgr, verbose=False, conf=0.15, imgsz=imgsz, classes=[2, 3, 5, 7])
         if not preds or len(preds) == 0:
             # Still attempt color extraction from plate surroundings
             result["car_color"] = _extract_dominant_color(image_bgr, plate_box, None)
@@ -373,7 +378,6 @@ def detect_vehicle_attributes(
             result["car_color"] = _extract_dominant_color(image_bgr, plate_box, None)
             return result
 
-        img_h, img_w = image_bgr.shape[:2]
         candidate_vehicles = []
 
         for b in boxes:

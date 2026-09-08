@@ -172,7 +172,7 @@ export default function MatchAlertModal({ match, onClose, onAcknowledge }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div
         className={`w-full max-w-3xl rounded-xl shadow-2xl overflow-hidden flex flex-col border transition-all my-auto ${
           isLight
@@ -609,7 +609,7 @@ export default function MatchAlertModal({ match, onClose, onAcknowledge }) {
       {/* ── Sub-modal: High Resolution Exhibit Inspect Zoom ── */}
       {zoomedExhibit && (
         <div
-          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
           onClick={() => setZoomedExhibit(null)}
         >
           <div

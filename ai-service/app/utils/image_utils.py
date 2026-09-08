@@ -157,12 +157,13 @@ def resize_for_processing(image: np.ndarray,
 # Drawing helpers
 # ---------------------------------------------------------------------------
 
-def draw_bounding_boxes(image: np.ndarray, plates: list) -> np.ndarray:
+def draw_bounding_boxes(image: np.ndarray, plates: list, vehicles: list = None) -> np.ndarray:
     """
     Draw bounding boxes and labels on a copy of the image.
 
     plates: list of dicts with keys: plate_id, bbox (x,y,width,height),
             detection_confidence, normalized_plate (optional)
+    vehicles: optional list of detected vehicles to highlight on the scene
     """
     if image is None or image.size == 0:
         return image
@@ -170,6 +171,25 @@ def draw_bounding_boxes(image: np.ndarray, plates: list) -> np.ndarray:
     annotated = image.copy()
     img_h, img_w = annotated.shape[:2]
 
+    # Draw vehicle boxes first (cyan/gold)
+    for v in (vehicles or []):
+        vbox = v.get("vehicle_bbox") or v.get("bbox") or {}
+        vx = max(0, min(int(vbox.get("x", 0)), img_w - 1))
+        vy = max(0, min(int(vbox.get("y", 0)), img_h - 1))
+        vw = max(1, min(int(vbox.get("width", 0)), img_w - vx))
+        vh = max(1, min(int(vbox.get("height", 0)), img_h - vy))
+        if vw > 20 and vh > 20:
+            cv2.rectangle(annotated, (vx, vy), (vx + vw, vy + vh), (255, 180, 0), 2)
+            v_type = str(v.get("vehicle_type", "Vehicle")).capitalize()
+            v_color = str(v.get("car_color") or "").strip()
+            v_lbl = f"{v_color} {v_type}".strip() if v_color else v_type
+            if v_lbl:
+                (tw, th), _ = cv2.getTextSize(v_lbl, cv2.FONT_HERSHEY_SIMPLEX, 0.48, 1)
+                label_y = max(th + 4, vy)
+                cv2.rectangle(annotated, (vx, max(0, label_y - th - 5)), (vx + tw + 6, label_y + 2), (255, 180, 0), -1)
+                cv2.putText(annotated, v_lbl, (vx + 3, label_y - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (20, 20, 20), 1, cv2.LINE_AA)
+
+    # Draw plate boxes (bright green for valid, orange for possible/detected)
     for plate in plates:
         bbox = plate.get("bbox", {})
         x = int(bbox.get("x", 0))
@@ -186,9 +206,9 @@ def draw_bounding_boxes(image: np.ndarray, plates: list) -> np.ndarray:
         w_box = max(1, min(w, img_w - x_box))
         h_box = max(1, min(h, img_h - y_box))
 
-        # Box colour: green
-        color = (0, 200, 80)
-        thickness = 2
+        val_status = plate.get("validation_status", "UNCERTAIN")
+        color = (0, 230, 80) if val_status == "VALID_FORMAT" else (0, 165, 255)
+        thickness = 3
         cv2.rectangle(annotated, (x_box, y_box), (x_box + w_box, y_box + h_box), color, thickness)
 
         # Label background

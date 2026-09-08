@@ -96,6 +96,14 @@ async function storePlate(plateData) {
   if (!plateData || !plateData.plate_number) return null;
 
   const cleanNumber = plateData.plate_number.trim().toUpperCase();
+  if (
+    cleanNumber === "DISTANT VEHICLE" ||
+    cleanNumber === "UNREADABLE" ||
+    cleanNumber === "UNREADABLE_OR_DISTANT" ||
+    cleanNumber.length < 3
+  ) {
+    return null;
+  }
 
   // 1. Try to save to MongoDB 'storedplates' collection
   let mongoDoc = null;

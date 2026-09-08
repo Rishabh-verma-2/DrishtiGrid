@@ -54,7 +54,7 @@ export default function CrowdFrameViewer({
     <div
       ref={containerRef}
       className={`relative rounded-2xl border flex flex-col overflow-hidden transition-all duration-300 ${
-        isFullscreen ? 'fixed inset-0 z-50 rounded-none' : 'h-[520px]'
+        isFullscreen ? 'fixed inset-0 z-[9999] rounded-none' : 'h-[520px]'
       } ${
         isLight
           ? 'bg-white border-slate-200 shadow-sm'

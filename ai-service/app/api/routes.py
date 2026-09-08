@@ -147,7 +147,7 @@ async def process_image(image: UploadFile = File(...)):
 async def crowd_detection(
     image: UploadFile = File(...),
     camera_id: str = Form(default="default"),
-    conf_threshold: float = Form(default=0.03),
+    conf_threshold: float = Form(default=0.15),
     grid_rows: int = Form(default=3),
     grid_cols: int = Form(default=4),
 ):
@@ -219,7 +219,7 @@ async def crowd_detection(
         crowd_result = detect_crowd(
             image=frame,
             camera_id=camera_id,
-            conf_threshold=max(0.01, min(0.95, conf_threshold)),
+            conf_threshold=max(0.15, min(0.95, conf_threshold)),
             grid_rows=max(1, min(8, grid_rows)),
             grid_cols=max(1, min(8, grid_cols)),
         )

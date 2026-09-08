@@ -262,6 +262,8 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
             detection_confidence=det_conf,
             bbox=bbox,
         )
+        if detection.get("vehicle_bbox"):
+            plate_result["vehicle_bbox"] = detection["vehicle_bbox"]
         plate_results.append(plate_result)
 
     NON_PLATE_KEYWORDS = {
@@ -282,8 +284,9 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
         "BHAVAN", "BHAWAN", "MANDIR", "MASJID", "CHURCH", "GURUDWARA",
     }
 
-    # Filter out false positives: if an object has NO alphanumeric OCR text and OCR confidence is 0,
-    # it is a false positive (e.g. taillight, wheel, car logo, or road artifact).
+    # Filter out distant vehicles & false positives:
+    # Only vehicles whose license plate is clearly visible and readable are retained.
+    # Distant vehicles or vehicles with unreadable/sub-pixel plates are discarded.
     valid_plate_results = []
     for p in plate_results:
         raw = p.get("raw_ocr", "").strip()
@@ -298,27 +301,31 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
             logger.info(f"Discarded non-plate keyword #{p['plate_id']} '{raw}'")
             continue
 
-        # Reject pure noise with fewer than 3 alphanumeric chars
-        if len(alnum_chars) < 3:
-            logger.info(f"Discarded short/noisy text #{p['plate_id']} '{raw}' (< 3 chars)")
+        # Reject distant vehicles, empty OCR, or unreadable noise (< 3 alphanumeric chars)
+        if len(alnum_chars) < 3 or ocr_conf <= 0.0 or not raw:
+            logger.info(f"Discarded distant vehicle/unreadable plate #{p['plate_id']} '{raw}' (insufficient/no OCR)")
             continue
 
-        # If flagged INVALID_FORMAT, but has valid plate length (4-12 chars), treat as possible plate
+        # If flagged INVALID_FORMAT, only retain if it contains both letters and digits and looks like a real plate
         if val_status == "INVALID_FORMAT":
-            if 4 <= len(alnum_chars) <= 12 and any(c.isdigit() for c in clean_alnum):
+            has_letters = any(c.isalpha() for c in clean_alnum)
+            has_digits = any(c.isdigit() for c in clean_alnum)
+            if 4 <= len(alnum_chars) <= 12 and has_letters and has_digits:
                 p["validation_status"] = "POSSIBLE_FORMAT"
                 p["validation_note"] = "Detected vehicle registration plate"
                 if not p.get("normalized_plate"):
                     p["normalized_plate"] = clean_alnum
             else:
-                logger.info(f"Discarded non-plate text #{p['plate_id']} '{raw}' (INVALID_FORMAT)")
+                logger.info(f"Discarded invalid non-plate text #{p['plate_id']} '{raw}' (INVALID_FORMAT)")
                 continue
 
-        if len(alnum_chars) == 0 and ocr_conf == 0.0 and det_conf < 0.70:
-            logger.info(
-                f"Discarded false positive detection #{p['plate_id']} "
-                f"(zero OCR text, conf={det_conf:.2f})"
-            )
+        # Drop any leftover distant vehicle or unreadable placeholders
+        if p.get("normalized_plate") in ("DISTANT VEHICLE", "UNREADABLE", "UNREADABLE_OR_DISTANT", ""):
+            logger.info(f"Discarded distant vehicle placeholder #{p['plate_id']}")
+            continue
+
+        if p.get("validation_status") == "UNREADABLE_OR_DISTANT":
+            logger.info(f"Discarded unreadable/distant status #{p['plate_id']}")
             continue
 
         if not p.get("normalized_plate") and clean_alnum:
@@ -326,38 +333,17 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
 
         valid_plate_results.append(p)
 
-    # Deduplicate by normalized plate text:
-    # When the same plate number is read from two slightly different crops
-    # (e.g. overlapping bounding boxes that survived NMS), keep the one with
-    # the highest overall_confidence. Plates with empty normalized text are
-    # deduplicated by raw_ocr instead so genuine empty-OCR detections are
-    # also collapsed (only the best bbox survives).
-    seen_texts: dict = {}  # normalized_text → plate_result with highest confidence
+    # Deduplicate by normalized plate text
+    seen_texts: dict = {}
     for p in valid_plate_results:
         norm = p.get("normalized_plate", "").strip()
-        key = norm if norm else f"__raw_{p.get('raw_ocr', '').strip()}"
-        # Plates with no OCR text at all keep a unique key so they are NOT
-        # merged with each other (each is independently retained).
-        if not key or key == "__raw_":
-            key = f"__noocr_{p['plate_id']}"
+        key = norm if norm else f"__plate_{p['plate_id']}"
         existing = seen_texts.get(key)
         if existing is None:
             seen_texts[key] = p
         else:
-            # Keep the higher-confidence detection
             if p.get("overall_confidence", 0.0) > existing.get("overall_confidence", 0.0):
-                logger.info(
-                    f"Deduplicated plate text '{key}': replacing plate #{existing['plate_id']} "
-                    f"(conf={existing.get('overall_confidence', 0.0):.3f}) with "
-                    f"plate #{p['plate_id']} (conf={p.get('overall_confidence', 0.0):.3f})"
-                )
                 seen_texts[key] = p
-            else:
-                logger.info(
-                    f"Deduplicated plate text '{key}': discarding plate #{p['plate_id']} "
-                    f"(conf={p.get('overall_confidence', 0.0):.3f}), "
-                    f"keeping #{existing['plate_id']} (conf={existing.get('overall_confidence', 0.0):.3f})"
-                )
 
     valid_plate_results = list(seen_texts.values())
 
@@ -369,31 +355,43 @@ def run_pipeline(image_bytes: bytes) -> Dict[str, Any]:
     for p in valid_plate_results:
         try:
             attr = detect_vehicle_attributes(image, p["bbox"])
-            p["car_color"] = attr.get("car_color")
-            p["car_model"] = attr.get("car_model")
-            p["vehicle_type"] = attr.get("vehicle_type", "car")
-            p["vehicle_bbox"] = attr.get("vehicle_bbox")
+            p["car_color"] = attr.get("car_color") or p.get("car_color") or "Unknown"
+            p["car_model"] = attr.get("car_model") or p.get("car_model")
+            p["vehicle_type"] = attr.get("vehicle_type") or p.get("vehicle_type") or "car"
+            if not p.get("vehicle_bbox"):
+                p["vehicle_bbox"] = attr.get("vehicle_bbox")
         except Exception as e:
             logger.warning(f"Plate #{p['plate_id']}: Vehicle attribute detection failed: {e}")
-            p["car_color"] = None
+            p["car_color"] = p.get("car_color") or "Unknown"
             p["car_model"] = None
-            p["vehicle_type"] = "car"
-            p["vehicle_bbox"] = None
+            p["vehicle_type"] = p.get("vehicle_type") or "car"
 
     result["total_plates_detected"] = len(valid_plate_results)
     result["timings"]["plate_processing"] = round(time.perf_counter() - t0, 3)
 
-    # --- Annotated image (bounding boxes) ---
+    # --- Annotated image (bounding boxes for vehicles & plates) ---
     try:
-        annotated = draw_bounding_boxes(image, [
-            {
-                "plate_id": p["plate_id"],
-                "bbox": p["bbox"],
-                "detection_confidence": p["detection_confidence"],
-                "normalized_plate": p.get("normalized_plate", ""),
-            }
-            for p in valid_plate_results
-        ])
+        annotated = draw_bounding_boxes(
+            image,
+            [
+                {
+                    "plate_id": p["plate_id"],
+                    "bbox": p["bbox"],
+                    "detection_confidence": p["detection_confidence"],
+                    "normalized_plate": p.get("normalized_plate", ""),
+                    "validation_status": p.get("validation_status", "UNCERTAIN"),
+                }
+                for p in valid_plate_results
+            ],
+            vehicles=[
+                {
+                    "vehicle_bbox": p.get("vehicle_bbox"),
+                    "vehicle_type": p.get("vehicle_type", "car"),
+                    "car_color": p.get("car_color"),
+                }
+                for p in valid_plate_results if p.get("vehicle_bbox")
+            ],
+        )
         result["processed_image_b64"] = numpy_to_base64(annotated)
     except Exception as e:
         logger.warning(f"Failed to draw bounding boxes: {e}")

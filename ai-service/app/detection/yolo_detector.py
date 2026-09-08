@@ -116,7 +116,7 @@ def load_yolo_model():
         logger.info(f"Loading dedicated LP model: {model_path}")
     elif coco_path.exists():
         model_path = str(coco_path)
-        logger.info(f"Loading COCO YOLOv8 model: {model_path}")
+        logger.info(f"Loading YOLO model: {model_path}")
     else:
         model_path = "yolov8n.pt"
         logger.info("No local weights — downloading yolov8n.pt")
@@ -241,6 +241,7 @@ def _run_yolo_inference(
     conf: float,
     iou: float = 0.40,
     classes: Optional[List[int]] = None,
+    imgsz: Optional[int] = None,
 ) -> Optional[object]:
     """
     Run a single YOLO forward pass and return results[0] or None on error.
@@ -255,6 +256,8 @@ def _run_yolo_inference(
         )
         if classes is not None:
             kw["classes"] = classes
+        if imgsz is not None:
+            kw["imgsz"] = imgsz
         results = model(image, **kw)
         return results[0] if results else None
     except Exception as e:
@@ -441,44 +444,81 @@ def _pass3_vehicle_cascade(
     if coco is None:
         return all_cands
 
-    # Detect vehicles — use a moderate conf so we don't miss any
+    # Detect vehicles using high-resolution inference
+    veh_imgsz = 1280 if max(img_w, img_h) >= 1200 else 640
     veh_result = _run_yolo_inference(
-        coco, image, conf=0.25, iou=0.45,
+        coco, image, conf=0.15, iou=0.45,
         classes=list(VEHICLE_CLASS_IDS),
+        imgsz=veh_imgsz,
     )
-    if veh_result is None or veh_result.boxes is None:
-        return all_cands
-
+    
     vehicle_boxes: List[Tuple[int,int,int,int]] = []
-    for box in veh_result.boxes:
-        if box.cls is None or len(box.cls) == 0:
-            continue
-        cls_id = int(box.cls[0].item())
-        if cls_id not in VEHICLE_CLASS_IDS:
-            continue
-        if box.xyxy is None or len(box.xyxy) == 0:
-            continue
-        xyxy = box.xyxy[0].cpu().numpy().astype(int)
-        vx1, vy1, vx2, vy2 = (
-            max(0, xyxy[0]), max(0, xyxy[1]),
-            min(img_w, xyxy[2]), min(img_h, xyxy[3]),
-        )
-        if (vx2 - vx1) < 20 or (vy2 - vy1) < 20:
-            continue
-        vehicle_boxes.append((vx1, vy1, vx2, vy2))
+    if veh_result is not None and veh_result.boxes is not None:
+        for box in veh_result.boxes:
+            if box.cls is None or len(box.cls) == 0:
+                continue
+            cls_id = int(box.cls[0].item())
+            if cls_id not in VEHICLE_CLASS_IDS:
+                continue
+            if box.xyxy is None or len(box.xyxy) == 0:
+                continue
+            xyxy = box.xyxy[0].cpu().numpy().astype(int)
+            vx1, vy1, vx2, vy2 = (
+                max(0, xyxy[0]), max(0, xyxy[1]),
+                min(img_w, xyxy[2]), min(img_h, xyxy[3]),
+            )
+            if (vx2 - vx1) < 20 or (vy2 - vy1) < 20:
+                continue
+            vehicle_boxes.append((vx1, vy1, vx2, vy2))
 
-    logger.debug(f"Pass3: {len(vehicle_boxes)} vehicle(s) found by COCO model")
+    # For wide CCTV images, also run tiled vehicle detection so no side/distant vehicles are missed
+    if img_w > 1200:
+        tile_w = int(img_w * 0.55)
+        stride = int(img_w * 0.40)
+        for x_start in range(0, img_w - tile_w + 1, stride):
+            x_end = min(img_w, x_start + tile_w)
+            tile = image[:, x_start:x_end]
+            t_res = _run_yolo_inference(coco, tile, conf=0.15, iou=0.45, classes=list(VEHICLE_CLASS_IDS), imgsz=960)
+            if t_res is not None and t_res.boxes is not None:
+                for b in t_res.boxes:
+                    cls_id = int(b.cls[0].item())
+                    if cls_id not in VEHICLE_CLASS_IDS:
+                        continue
+                    xyxy = b.xyxy[0].cpu().numpy().astype(int)
+                    tx1 = max(0, xyxy[0] + x_start)
+                    ty1 = max(0, xyxy[1])
+                    tx2 = min(img_w, xyxy[2] + x_start)
+                    ty2 = min(img_h, xyxy[3])
+                    if (tx2 - tx1) < 20 or (ty2 - ty1) < 20:
+                        continue
+                    # Check overlap with existing vehicle boxes
+                    if not any(_compute_iou((tx1, ty1, tx2, ty2), vb) > 0.45 for vb in vehicle_boxes):
+                        vehicle_boxes.append((tx1, ty1, tx2, ty2))
 
-    for (vx1, vy1, vx2, vy2) in vehicle_boxes:
+    logger.debug(f"Pass3: {len(vehicle_boxes)} vehicle(s) found across scene")
+
+    # Check if lp_model is a dedicated LP model or generic COCO
+    names = lp_model.names or {}
+    is_dedicated_lp = (
+        len(names) == 1 or
+        any(term in str(n).lower() for n in names.values()
+            for term in ("lp", "plate", "license"))
+    )
+
+    # Sort vehicles by area descending so closest, clearest vehicles are prioritized
+    vehicle_boxes.sort(key=lambda b: (b[2] - b[0]) * (b[3] - b[1]), reverse=True)
+
+    for v_idx, (vx1, vy1, vx2, vy2) in enumerate(vehicle_boxes):
         vw = vx2 - vx1
         vh = vy2 - vy1
 
-        # --- Crop the lower 40% of the vehicle box (plate region) ---
-        # For overhead cameras the plate is in the full bottom section;
-        # use 55% to be safe.
-        plate_y1 = vy1 + int(vh * 0.45)
+        # Distant background vehicles where plates are physically sub-pixel
+        is_subpixel_distant = (vw < 60 or vh < 40)
+
+        # Crop the lower 45% of the vehicle box (bumper/plate region)
+        plate_y1 = vy1 + int(vh * 0.40)
         plate_y2 = vy2
-        plate_x1 = max(0, vx1 - int(vw * 0.05))  # tiny horizontal expansion
+        plate_x1 = max(0, vx1 - int(vw * 0.05))
         plate_x2 = min(img_w, vx2 + int(vw * 0.05))
 
         roi = image[plate_y1:plate_y2, plate_x1:plate_x2]
@@ -487,24 +527,77 @@ def _pass3_vehicle_cascade(
 
         roi_h, roi_w = roi.shape[:2]
 
-        # Upscale ROI to at least 320px wide for YOLO to resolve small text
-        target_w = max(roi_w, 320)
-        up_scale = target_w / roi_w
-        up_h = int(roi_h * up_scale)
-        try:
-            roi_up = cv2.resize(roi, (target_w, up_h), interpolation=cv2.INTER_LANCZOS4)
-        except Exception:
-            roi_up = roi
-            up_scale = 1.0
+        if is_dedicated_lp:
+            # Upscale ROI to at least 320px wide for YOLO to resolve small text
+            target_w = max(roi_w, 320)
+            up_scale = target_w / roi_w
+            up_h = int(roi_h * up_scale)
+            try:
+                roi_up = cv2.resize(roi, (target_w, up_h), interpolation=cv2.INTER_LANCZOS4)
+            except Exception:
+                roi_up = roi
+                up_scale = 1.0
 
-        result = _run_yolo_inference(lp_model, roi_up, conf=max(CONF_FLOOR, conf - 0.08), iou=iou)
-        cands = _extract_lp_boxes(
-            result, img_w, img_h,
-            scale_x=up_scale, scale_y=up_scale,
-            offset_x=plate_x1, offset_y=plate_y1,
-            source_tag="pass3_vehicle_cascade",
-        )
-        all_cands.extend(cands)
+            result = _run_yolo_inference(lp_model, roi_up, conf=max(CONF_FLOOR, conf - 0.08), iou=iou)
+            cands = _extract_lp_boxes(
+                result, img_w, img_h,
+                scale_x=up_scale, scale_y=up_scale,
+                offset_x=plate_x1, offset_y=plate_y1,
+                source_tag="pass3_vehicle_cascade",
+            )
+            all_cands.extend(cands)
+        else:
+            # When COCO model is active: locate plate by running OCR directly on vehicle bumper zone
+            try:
+                from app.ocr.paddle_ocr import get_ocr_engine
+                from app.validation.indian_plate import normalize_plate_text, validate_indian_plate
+                import re
+
+                plate_found_in_veh = False
+
+                # Run OCR if vehicle is large enough to contain visible text (top 15 prominent vehicles)
+                if not is_subpixel_distant and v_idx < 15:
+                    engine = get_ocr_engine()
+                    if engine is not None and roi.size > 0:
+                        rgb_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+                        ocr_out = engine.ocr(rgb_roi, cls=True)
+                        if ocr_out and ocr_out[0]:
+                            for line in ocr_out[0]:
+                                if not line:
+                                    continue
+                                pts, (txt, ocr_c) = line
+                                clean = re.sub(r"[^A-Z0-9]", "", txt.upper())
+                                if len(clean) >= 3:
+                                    xs = [p[0] for p in pts]
+                                    ys = [p[1] for p in pts]
+                                    px1 = max(0, int(plate_x1 + min(xs)))
+                                    py1 = max(0, int(plate_y1 + min(ys)))
+                                    px2 = min(img_w, int(plate_x1 + max(xs)))
+                                    py2 = min(img_h, int(plate_y1 + max(ys)))
+                                    pw = px2 - px1
+                                    ph = py2 - py1
+                                    if ph > 0 and (pw / ph) >= 0.70:
+                                        pad_x = max(6, int(pw * 0.15))
+                                        pad_y = max(4, int(ph * 0.25))
+                                        cx1 = max(0, px1 - pad_x)
+                                        cy1 = max(0, py1 - pad_y)
+                                        cx2 = min(img_w, px2 + pad_x)
+                                        cy2 = min(img_h, py2 + pad_y)
+                                        cw = cx2 - cx1
+                                        ch = cy2 - cy1
+                                        norm = normalize_plate_text(clean)
+                                        status, _ = validate_indian_plate(norm)
+                                        conf_score = min(0.99, float(ocr_c) + (0.35 if status == "VALID_FORMAT" else 0.15 if status == "POSSIBLE_FORMAT" else 0.05))
+                                        all_cands.append({
+                                            "box": (cx1, cy1, cx2, cy2),
+                                            "bbox": {"x": cx1, "y": cy1, "width": cw, "height": ch},
+                                            "conf": conf_score,
+                                            "crop": image[cy1:cy2, cx1:cx2].copy(),
+                                            "source": "pass3_vehicle_cascade_ocr",
+                                            "vehicle_bbox": {"x": vx1, "y": vy1, "width": vw, "height": vh},
+                                        })
+            except Exception as e:
+                logger.debug(f"Pass3 OCR error on vehicle ROI: {e}")
 
     logger.debug(f"Pass3 vehicle cascade: {len(all_cands)} plate candidates")
     return all_cands
@@ -617,6 +710,11 @@ def _pass5_ocr_guided(image: np.ndarray) -> List[Dict]:
                 continue
             pts, (txt, conf) = line
             clean = re.sub(r"[^A-Z0-9]", "", txt.upper())
+
+            # Skip camera HUD timestamp / header (top 15% of frame) or timestamps containing IST/CAM/UTC
+            ys = [p[1] for p in pts]
+            if min(ys) < img_h * 0.15 or any(kw in clean for kw in ("IST", "CAM", "UTC", "FPS", "REC", "BANDRA", "JUNCTION")):
+                continue
 
             # Strip common IND prefix watermark
             for b in ("IND", "INT", "1ND", "IN0", "LND", "INDIA"):
@@ -871,13 +969,14 @@ def detect_license_plates(
         all_candidates.extend(p4)
         logger.info(f"Pass4 tiled:        {len(p4)} candidates")
 
-    # ---- Pass 5: OCR-guided (run in parallel with YOLO passes) ------------
-    p5 = _pass5_ocr_guided(image)
-    all_candidates.extend(p5)
-    logger.info(f"Pass5 OCR-guided:   {len(p5)} candidates")
+    # ---- Pass 5: OCR-guided (run only if vehicle cascade found fewer than 2 candidates) ----
+    if len(all_candidates) < 2:
+        p5 = _pass5_ocr_guided(image)
+        all_candidates.extend(p5)
+        logger.info(f"Pass5 OCR-guided:   {len(p5)} candidates")
 
-    # ---- Pass 6: Heuristic (only if very few candidates so far) -----------
-    if len(all_candidates) < 3:
+    # ---- Pass 6: Heuristic (only if zero candidates found so far) -----------
+    if len(all_candidates) == 0:
         p6 = _heuristic_plate_regions(image, img_w=img_w, img_h=img_h, max_results=8)
         all_candidates.extend(p6)
         logger.info(f"Pass6 heuristic:    {len(p6)} candidates")
@@ -925,6 +1024,7 @@ def detect_license_plates(
             "bbox":                 c["bbox"],
             "detection_confidence": round(c["conf"], 4),
             "original_crop":        c["crop"],
+            "vehicle_bbox":         c.get("vehicle_bbox"),
         })
 
     logger.info(

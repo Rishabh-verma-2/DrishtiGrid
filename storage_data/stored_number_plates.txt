@@ -1,37 +1,68 @@
 # ===========================================================================
 # DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES
-# Last Synchronized: 2026-09-08T05:17:34.723Z
-# Total Unique Plates: 16
+# Last Synchronized: 2026-09-08T08:29:51.509Z
+# Total Unique Plates: 32
 # ===========================================================================
 
 # --- CLEAN STRING PLATE LIST ---
-DHR47F8792
-MH01EE238
+6019
+16A2790
+620
+29C58156
+10136303DD
+16A27809
+028
+D38056303
+800L0720
+JOL21017
+308
+29B07132
+30EDOO
+SUC63928
+30E
 MH01EE2388
-MH03BH1690
-UP12BL3465
-TN11AX6639
-29A33185
-MH01BM4155
-MH01BMA679
-AROO9C0
-MH01AT0992
-UP84AT5457
+HH03BH1690
+UP128L3465
+T11AX6639
+MB26A
+HH84F63456
+HH81DE9012
+9H14JK7890
+VHHO3HN2345
+280N
+GJ06AB1234
+911HH12BC5878
 
 # --- DETAILED REGISTRY ENTRIES ---
-[#1] DHR47F8792 | Silver / Gray | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T05:17:34.683Z | Source: Screenshot 2026-09-03 133745.png | Loc: Unknown Location
-[#2] MH01EE238 | Silver / Gray | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T05:17:22.873Z | Source: Screenshot 2026-09-03 133729.png | Loc: Unknown Location
-[#3] MH01EE2388 | White | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T05:17:15.890Z | Source: Screenshot 2026-09-03 133651.png | Loc: Unknown Location
-[#4] MH03BH1690 | White | Unknown Model | Conf: 88% | Status: NO_MATCH | Time: 2026-09-08T05:17:07.636Z | Source: Screenshot 2026-09-03 133620.png | Loc: Unknown Location
-[#5] UP12BL3465 | Black | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T05:17:04.416Z | Source: Screenshot 2026-09-03 133446.png | Loc: Unknown Location
-[#6] TN11AX6639 | Black | Unknown Model | Conf: 90% | Status: NO_MATCH | Time: 2026-09-08T05:17:01.528Z | Source: Screenshot 2026-09-03 133418.png | Loc: Unknown Location
-[#7] 29A33185 | White | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T04:57:13.818Z | Source: Screenshot 2026-09-03 133916.png | Loc: Unknown Location
-[#8] MH01BM4155 | Black | Unknown Model | Conf: 83% | Status: NO_MATCH | Time: 2026-09-08T04:57:01.100Z | Source: Screenshot 2026-09-03 133853.png | Loc: Unknown Location
-[#9] MH01BMA679 | Black | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-08T04:57:00.998Z | Source: Screenshot 2026-09-03 133853.png | Loc: Unknown Location
-[#10] AROO9C0 | Black | Unknown Model | Conf: 70% | Status: NO_MATCH | Time: 2026-09-08T04:56:50.343Z | Source: Screenshot 2026-09-03 133842.png | Loc: Unknown Location
-[#11] MH01AT0992 | Silver / Gray | Unknown Model | Conf: 94% | Status: MATCH_FOUND | Time: 2026-09-08T04:56:50.282Z | Source: Screenshot 2026-09-03 133842.png | Loc: Unknown Location
-[#12] UP84AT5457 | Silver / Gray | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-08T04:56:45.113Z | Source: Screenshot 2026-09-03 133807.png | Loc: Unknown Location
-[#13] DHR47F8792 | Silver / Gray | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T04:56:28.494Z | Source: Screenshot 2026-09-03 133745.png | Loc: Unknown Location
-[#14] MH01EE238 | Silver / Gray | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T04:56:17.749Z | Source: Screenshot 2026-09-03 133729.png | Loc: Unknown Location
-[#15] UP12BL3465 | Black | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T04:56:04.240Z | Source: Screenshot 2026-09-03 133446.png | Loc: Unknown Location
-[#16] TN11AX6639 | Black | Unknown Model | Conf: 90% | Status: NO_MATCH | Time: 2026-09-08T04:56:01.408Z | Source: Screenshot 2026-09-03 133418.png | Loc: Unknown Location
+[#1] 6019 | Dark Blue | Unknown Model | Conf: 97% | Status: NO_MATCH | Time: 2026-09-08T08:26:17.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#2] 16A2790 | Black | Unknown Model | Conf: 91% | Status: NO_MATCH | Time: 2026-09-08T08:26:16.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#3] 620 | Dark Blue | Unknown Model | Conf: 99% | Status: NO_MATCH | Time: 2026-09-08T08:26:15.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#4] 29C58156 | Black | Unknown Model | Conf: 89% | Status: NO_MATCH | Time: 2026-09-08T08:26:15.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#5] 10136303DD | White | Unknown Model | Conf: 88% | Status: NO_MATCH | Time: 2026-09-08T08:26:14.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#6] 16A27809 | Black | Unknown Model | Conf: 92% | Status: NO_MATCH | Time: 2026-09-08T08:26:14.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#7] 028 | Blue | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T08:26:12.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#8] D38056303 | White | Unknown Model | Conf: 76% | Status: NO_MATCH | Time: 2026-09-08T08:26:11.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#9] 800L0720 | Yellow | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-08T08:26:09.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#10] JOL21017 | Maroon / Dark Red | Unknown Model | Conf: 89% | Status: NO_MATCH | Time: 2026-09-08T08:26:08.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#11] 308 | White | Unknown Model | Conf: 76% | Status: NO_MATCH | Time: 2026-09-08T08:26:07.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#12] 29B07132 | Red | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T08:26:07.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#13] 30EDOO | White | Unknown Model | Conf: 89% | Status: NO_MATCH | Time: 2026-09-08T08:26:07.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#14] SUC63928 | Blue | Unknown Model | Conf: 90% | Status: NO_MATCH | Time: 2026-09-08T08:26:07.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#15] 30E | Red | Unknown Model | Conf: 99% | Status: NO_MATCH | Time: 2026-09-08T08:26:07.023Z | Source: video_vid_1788855965588.mp4 | Loc: Unknown Location
+[#16] MH01EE2388 | White | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T08:21:40.896Z | Source: Screenshot 2026-09-03 133651.png | Loc: Unknown Location
+[#17] HH03BH1690 | White | Unknown Model | Conf: 92% | Status: NO_MATCH | Time: 2026-09-08T08:21:30.054Z | Source: Screenshot 2026-09-03 133620.png | Loc: Unknown Location
+[#18] UP128L3465 | Black | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T08:21:23.253Z | Source: Screenshot 2026-09-03 133446.png | Loc: Unknown Location
+[#19] T11AX6639 | Black | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T08:21:17.983Z | Source: Screenshot 2026-09-03 133418.png | Loc: Unknown Location
+[#20] MB26A | Black | Unknown Model | Conf: 93% | Status: NO_MATCH | Time: 2026-09-08T08:02:41.644Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#21] HH84F63456 | Dark Blue | Unknown Model | Conf: 99% | Status: NO_MATCH | Time: 2026-09-08T08:02:41.545Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#22] HH81DE9012 | White | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T08:02:41.452Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#23] 9H14JK7890 | Black | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T08:02:41.359Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#24] VHHO3HN2345 | Black | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T08:02:41.267Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#25] 280N | Black | Unknown Model | Conf: 85% | Status: NO_MATCH | Time: 2026-09-08T08:02:21.587Z | Source: Gemini_Generated_Image_snc0w2snc0w2snc0.png | Loc: Unknown Location
+[#26] GJ06AB1234 | Dark Blue | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T08:02:21.410Z | Source: Gemini_Generated_Image_snc0w2snc0w2snc0.png | Loc: Unknown Location
+[#27] MB26A | Black | Unknown Model | Conf: 93% | Status: NO_MATCH | Time: 2026-09-08T07:47:12.371Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#28] HH84F63456 | Dark Blue | Unknown Model | Conf: 99% | Status: NO_MATCH | Time: 2026-09-08T07:47:12.267Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#29] HH81DE9012 | White | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T07:47:12.149Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#30] 911HH12BC5878 | Black | Unknown Model | Conf: 91% | Status: NO_MATCH | Time: 2026-09-08T07:47:12.046Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#31] 9H14JK7890 | Black | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-08T07:47:11.944Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location
+[#32] VHHO3HN2345 | Black | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T07:47:11.839Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k (1).png | Loc: Unknown Location

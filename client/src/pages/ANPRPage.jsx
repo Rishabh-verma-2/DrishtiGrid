@@ -590,7 +590,7 @@ export default function ANPRPage() {
                     {batchResults.isProcessing ? (
                       `Processed ${batchResults.summary?.images_processed || 0} of ${batchResults.summary?.images_submitted || 0} frames · elapsed ${batchResults.summary?.total_duration_ms || 0} ms`
                     ) : (
-                      `Total duration: ${batchResults.summary?.total_duration_ms || 0} ms · Pipeline: YOLOv8 + Zero-DCE + PaddleOCR`
+                      `Total duration: ${batchResults.summary?.total_duration_ms || 0} ms · Pipeline: YOLO11 + Zero-DCE + PaddleOCR`
                     )}
                   </p>
                 </div>
@@ -660,15 +660,24 @@ export default function ANPRPage() {
                         </span>
 
                         {/* Permanent Storage Confirmation Badge */}
-                        <span
-                          className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg border ${
-                            isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                          }`}
-                          title="Analyzed plate details and timestamp stored to MongoDB and local registry"
-                        >
-                          <Database className="w-3 h-3 text-emerald-500" />
-                          <span>Stored to Registry</span>
-                        </span>
+                        {imgRes.status === 'SUCCESS' && (
+                          <span
+                            className={`text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg border ${
+                              isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            }`}
+                            title="Analyzed plate details and timestamp stored to MongoDB and local registry"
+                          >
+                            <Database className="w-3 h-3 text-emerald-500" />
+                            <span>Stored to Registry</span>
+                          </span>
+                        )}
+
+                        {imgRes.status === 'FAILED' && (
+                          <span className="text-[10px] font-bold flex items-center gap-1 px-2 py-0.5 rounded-lg border bg-red-500/15 text-red-400 border-red-500/30">
+                            <AlertTriangle className="w-3 h-3 text-red-400" />
+                            <span>Analysis Error: {imgRes.error || 'Server error or timeout'}</span>
+                          </span>
+                        )}
 
                         {imgRes.simulated && (
                           <span className={`text-[9px] font-bold px-2 py-0.5 rounded border ${
@@ -680,7 +689,11 @@ export default function ANPRPage() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {imgRes.plates_detected > 0 ? (
+                        {imgRes.status === 'FAILED' ? (
+                          <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg border bg-red-500/20 text-red-400 border-red-500/40">
+                            Failed
+                          </span>
+                        ) : imgRes.plates_detected > 0 ? (
                           <span className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-lg flex items-center gap-1 border ${
                             isLight
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-2xs'
@@ -1394,7 +1407,7 @@ export default function ANPRPage() {
       {/* ─── High-Resolution Tactical Image Inspection Modal ─── */}
       {inspectModalImage && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
           onClick={() => setInspectModalImage(null)}
         >
           <div

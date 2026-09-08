@@ -22,12 +22,16 @@ TEMP_DIR.mkdir(parents=True, exist_ok=True)
 # Model Paths
 # ---------------------------------------------------------------------------
 MODEL_CONFIG: Dict[str, Any] = {
-    # ---- Detection ----
-    "YOLO_MODEL_PATH": str(WEIGHTS_DIR / "yolov8n.pt"),
-    # Dedicated license-plate YOLOv8 weights (preferred if downloaded)
+    # ---- Detection (YOLO11) ----
+    "YOLO_MODEL_PATH": str(
+        WEIGHTS_DIR / "yolo11s.pt" if (WEIGHTS_DIR / "yolo11s.pt").exists()
+        else WEIGHTS_DIR / "yolo11n.pt" if (WEIGHTS_DIR / "yolo11n.pt").exists()
+        else WEIGHTS_DIR / "yolov8n.pt"
+    ),
+    # Dedicated license-plate YOLO weights (preferred if downloaded)
     "YOLO_LP_MODEL_PATH": str(WEIGHTS_DIR / "license_plate_detector.pt"),
     # Which YOLO model to prefer: "lp" = dedicated LP model, "coco" = generic
-    "YOLO_MODEL_PREFERENCE": os.getenv("YOLO_MODEL_PREFERENCE", "lp"),
+    "YOLO_MODEL_PREFERENCE": os.getenv("YOLO_MODEL_PREFERENCE", "coco"),
 
     # ---- Zero-DCE ----
     "ZERO_DCE_WEIGHTS_PATH": str(WEIGHTS_DIR / "zero_dce.pth"),

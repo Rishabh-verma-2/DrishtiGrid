@@ -268,7 +268,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
       <div className="bg-[#0f1422] border border-white/10 rounded-2xl w-full max-w-3xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.8)] flex flex-col max-h-[90vh]">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between bg-[#141929]">

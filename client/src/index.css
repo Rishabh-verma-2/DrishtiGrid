@@ -1249,4 +1249,13 @@ body {
   text-transform: uppercase;
 }
 
+/* ─── Global Modal Stacking Safeguard ───────────────────────────── */
+/* Ensures all modal backdrops and dialogs are always on top of headers, sidebars, and navbars */
+div[class*="fixed"][class*="inset-0"][class*="bg-black"],
+div[class*="fixed"][class*="inset-0"]:has(> div[class*="rounded"]),
+div[class*="fixed"][class*="inset-0"]:has([role="dialog"]) {
+  z-index: 9999 !important;
+}
+
+
 

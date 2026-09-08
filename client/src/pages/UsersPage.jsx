@@ -319,7 +319,7 @@ export default function UsersPage() {
 
       {/* Create / Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className={`max-w-lg w-full p-6 rounded-3xl border shadow-2xl space-y-4 ${
             isLight ? 'bg-white border-slate-200' : 'bg-[#0e1322] border-white/10 text-slate-100'
           }`}>

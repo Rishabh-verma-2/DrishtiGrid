@@ -225,7 +225,7 @@ export default function DashboardLayout() {
     <div className={`flex flex-col h-screen ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'} overflow-hidden`}>
 
       {/* 🇮🇳 National Tricolor Accent Bar (Stretches completely across the top) */}
-      <div className="gov-tricolor-strip shrink-0 w-full z-50 shadow-sm" />
+      <div className="gov-tricolor-strip shrink-0 w-full z-30 shadow-sm" />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
@@ -273,7 +273,7 @@ export default function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Top Header */}
-          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors relative z-[2100] ${
+          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors relative z-30 ${
             isLight
               ? 'bg-white border-slate-200 shadow-sm'
               : 'bg-[#0a0d14]/95 border-white/5 backdrop-blur-sm'

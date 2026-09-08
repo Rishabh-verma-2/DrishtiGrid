@@ -67,10 +67,10 @@ const analyzeFrame = [
         grid_cols: gridColsStr = '4',
       } = req.body;
 
-      // Ultra-sensitive threshold so every detected individual is captured
+      // Enforce minimum 15% confidence threshold as requested
       const confThreshold = confThresholdStr !== undefined && confThresholdStr !== ''
-        ? parseFloat(confThresholdStr)
-        : 0.03;
+        ? Math.max(0.15, parseFloat(confThresholdStr))
+        : 0.15;
       const gridRows = parseInt(gridRowsStr, 10) || 3;
       const gridCols = parseInt(gridColsStr, 10) || 4;
 

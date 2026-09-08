@@ -31,7 +31,7 @@ export default function CrowdDetectionPage() {
     mutationFn: async ({ file }) => {
       const [rowsStr, colsStr] = gridConfig.split('x');
       const res = await crowdAPI.analyzeFrame(file, 'image-upload', {
-        confThreshold: 0.03, // Ultra-sensitive: include every person regardless of confidence
+        confThreshold: 0.15, // 15% confidence threshold: only count people with confidence > 15%
         gridRows: parseInt(rowsStr, 10) || 3,
         gridCols: parseInt(colsStr, 10) || 4,
       });

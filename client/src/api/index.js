@@ -76,10 +76,12 @@ export const anprAPI = {
   analyze: (formData) =>
     apiClient.post('/anpr/analyze', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 180000,
     }),
   uploadVideo: (formData) =>
     apiClient.post('/anpr/video/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
     }),
   getVideoJobStatus: (jobId) => apiClient.get(`/anpr/video/job/${jobId}`),
   getVideoDetections: (videoId) => apiClient.get(`/anpr/video/detections/${videoId}`),

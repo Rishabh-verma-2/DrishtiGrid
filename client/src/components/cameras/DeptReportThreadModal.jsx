@@ -111,7 +111,7 @@ export default function DeptReportThreadModal({ isOpen, onClose, reportId }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
 

@@ -59,7 +59,7 @@ const ALERTABLE_LEVELS = new Set(['HIGH', 'CRITICAL']);
 async function callCrowdAIService(
   imageBuffer,
   cameraId = 'default',
-  confThreshold = 0.03,
+  confThreshold = 0.15,
   gridRows = 3,
   gridCols = 4
 ) {

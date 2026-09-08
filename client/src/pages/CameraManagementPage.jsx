@@ -499,7 +499,7 @@ export default function CameraManagementPage() {
 
       {/* Delete Confirmation Modal */}
       {deletingCamera && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease]">
           <div className="bg-[#141929] border border-white/10 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
             <div className="flex items-center gap-3 text-rose-400">
               <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20">
