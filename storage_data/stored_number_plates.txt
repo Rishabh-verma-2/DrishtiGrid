@@ -1,5 +1,37 @@
 # ===========================================================================
 # DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES
-# Last Synchronized: 2026-09-05T07:41:08.330Z
-# Total Unique Plates: 0
+# Last Synchronized: 2026-09-08T05:17:34.723Z
+# Total Unique Plates: 16
 # ===========================================================================
+
+# --- CLEAN STRING PLATE LIST ---
+DHR47F8792
+MH01EE238
+MH01EE2388
+MH03BH1690
+UP12BL3465
+TN11AX6639
+29A33185
+MH01BM4155
+MH01BMA679
+AROO9C0
+MH01AT0992
+UP84AT5457
+
+# --- DETAILED REGISTRY ENTRIES ---
+[#1] DHR47F8792 | Silver / Gray | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T05:17:34.683Z | Source: Screenshot 2026-09-03 133745.png | Loc: Unknown Location
+[#2] MH01EE238 | Silver / Gray | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T05:17:22.873Z | Source: Screenshot 2026-09-03 133729.png | Loc: Unknown Location
+[#3] MH01EE2388 | White | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T05:17:15.890Z | Source: Screenshot 2026-09-03 133651.png | Loc: Unknown Location
+[#4] MH03BH1690 | White | Unknown Model | Conf: 88% | Status: NO_MATCH | Time: 2026-09-08T05:17:07.636Z | Source: Screenshot 2026-09-03 133620.png | Loc: Unknown Location
+[#5] UP12BL3465 | Black | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T05:17:04.416Z | Source: Screenshot 2026-09-03 133446.png | Loc: Unknown Location
+[#6] TN11AX6639 | Black | Unknown Model | Conf: 90% | Status: NO_MATCH | Time: 2026-09-08T05:17:01.528Z | Source: Screenshot 2026-09-03 133418.png | Loc: Unknown Location
+[#7] 29A33185 | White | Unknown Model | Conf: 98% | Status: NO_MATCH | Time: 2026-09-08T04:57:13.818Z | Source: Screenshot 2026-09-03 133916.png | Loc: Unknown Location
+[#8] MH01BM4155 | Black | Unknown Model | Conf: 83% | Status: NO_MATCH | Time: 2026-09-08T04:57:01.100Z | Source: Screenshot 2026-09-03 133853.png | Loc: Unknown Location
+[#9] MH01BMA679 | Black | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-08T04:57:00.998Z | Source: Screenshot 2026-09-03 133853.png | Loc: Unknown Location
+[#10] AROO9C0 | Black | Unknown Model | Conf: 70% | Status: NO_MATCH | Time: 2026-09-08T04:56:50.343Z | Source: Screenshot 2026-09-03 133842.png | Loc: Unknown Location
+[#11] MH01AT0992 | Silver / Gray | Unknown Model | Conf: 94% | Status: MATCH_FOUND | Time: 2026-09-08T04:56:50.282Z | Source: Screenshot 2026-09-03 133842.png | Loc: Unknown Location
+[#12] UP84AT5457 | Silver / Gray | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-08T04:56:45.113Z | Source: Screenshot 2026-09-03 133807.png | Loc: Unknown Location
+[#13] DHR47F8792 | Silver / Gray | Unknown Model | Conf: 87% | Status: NO_MATCH | Time: 2026-09-08T04:56:28.494Z | Source: Screenshot 2026-09-03 133745.png | Loc: Unknown Location
+[#14] MH01EE238 | Silver / Gray | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T04:56:17.749Z | Source: Screenshot 2026-09-03 133729.png | Loc: Unknown Location
+[#15] UP12BL3465 | Black | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-08T04:56:04.240Z | Source: Screenshot 2026-09-03 133446.png | Loc: Unknown Location
+[#16] TN11AX6639 | Black | Unknown Model | Conf: 90% | Status: NO_MATCH | Time: 2026-09-08T04:56:01.408Z | Source: Screenshot 2026-09-03 133418.png | Loc: Unknown Location

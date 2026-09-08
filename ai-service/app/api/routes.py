@@ -24,6 +24,22 @@ ALLOWED_TYPES = MODEL_CONFIG["ALLOWED_MIME_TYPES"]
 ALLOWED_EXT = MODEL_CONFIG["ALLOWED_EXTENSIONS"]
 
 
+def to_json_compatible(obj):
+    if isinstance(obj, dict):
+        return {str(k): to_json_compatible(v) for k, v in obj.items()}
+    elif isinstance(obj, (list, tuple, set)):
+        return [to_json_compatible(item) for item in obj]
+    elif isinstance(obj, (np.integer, np.int32, np.int64, np.int16, np.int8)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float32, np.float64, np.float16)):
+        return float(obj)
+    elif isinstance(obj, (np.bool_, bool)):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return to_json_compatible(obj.tolist())
+    return obj
+
+
 @router.get("/health")
 async def health_check():
     """Simple health/liveness endpoint."""
@@ -124,14 +140,14 @@ async def process_image(image: UploadFile = File(...)):
         "timings": pipeline_result.get("timings", {}),
     }
 
-    return JSONResponse(content=response)
+    return JSONResponse(content=to_json_compatible(response))
 
 
 @router.post("/crowd")
 async def crowd_detection(
     image: UploadFile = File(...),
     camera_id: str = Form(default="default"),
-    conf_threshold: float = Form(default=0.30),
+    conf_threshold: float = Form(default=0.03),
     grid_rows: int = Form(default=3),
     grid_cols: int = Form(default=4),
 ):
@@ -163,10 +179,10 @@ async def crowd_detection(
     filename = (image.filename or "").lower()
     import os
     _, ext = os.path.splitext(filename)
-    if ext not in ALLOWED_EXT and content_type not in ALLOWED_TYPES:
+    if ext not in ALLOWED_EXT and content_type not in ALLOWED_TYPES and not content_type.startswith("image/"):
         raise HTTPException(
             status_code=415,
-            detail=f"Unsupported file type '{ext or content_type}'. Only JPG/JPEG/PNG accepted.",
+            detail=f"Unsupported file type '{ext or content_type}'. Accepted formats: JPG, JPEG, PNG, WEBP, BMP.",
         )
 
     # ---- Read bytes ----
@@ -184,7 +200,13 @@ async def crowd_detection(
     arr = np.frombuffer(image_bytes, dtype=np.uint8)
     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if frame is None:
-        raise HTTPException(status_code=422, detail="Could not decode image.")
+        try:
+            from PIL import Image
+            import io
+            pil_img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            frame = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
+        except Exception:
+            raise HTTPException(status_code=422, detail="Could not decode image.")
 
     # ---- Run crowd detection ----
     logger.info(
@@ -197,7 +219,7 @@ async def crowd_detection(
         crowd_result = detect_crowd(
             image=frame,
             camera_id=camera_id,
-            conf_threshold=max(0.15, min(0.95, conf_threshold)),
+            conf_threshold=max(0.01, min(0.95, conf_threshold)),
             grid_rows=max(1, min(8, grid_rows)),
             grid_cols=max(1, min(8, grid_cols)),
         )
@@ -208,7 +230,7 @@ async def crowd_detection(
     if not crowd_result.get("success") and crowd_result.get("error"):
         raise HTTPException(status_code=500, detail=crowd_result["error"])
 
-    return JSONResponse(content=crowd_result)
+    return JSONResponse(content=to_json_compatible(crowd_result))
 
 
 @router.post("/crowd/reset/{camera_id}")

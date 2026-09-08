@@ -2,6 +2,8 @@ const PlateRecord = require('../models/PlateRecord');
 const PlateDetection = require('../models/PlateDetection');
 const StoredPlate = require('../models/StoredPlate');
 const Alert = require('../models/Alert');
+const Camera = require('../models/Camera');
+const mongoose = require('mongoose');
 const fs = require('fs');
 const { randomUUID: uuidv4 } = require('crypto');
 const logger = require('../utils/logger');
@@ -115,7 +117,17 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
 
   let cameraDoc = null;
   if (cameraId) {
-    cameraDoc = await Camera.findById(cameraId).catch(() => null);
+    if (mongoose.Types.ObjectId.isValid(cameraId)) {
+      cameraDoc = await Camera.findById(cameraId).catch(() => null);
+    }
+    if (!cameraDoc) {
+      cameraDoc = await Camera.findOne({
+        $or: [
+          { cameraId: cameraId },
+          { cameraId: new RegExp(`^${cameraId}$`, 'i') },
+        ],
+      }).catch(() => null);
+    }
   }
   if (!cameraDoc) {
     cameraDoc = await Camera.findOne({ status: { $in: ['online', 'active'] } }).catch(() => null);
@@ -123,6 +135,10 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
   if (!cameraDoc) {
     cameraDoc = await Camera.findOne().catch(() => null);
   }
+
+  const cameraLocation = cameraDoc?.location?.coordinates?.length === 2
+    ? cameraDoc.location
+    : { type: 'Point', coordinates: [72.5714, 23.0225] };
 
   for (const plate of plates) {
     const matchResult = matchPlateAgainstRecords(plate.raw_ocr || plate.normalized_plate, activeRecords);
@@ -149,8 +165,8 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
           severity: alertSeverity,
           title: `ANPR Hit: ${rec.category} Vehicle ${rec.plate_number}`,
           description: `Vehicle with license plate "${rec.plate_number}" matched active watchlist [${rec.category}]. Color: ${plate.car_color || 'Unknown'}. Detection confidence: ${((plate.overall_confidence || 0.9) * 100).toFixed(1)}%.`,
-          location: cameraDoc?.location || { type: 'Point', coordinates: [72.5714, 23.0225] },
-          district: cameraDoc?.district || 'Ahmedabad',
+          location: cameraLocation,
+          district: cameraDoc?.district || cameraDoc?.address?.district || 'Ahmedabad',
           address: cameraDoc?.address || { district: 'Ahmedabad', city: 'Ahmedabad', area: 'Command Grid' },
           snapshot: cropDataUrl || '',
           metadata: {
@@ -242,9 +258,10 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
         match_status: matchResult.matchStatus,
         matched_record: matchResult.matchedRecord || null,
         cropped_image_url: cropDataUrl,
+        location: cameraLocation,
         location_address: cameraDoc?.address?.district || 'Ahmedabad Command Grid',
-        latitude: cameraDoc?.location?.coordinates?.[1] || 23.0225,
-        longitude: cameraDoc?.location?.coordinates?.[0] || 72.5714,
+        latitude: cameraLocation.coordinates[1],
+        longitude: cameraLocation.coordinates[0],
       });
     } catch (detErr) {
       // Non-fatal

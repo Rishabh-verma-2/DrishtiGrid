@@ -100,7 +100,7 @@ export default function CrowdAlertsTable({ isLight = false, onSelectCamera = nul
               {alerts.map((alert) => {
                 const cam = alert.camera || {};
                 const camId = alert.cameraId || cam.cameraId || 'default';
-                const isCritical = alert.severity === 'CRITICAL';
+                const isCritical = (alert.severity || '').toUpperCase() === 'CRITICAL';
 
                 return (
                   <tr
@@ -115,7 +115,7 @@ export default function CrowdAlertsTable({ isLight = false, onSelectCamera = nul
                           ? isLight ? 'bg-red-50 text-red-700 border-red-200 animate-pulse' : 'bg-red-500/20 text-red-300 border-red-500/40 animate-pulse'
                           : isLight ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-orange-500/20 text-orange-300 border-orange-500/30'
                       }`}>
-                        {alert.severity}
+                        {(alert.severity || 'MEDIUM').toUpperCase()}
                       </span>
                     </td>
 

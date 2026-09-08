@@ -205,10 +205,12 @@ body {
 .theme-light [class*="bg-[#0e1322]"],
 .theme-light [class*="bg-[#0b0f19]"],
 .theme-light [class*="bg-[#080c16]"],
+.theme-light [class*="bg-[#111625]"],
 .theme-light .bg-\[\#141929\],
 .theme-light .bg-\[\#0e1220\],
 .theme-light .bg-\[\#0f1422\],
-.theme-light .bg-\[\#1e2740\] {
+.theme-light .bg-\[\#1e2740\],
+.theme-light .bg-\[\#111625\] {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   color: #0f172a !important;
@@ -433,6 +435,11 @@ body {
   color: #047857 !important;
 }
 
+.theme-light .text-purple-300,
+.theme-light .text-purple-400 {
+  color: #7e22ce !important;
+}
+
 /* Inputs & Form Controls in Light Mode */
 .theme-light input,
 .theme-light select,
@@ -441,6 +448,11 @@ body {
   border: 1px solid #cbd5e1 !important;
   color: #0f172a !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.theme-light select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 .theme-light input:focus,

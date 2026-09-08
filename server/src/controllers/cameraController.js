@@ -57,21 +57,28 @@ const getCameras = async (req, res) => {
       };
     }
 
+    const parsedLimit = (limit === 'all' || limit === '0' || limit === 0 || limit === -1 || limit === '-1') ? 0 : parseInt(limit, 10);
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+
     const total = await Camera.countDocuments(filter);
-    const cameras = await Camera.find(filter)
+    let cameraQuery = Camera.find(filter)
       .populate('assignedTo', 'name email')
-      .skip((page - 1) * limit)
-      .limit(parseInt(limit))
       .sort({ createdAt: -1 });
+
+    if (parsedLimit > 0) {
+      cameraQuery = cameraQuery.skip((parsedPage - 1) * parsedLimit).limit(parsedLimit);
+    }
+
+    const cameras = await cameraQuery;
 
     res.status(200).json({
       success: true,
       data: cameras,
       pagination: {
         total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / limit),
+        page: parsedPage,
+        limit: parsedLimit > 0 ? parsedLimit : total,
+        pages: parsedLimit > 0 ? Math.ceil(total / parsedLimit) : 1,
       },
     });
   } catch (error) {

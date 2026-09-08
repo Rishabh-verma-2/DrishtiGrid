@@ -125,7 +125,7 @@ export default function GISMapPage() {
   // Fetch cameras
   const { data: cameras = [], isLoading } = useQuery({
     queryKey: ['cameras', 'gis-all'],
-    queryFn: () => cameraAPI.getAll({ limit: 1500 }).then((r) => r.data.data || []),
+    queryFn: () => cameraAPI.getAll({ limit: 0 }).then((r) => r.data.data || []),
     staleTime: 60000,
   });
 

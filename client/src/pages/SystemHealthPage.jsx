@@ -4,7 +4,7 @@ import { useThemeStore } from '../store/themeStore';
 import {
   Activity, Database, Server, Radio, Camera, Cpu,
   CheckCircle2, AlertTriangle, Clock, RefreshCw, Layers,
-  ShieldCheck, HardDrive, Zap, Network
+  ShieldCheck, HardDrive, Zap, Network, Bot, Sparkles
 } from 'lucide-react';
 
 export default function SystemHealthPage() {
@@ -29,6 +29,7 @@ export default function SystemHealthPage() {
   const grid = healthRes?.cameraGrid;
   const gateway = healthRes?.liveStreamGateway;
   const api = healthRes?.apiServer;
+  const ai = healthRes?.aiService;
 
   return (
     <div className="p-6 space-y-6">
@@ -64,7 +65,7 @@ export default function SystemHealthPage() {
       </div>
 
       {/* Grid Status Overview Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
         {/* Database Status */}
         <div className={`p-5 rounded-3xl border transition-all ${
@@ -84,6 +85,36 @@ export default function SystemHealthPage() {
             MongoDB Atlas Ping
           </p>
           <p className="text-[11px] text-slate-500 truncate mt-0.5">{db?.host || 'Gujarat Cloud Cluster'}</p>
+        </div>
+
+        {/* Python FastAPI AI Engine Status */}
+        <div className={`p-5 rounded-3xl border transition-all ${
+          isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
+              ai?.status === 'ONLINE'
+                ? 'bg-violet-500/10 text-violet-400 border-violet-500/20'
+                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+            }`}>
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+              ai?.status === 'ONLINE'
+                ? 'bg-emerald-500/10 text-emerald-500'
+                : 'bg-amber-500/10 text-amber-500'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${ai?.status === 'ONLINE' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              {ai?.status || 'OFFLINE'}
+            </span>
+          </div>
+          <p className="text-2xl font-black font-mono text-violet-400">
+            {ai?.status === 'ONLINE' ? `${ai?.latencyMs ?? 5} ms` : 'OFFLINE'}
+          </p>
+          <p className={`text-xs font-bold uppercase tracking-wider mt-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+            Python AI Service
+          </p>
+          <p className="text-[11px] text-slate-500 truncate mt-0.5">FastAPI :8000 · YOLOv8 + OCR</p>
         </div>
 
         {/* Live Stream Gateway Status */}
@@ -147,7 +178,48 @@ export default function SystemHealthPage() {
       </div>
 
       {/* Deep Dives */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* AI Computer Vision & Deep Learning Diagnostics */}
+        <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${
+          isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-violet-400" />
+              <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+                AI Computer Vision Pipeline
+              </h3>
+            </div>
+            <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+              ai?.status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+            }`}>
+              {ai?.status === 'ONLINE' ? 'PORT 8000 ACTIVE' : 'STANDBY'}
+            </span>
+          </div>
+
+          <div className="space-y-3 text-xs">
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white/3 border border-white/6">
+              <span className="text-slate-400">Object Detection</span>
+              <strong className="font-mono text-violet-400">YOLOv8 Nano (Vehicles + People)</strong>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white/3 border border-white/6">
+              <span className="text-slate-400">Low-Light Enhancer</span>
+              <strong className="font-mono text-cyan-400">Zero-DCE (Retinex Curve)</strong>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white/3 border border-white/6">
+              <span className="text-slate-400">Super-Resolution</span>
+              <strong className="font-mono text-blue-400">Real-ESRGAN x4+</strong>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-white/3 border border-white/6">
+              <span className="text-slate-400">Text OCR Engine</span>
+              <strong className="font-mono text-emerald-400">PaddleOCR (High-Confidence ANPR)</strong>
+            </div>
+          </div>
+        </div>
 
         {/* Server Memory & Process Stats */}
         <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${

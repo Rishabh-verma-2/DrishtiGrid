@@ -218,7 +218,7 @@ export default function FootageRequestsPage() {
 
   const { data: camerasList = [] } = useQuery({
     queryKey: ['cameras-short-list'],
-    queryFn: () => cameraAPI.getAll({ limit: 1000 }).then((r) => r.data.data || []),
+    queryFn: () => cameraAPI.getAll({ limit: 0 }).then((r) => r.data.data || []),
     staleTime: 120000,
   });
 

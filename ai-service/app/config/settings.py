@@ -58,8 +58,8 @@ MODEL_CONFIG: Dict[str, Any] = {
 
     # ---- Image Constraints ----
     "MAX_IMAGE_SIZE_BYTES": int(os.getenv("MAX_IMAGE_SIZE_MB", "20")) * 1024 * 1024,
-    "ALLOWED_MIME_TYPES": {"image/jpeg", "image/jpg", "image/png"},
-    "ALLOWED_EXTENSIONS": {".jpg", ".jpeg", ".png"},
+    "ALLOWED_MIME_TYPES": {"image/jpeg", "image/jpg", "image/png", "image/webp", "image/bmp", "image/tiff"},
+    "ALLOWED_EXTENSIONS": {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tiff"},
 
     # ---- CLAHE ----
     "CLAHE_CLIP_LIMIT": float(os.getenv("CLAHE_CLIP", "2.0")),

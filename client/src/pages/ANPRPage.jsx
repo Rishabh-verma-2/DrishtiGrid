@@ -59,6 +59,7 @@ export default function ANPRPage() {
   const [editingRecord, setEditingRecord] = useState(null);
 
   const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const [clearingIncidents, setClearingIncidents] = useState(false);
 
@@ -450,11 +451,21 @@ export default function ANPRPage() {
           
           {/* Multi-image Upload Zone */}
           <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
-              isLight
-                ? 'bg-white border-slate-300 hover:border-blue-500 shadow-sm'
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              setIsDragging(false);
+              handleDrop(e);
+            }}
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all select-none ${
+              isDragging
+                ? 'border-blue-500 bg-blue-500/10 scale-[1.005]'
+                : isLight
+                ? 'bg-white border-slate-300 hover:border-blue-500 hover:bg-blue-50/25 shadow-sm'
                 : 'bg-[#121626] border-white/15 hover:border-blue-500/50 hover:bg-[#151b30]'
             }`}
           >
@@ -467,20 +478,16 @@ export default function ANPRPage() {
               className="hidden"
             />
 
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <div className="flex flex-col items-center justify-center space-y-3 pointer-events-none">
+              <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
                 <UploadCloud className="w-7 h-7" />
               </div>
               <div>
                 <p className={`text-sm font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                   Drag &amp; drop vehicle images here, or{' '}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-blue-500 hover:underline font-extrabold"
-                  >
+                  <span className="text-blue-500 underline font-extrabold">
                     browse files
-                  </button>
+                  </span>
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
                   Supports multiple CCTV snapshots, street camera frames (JPG, PNG, WebP · Max 10 images)
@@ -490,7 +497,7 @@ export default function ANPRPage() {
 
             {/* Thumbnail Strip */}
             {selectedFiles.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-white/10">
+              <div className="mt-6 pt-6 border-t border-white/10" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-bold text-slate-300">
                     Selected Images ({selectedFiles.length}/10)

@@ -19,6 +19,7 @@ const plateStorageService = require("./plateStorageService");
 const geocodingService = require("./geocodingService");
 const PlateDetection = require("../models/PlateDetection");
 const PlateRecord = require("../models/PlateRecord");
+const { randomUUID: uuidv4 } = require("crypto");
 const Alert = require("../models/Alert");
 const {
   normalizePlateNumber,
@@ -388,6 +389,7 @@ async function runVideoProcessingJob({
         job.matchedCount = (job.matchedCount || 0) + 1;
         try {
           const alertDoc = await Alert.create({
+            alertId: `ALT-VID-${uuidv4().split('-')[0].toUpperCase()}`,
             type: "anpr_match",
             title: `ANPR Hit: ${track.plate_number} (${track.matched_record.category})`,
             description: `Vehicle seen in ${track.occurrence_count} frame(s) (${track.first_seen_second}s-${track.last_seen_second}s). Color: ${consensusColor || "Unknown"}. ${track.matched_record.notes || ""}`,

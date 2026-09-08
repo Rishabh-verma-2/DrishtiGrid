@@ -289,14 +289,14 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-white/8 bg-[#111625] px-6 gap-2">
+        <div className="flex border-b border-slate-200 dark:border-white/8 bg-slate-50 dark:bg-[#111625] px-6 gap-2">
           {[
             { id: 'basic', label: '1. Identification & Type', icon: Camera },
             { id: 'location', label: '2. Location & GIS Coordinates', icon: MapPin },
@@ -310,10 +310,10 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 px-3 text-xs font-semibold border-b-2 transition-all ${
+                className={`flex items-center gap-2 py-3 px-3.5 text-xs font-bold border-b-2 transition-all cursor-pointer ${
                   active
-                    ? 'border-blue-500 text-blue-400 bg-blue-500/5'
-                    : 'border-transparent text-slate-400 hover:text-slate-200'
+                    ? 'border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400 bg-blue-50/70 dark:bg-blue-500/10'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100/60 dark:hover:bg-white/5'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -481,15 +481,15 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
               </div>
 
               {/* Coordinates Section */}
-              <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 space-y-3">
+              <div className="p-4 rounded-xl bg-blue-50/60 dark:bg-blue-500/5 border border-blue-200 dark:border-blue-500/20 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
                     <Compass className="w-3.5 h-3.5" /> GIS Coordinates (Leaflet & MongoDB 2dsphere)
                   </span>
                   <button
                     type="button"
                     onClick={autofillCoordinates}
-                    className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 underline"
+                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                   >
                     Center on {formData.district}
                   </button>
@@ -639,7 +639,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
           {/* TAB 4: AI & ALERTS */}
           {activeTab === 'ai' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/20 text-xs text-purple-300">
+              <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-500/5 border border-purple-200 dark:border-purple-500/20 text-xs font-medium text-purple-700 dark:text-purple-300">
                 Configure automated edge analytics, computer vision triggers, and automated incident alert generation for this camera.
               </div>
 
@@ -653,17 +653,17 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                 ].map((feature) => (
                   <label
                     key={feature.key}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-[#141929] border border-white/5 hover:border-white/10 cursor-pointer transition-colors"
+                    className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 dark:bg-[#141929] border border-slate-200 dark:border-white/5 hover:border-blue-400 dark:hover:border-white/15 cursor-pointer transition-all"
                   >
                     <div>
-                      <p className="text-xs font-semibold text-slate-200">{feature.label}</p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">{feature.desc}</p>
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{feature.label}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{feature.desc}</p>
                     </div>
                     <input
                       type="checkbox"
                       checked={formData[feature.key]}
                       onChange={(e) => setFormData({ ...formData, [feature.key]: e.target.checked })}
-                      className="w-4 h-4 rounded border-white/20 bg-[#1e2538] text-blue-600 focus:ring-blue-500"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-white/20 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </label>
                 ))}
@@ -672,7 +672,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
           )}
 
           {/* Form Footer */}
-          <div className="pt-4 border-t border-white/8 flex items-center justify-between">
+          <div className="pt-4 border-t border-slate-200 dark:border-white/8 flex items-center justify-between">
             <div className="flex gap-2">
               {activeTab !== 'basic' && (
                 <button
@@ -682,7 +682,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                     const idx = tabs.indexOf(activeTab);
                     if (idx > 0) setActiveTab(tabs[idx - 1]);
                   }}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 transition-all cursor-pointer"
                 >
                   Previous Step
                 </button>
@@ -695,7 +695,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                     const idx = tabs.indexOf(activeTab);
                     if (idx < tabs.length - 1) setActiveTab(tabs[idx + 1]);
                   }}
-                  className="px-3.5 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-white/10 hover:bg-white/15 transition-colors"
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 border border-slate-200 dark:border-white/5 transition-all cursor-pointer"
                 >
                   Next Step
                 </button>
@@ -707,14 +707,14 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-white transition-colors"
+                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-bold px-5 py-2.5 rounded-xl transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)] cursor-pointer"
               >
                 {isSaving ? (
                   <>

@@ -39,6 +39,7 @@ def _get_vehicle_model() -> Optional[YOLO]:
         try:
             candidate_paths = [
                 Path(__file__).resolve().parent.parent.parent / "yolov8n.pt",
+                Path(__file__).resolve().parent.parent.parent / "model_weights" / "yolov8n.pt",
                 Path(__file__).resolve().parent.parent / "model_weights" / "yolov8n.pt",
                 Path("yolov8n.pt"),
             ]

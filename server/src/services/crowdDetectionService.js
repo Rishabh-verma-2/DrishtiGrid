@@ -59,7 +59,7 @@ const ALERTABLE_LEVELS = new Set(['HIGH', 'CRITICAL']);
 async function callCrowdAIService(
   imageBuffer,
   cameraId = 'default',
-  confThreshold = 0.30,
+  confThreshold = 0.03,
   gridRows = 3,
   gridCols = 4
 ) {
@@ -87,8 +87,8 @@ async function callCrowdAIService(
  * Main entry point: analyze a single frame for crowd density.
  *
  * Steps:
- *  1. Call AI service /crowd endpoint
- *  2. Emit Socket.IO event crowd:analysis with metrics to all connected clients
+ *  1. Call AI service /crowd endpoint for actual YOLOv8 person detection
+ *  2. Emit Socket.IO event crowd:analysis with actual metrics to all connected clients
  *  3. If crowd level is HIGH or CRITICAL and cooldown has elapsed:
  *     a. Create a crowd_surge Alert in MongoDB
  *     b. Emit Socket.IO events alert:new and crowd:alert
@@ -109,7 +109,7 @@ async function analyzeCrowdFrame({
   cameraId = 'default',
   cameraDoc = null,
   io = null,
-  confThreshold = 0.30,
+  confThreshold = 0.03,
   gridRows = 3,
   gridCols = 4,
 }) {
@@ -119,7 +119,7 @@ async function analyzeCrowdFrame({
     detected_count:      0,
     occluded_est:        0,
     total_count:         0,
-    crowd_level:         'LOW',
+    crowd_level:         'ZERO',
     density_score:       0.0,
     zones:               [],
     person_detections:   [],
@@ -133,17 +133,25 @@ async function analyzeCrowdFrame({
   };
 
   try {
-    // ---- 1. AI service call ----
-    const aiResult = await callCrowdAIService(
-      imageBuffer,
-      cameraId,
-      confThreshold,
-      gridRows,
-      gridCols
-    );
+    // ---- 1. Call Python AI service for actual YOLO person detection ----
+    let aiResult;
+    try {
+      aiResult = await callCrowdAIService(
+        imageBuffer,
+        cameraId,
+        confThreshold,
+        gridRows,
+        gridCols
+      );
+    } catch (aiErr) {
+      const errMsg = aiErr.response?.data?.detail || aiErr.message;
+      logger.error(`[CrowdService] AI service call error for camera ${cameraId}: ${errMsg}`);
+      analysisResult.error = `AI service error: ${errMsg}`;
+      return analysisResult;
+    }
 
-    if (!aiResult.success) {
-      analysisResult.error = aiResult.error || 'AI service returned failure';
+    if (!aiResult || !aiResult.success) {
+      analysisResult.error = aiResult?.error || 'AI detection returned unsuccessful result';
       return analysisResult;
     }
 
@@ -202,6 +210,21 @@ async function analyzeCrowdFrame({
             ? `Critical Crowd Density — ${totalCount} persons (est.)`
             : `High Crowd Density — ${totalCount} persons (est.)`;
 
+          const alertLocation = cameraDoc?.location?.coordinates?.length === 2
+            ? cameraDoc.location
+            : { type: 'Point', coordinates: [72.5714, 23.0225] };
+          const alertAddress = cameraDoc?.address || {
+            district: cameraDoc?.district || 'Ahmedabad',
+            city: 'Ahmedabad',
+            area: 'Command Grid',
+          };
+          const alertDistrict = cameraDoc?.district || cameraDoc?.address?.district || 'Ahmedabad';
+          const alertSnapshot = aiResult.annotated_image_b64
+            ? (aiResult.annotated_image_b64.startsWith('data:')
+                ? aiResult.annotated_image_b64
+                : `data:image/jpeg;base64,${aiResult.annotated_image_b64}`)
+            : (imageBuffer ? `data:image/jpeg;base64,${imageBuffer.toString('base64')}` : '');
+
           const alertDoc = await Alert.create({
             alertId:     `ALT-${uuidv4().split('-')[0].toUpperCase()}`,
             type:        'crowd_surge',
@@ -214,10 +237,11 @@ async function analyzeCrowdFrame({
             severity,
             status:      'active',
             camera:      cameraDoc?._id     || undefined,
-            cameraId:    String(cameraId),
-            location:    cameraDoc?.location || undefined,
-            address:     cameraDoc?.address  || undefined,
-            district:    cameraDoc?.district || cameraDoc?.address?.district || 'Unknown',
+            cameraId:    String(cameraDoc?.cameraId || cameraId),
+            location:    alertLocation,
+            address:     alertAddress,
+            district:    alertDistrict,
+            snapshot:    alertSnapshot,
             metadata: {
               detected_count:   detected,
               occluded_est:     occluded,

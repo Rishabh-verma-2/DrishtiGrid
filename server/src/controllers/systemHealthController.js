@@ -1,7 +1,10 @@
 const mongoose = require('mongoose');
 const os = require('os');
+const axios = require('axios');
 const Camera = require('../models/Camera');
 const logger = require('../utils/logger');
+
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
 
 /**
  * @desc    Get real-time system health metrics (Admin Only)
@@ -52,7 +55,23 @@ const getSystemHealth = async (req, res) => {
       activeStreamChannels = 30;
     }
 
-    // 4. Server & OS Resources
+    // 4. Python FastAPI AI Service Health Check
+    let aiServiceStatus = 'OFFLINE';
+    let aiServiceLatencyMs = 0;
+    let aiServiceDetails = null;
+    try {
+      const aiStart = Date.now();
+      const aiRes = await axios.get(`${AI_SERVICE_URL}/health`, { timeout: 3000 });
+      if (aiRes.status === 200) {
+        aiServiceStatus = 'ONLINE';
+        aiServiceLatencyMs = Date.now() - aiStart;
+        aiServiceDetails = aiRes.data;
+      }
+    } catch (_) {
+      aiServiceStatus = 'OFFLINE';
+    }
+
+    // 5. Server & OS Resources
     const memoryUsage = process.memoryUsage();
     const systemUptimeSeconds = Math.floor(process.uptime());
 
@@ -60,6 +79,14 @@ const getSystemHealth = async (req, res) => {
       success: true,
       data: {
         timestamp: new Date().toISOString(),
+        aiService: {
+          status: aiServiceStatus,
+          port: 8000,
+          url: AI_SERVICE_URL,
+          latencyMs: aiServiceLatencyMs,
+          serviceName: aiServiceDetails?.service || 'ANPR & Crowd Detection AI Pipeline',
+          details: aiServiceDetails,
+        },
         database: {
           status: dbStatus,
           latencyMs: dbLatencyMs,

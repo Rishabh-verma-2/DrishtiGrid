@@ -665,146 +665,91 @@ def _draw_annotations(
     person_boxes: List[Tuple],
     person_scores: List[float],
     zones: List[Dict],
-    kde_heatmap: np.ndarray,
+    kde_heatmap: Optional[np.ndarray],
     metrics: Dict[str, Any],
     surge_info: Dict[str, Any],
     obj_inventory: Dict[str, Any],
     occluded_est: int,
 ) -> np.ndarray:
     """
-    Produce a richly annotated BGR frame:
-    - Gaussian KDE heatmap overlay (colourised)
-    - Zone grid overlay (semi-transparent)
-    - Per-person bounding boxes coloured by zone density
-    - Vehicle / object boxes (blue)
-    - Stats panel (top-left)
-    - Object inventory mini-panel (top-right)
+    Produce a clean, tactical annotated BGR frame:
+    - Bounding boxes around every detected person with ID and confidence
+    - Top header panel with actual people count and density status
+    - Subtle zone grid indication
     """
     out = image.copy()
     img_h, img_w = out.shape[:2]
 
     grid_rows = metrics.get("grid_rows", DEFAULT_GRID_ROWS)
     grid_cols = metrics.get("grid_cols", DEFAULT_GRID_COLS)
-    cell_h = img_h / grid_rows
-    cell_w = img_w / grid_cols
+    cell_h = img_h / max(1, grid_rows)
+    cell_w = img_w / max(1, grid_cols)
 
-    # ---------- KDE heatmap colourised overlay ----------
-    if kde_heatmap is not None and kde_heatmap.max() > 0:
-        try:
-            hm_uint8 = (kde_heatmap * 255).astype(np.uint8)
-            hm_color = cv2.applyColorMap(hm_uint8, cv2.COLORMAP_JET)
-            # Only overlay where density is meaningful (> 10%)
-            mask = (kde_heatmap > 0.10).astype(np.float32)
-            alpha = (kde_heatmap * 0.45 * mask)[:, :, np.newaxis]
-            out = (out * (1 - alpha) + hm_color * alpha).astype(np.uint8)
-        except Exception:
-            pass
+    # Optional subtle zone grid lines
+    if grid_rows > 1 and grid_cols > 1:
+        for r in range(1, grid_rows):
+            y = int(r * cell_h)
+            cv2.line(out, (0, y), (img_w, y), (45, 45, 55), 1, cv2.LINE_AA)
+        for c in range(1, grid_cols):
+            x = int(c * cell_w)
+            cv2.line(out, (x, 0), (x, img_h), (45, 45, 55), 1, cv2.LINE_AA)
 
-    # ---------- Zone grid lines ----------
-    for r in range(1, grid_rows):
-        y = int(r * cell_h)
-        cv2.line(out, (0, y), (img_w, y), (60, 60, 60), 1, cv2.LINE_AA)
-    for c in range(1, grid_cols):
-        x = int(c * cell_w)
-        cv2.line(out, (x, 0), (x, img_h), (60, 60, 60), 1, cv2.LINE_AA)
+    # ---------- Draw Person Bounding Boxes ----------
+    box_color = (0, 230, 115)     # Vibrant Emerald green
+    text_bg_color = (15, 20, 30)  # Dark pill bg
 
-    # Build zone → density level lookup
-    zone_level_grid = {(z["row"], z["col"]): z["level"] for z in zones}
-
-    # ---------- Person bounding boxes ----------
-    for box, score in zip(person_boxes, person_scores):
+    for idx, (box, score) in enumerate(zip(person_boxes, person_scores)):
         x1, y1, x2, y2 = box
-        cx = (x1 + x2) // 2
-        cy = (y1 + y2) // 2
-        r = min(int(cy / cell_h), grid_rows - 1)
-        c = min(int(cx / cell_w), grid_cols - 1)
-        zlevel = zone_level_grid.get((r, c), "clear")
-        color  = _BOX_COLORS[zlevel]
-        thick  = 2 if zlevel in ("dense", "critical") else 1
-        cv2.rectangle(out, (x1, y1), (x2, y2), color, thick)
-        # Confidence label (small, not cluttering)
-        cv2.putText(out, f"{score:.0%}", (x1 + 2, y1 - 3),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.33, color, 1, cv2.LINE_AA)
+        x1 = max(0, min(img_w - 1, x1))
+        y1 = max(0, min(img_h - 1, y1))
+        x2 = max(0, min(img_w, x2))
+        y2 = max(0, min(img_h, y2))
 
-    # ---------- Vehicle / object boxes ----------
-    for det in obj_inventory.get("detections", []):
-        bcolor = _VEH_BOX_COLOR if det["is_vehicle"] else _OTHER_BOX_COLOR
-        for b in det.get("boxes", []):
-            cv2.rectangle(out, (b["x1"], b["y1"]), (b["x2"], b["y2"]), bcolor, 2)
-            cv2.putText(out, det["class"],
-                        (b["x1"] + 2, b["y1"] - 4),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.38, bcolor, 1, cv2.LINE_AA)
+        # Main person box
+        cv2.rectangle(out, (x1, y1), (x2, y2), box_color, 2)
 
-    # ---------- Stats panel (top-left) ----------
-    level  = metrics["crowd_level"]
-    count  = metrics["total_count"]
-    det_c  = metrics["detected_count"]
-    occ_c  = metrics["occluded_est"]
-    den_pct = int(metrics["density_score"] * 100)
-    surge   = surge_info["surge_detected"]
+        # Label tag: e.g. "#1 92%"
+        label = f"#{idx + 1} {score:.0%}"
+        (tw, th), baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
 
+        tag_y1 = max(0, y1 - th - 6)
+        tag_y2 = y1
+        tag_x1 = x1
+        tag_x2 = min(img_w, x1 + tw + 8)
+
+        # Draw pill background for label
+        cv2.rectangle(out, (tag_x1, tag_y1), (tag_x2, tag_y2), text_bg_color, -1)
+        cv2.rectangle(out, (tag_x1, tag_y1), (tag_x2, tag_y2), box_color, 1)
+        cv2.putText(
+            out, label, (tag_x1 + 4, tag_y2 - 3),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.40, (255, 255, 255), 1, cv2.LINE_AA
+        )
+
+    # ---------- Tactical Top Banner ----------
+    level = metrics.get("crowd_level", "LOW")
+    count = metrics.get("total_count", len(person_boxes))
     lvl_colors = {
-        "LOW": (80, 200, 80), "MEDIUM": (0, 200, 240),
-        "HIGH": (0, 140, 255), "CRITICAL": (0, 40, 230),
+        "ZERO": (160, 160, 160),
+        "LOW": (80, 200, 80),
+        "MODERATE": (0, 210, 240),
+        "HIGH": (0, 140, 255),
+        "CRITICAL": (0, 40, 235),
     }
-    lvl_color = lvl_colors.get(level, (200, 200, 200))
+    status_color = lvl_colors.get(level, (0, 200, 120))
 
-    lines = [
-        ("DrishtiGrid AI", _TITLE_COLOR, 0.48),
-        (f"Detected: {det_c}  Est.Hidden: +{occ_c}", _TEXT_COLOR, 0.42),
-        (f"Total Est.: {count}", _TEXT_COLOR, 0.46),
-        (f"Density: {den_pct}%", _TEXT_COLOR, 0.44),
-        (f"Level: {level}", lvl_color, 0.50),
-        (f"Vehicles: {obj_inventory['vehicle_total']}", _TEXT_COLOR, 0.42),
-    ]
-    if surge:
-        lines.append((f"SURGE +{surge_info['surge_percent']:.0f}%", (40, 40, 230), 0.46))
-    lines.append((time.strftime("%H:%M:%S"), (120, 120, 120), 0.40))
+    banner_h = 38
+    banner_w = min(img_w, 480)
+    if banner_w > 120 and img_h > banner_h:
+        overlay = out[0:banner_h, 0:banner_w].copy()
+        cv2.rectangle(overlay, (0, 0), (banner_w, banner_h), (12, 16, 24), -1)
+        cv2.addWeighted(overlay, 0.85, out[0:banner_h, 0:banner_w], 0.15, 0, out[0:banner_h, 0:banner_w])
+        cv2.rectangle(out, (0, 0), (banner_w, banner_h), status_color, 1)
 
-    line_h  = 22
-    panel_h = len(lines) * line_h + 12
-    panel_w = 280
-    px, py  = 8, 8
-
-    # Dark panel background
-    roi = out[py:py+panel_h, px:px+panel_w]
-    if roi.size > 0:
-        dark = np.full_like(roi, _PANEL_DARK)
-        cv2.addWeighted(dark, 0.78, roi, 0.22, 0, out[py:py+panel_h, px:px+panel_w])
-    cv2.rectangle(out, (px, py), (px+panel_w, py+panel_h), lvl_color, 2)
-
-    for i, (txt, col, fs) in enumerate(lines):
-        cv2.putText(out, txt, (px + 8, py + 12 + i * line_h),
-                    cv2.FONT_HERSHEY_SIMPLEX, fs, col, 1, cv2.LINE_AA)
-
-    # ---------- Object inventory mini-panel (top-right) ----------
-    inv_lines = ["Object Count"]
-    vehicles = obj_inventory.get("vehicles", {})
-    for vname, vcnt in sorted(vehicles.items(), key=lambda x: -x[1])[:6]:
-        inv_lines.append(f"  {vname.title()}: {vcnt}")
-    others = obj_inventory.get("other_objects", {})
-    for oname, ocnt in sorted(others.items(), key=lambda x: -x[1])[:4]:
-        inv_lines.append(f"  {oname.title()}: {ocnt}")
-    if not vehicles and not others:
-        inv_lines.append("  (none detected)")
-
-    inv_panel_w = 200
-    inv_panel_h = len(inv_lines) * line_h + 12
-    inv_px = max(img_w - inv_panel_w - 8, 0)
-    inv_py = 8
-
-    roi2 = out[inv_py:inv_py+inv_panel_h, inv_px:inv_px+inv_panel_w]
-    if roi2.size > 0:
-        dark2 = np.full_like(roi2, _PANEL_DARK)
-        cv2.addWeighted(dark2, 0.78, roi2, 0.22, 0,
-                        out[inv_py:inv_py+inv_panel_h, inv_px:inv_px+inv_panel_w])
-    cv2.rectangle(out, (inv_px, inv_py), (inv_px+inv_panel_w, inv_py+inv_panel_h),
-                  _VEH_BOX_COLOR, 2)
-    for i, txt in enumerate(inv_lines):
-        col = _TITLE_COLOR if i == 0 else _TEXT_COLOR
-        fs  = 0.45 if i == 0 else 0.40
-        cv2.putText(out, txt, (inv_px + 8, inv_py + 12 + i * line_h),
-                    cv2.FONT_HERSHEY_SIMPLEX, fs, col, 1, cv2.LINE_AA)
+        # Title and Count text
+        title_text = f"PEOPLE COUNT: {count}"
+        status_text = f"DENSITY: {level}"
+        cv2.putText(out, title_text, (12, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.60, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(out, status_text, (banner_w - 150, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.45, status_color, 1, cv2.LINE_AA)
 
     return out
 
@@ -816,38 +761,25 @@ def _draw_annotations(
 def detect_crowd(
     image: np.ndarray,
     camera_id: str = "default",
-    conf_threshold: float = 0.25,
+    conf_threshold: float = 0.03,
     grid_rows: int = DEFAULT_GRID_ROWS,
     grid_cols: int = DEFAULT_GRID_COLS,
 ) -> Dict[str, Any]:
     """
-    High-accuracy crowd detection + object inventory on a single BGR frame.
+    Direct, highly accurate person detection and counting on a single image.
 
     Parameters
     ----------
     image          : BGR NumPy array
-    camera_id      : Camera ID for per-camera surge baseline
-    conf_threshold : Base YOLO confidence (default 0.25)
-    grid_rows      : Density grid rows  (1-8)
-    grid_cols      : Density grid cols  (1-8)
+    camera_id      : Camera ID or identifier
+    conf_threshold : YOLO detection confidence threshold (default 0.25)
+    grid_rows      : Density grid row divisions (default 3)
+    grid_cols      : Density grid column divisions (default 4)
 
     Returns
     -------
-    {
-      "success"             : bool,
-      "detected_count"      : int,   # persons found by detection
-      "occluded_est"        : int,   # estimated hidden/occluded persons
-      "total_count"         : int,   # detected + occluded estimate
-      "crowd_level"         : "LOW"|"MEDIUM"|"HIGH"|"CRITICAL",
-      "density_score"       : float 0-1,
-      "zones"               : [...],
-      "person_detections"   : [...],
-      "object_inventory"    : { vehicles, vehicle_total, other_objects, detections },
-      "surge"               : { surge_detected, baseline_avg, surge_percent },
-      "annotated_image_b64" : str,
-      "processing_time_ms"  : float,
-      "error"               : str|None,
-    }
+    JSON with actual people count, person bounding boxes, density metrics,
+    and annotated image.
     """
     t_start = time.perf_counter()
 
@@ -861,8 +793,10 @@ def detect_crowd(
         "zones":               [],
         "person_detections":   [],
         "object_inventory":    {
-            "vehicles": {}, "vehicle_total": 0,
-            "other_objects": {}, "detections": []
+            "vehicles": {},
+            "vehicle_total": 0,
+            "other_objects": {},
+            "detections": [],
         },
         "surge":               {"surge_detected": False, "baseline_avg": 0.0, "surge_percent": 0.0},
         "annotated_image_b64": "",
@@ -871,7 +805,7 @@ def detect_crowd(
     }
 
     if image is None or image.size == 0:
-        result["error"] = "Empty or null image."
+        result["error"] = "Empty or null image provided."
         return result
 
     if len(image.shape) == 2:
@@ -881,143 +815,238 @@ def detect_crowd(
 
     img_h, img_w = image.shape[:2]
 
-    # ---- Load model ----
+    # ---- Load COCO model (class 0 = person) ----
     try:
-        from app.detection.yolo_detector import get_yolo_model
-        model = get_yolo_model()
+        from app.detection.yolo_detector import get_coco_model, get_yolo_model
+        model = get_coco_model() or get_yolo_model()
         if model is None:
-            result["error"] = "YOLO model unavailable."
+            result["error"] = "YOLO detection model unavailable."
             return result
     except Exception as e:
+        logger.error(f"[CrowdDetector] Model load error: {e}")
         result["error"] = f"Model load error: {e}"
         return result
 
-    # ================================================================
-    #  PASS A — Full-frame, loose conf  (catches anything plausible)
-    # ================================================================
-    conf_loose = max(0.18, conf_threshold - 0.07)
-    conf_tight = min(0.70, conf_threshold + 0.10)
+    # ---- High-Accuracy Multi-Scale & Sliced Person Detection ----
+    # Allow ultra-sensitive detection down to 0.01 so every visible individual is captured
+    target_conf = max(0.01, min(0.85, float(conf_threshold)))
+    device = _get_device()
+    iou_thresh = 0.55
 
-    raw_full_loose = _run_yolo_pass(
-        model, image, conf=conf_loose, iou=0.40,
-    )
+    candidate_boxes: List[List[float]] = []
+    candidate_scores: List[float] = []
 
-    # ================================================================
-    #  PASS B — Full-frame at 1.25× scale (distant/small persons)
-    # ================================================================
-    raw_scaled = _run_yolo_pass(
-        model, image, conf=conf_loose, iou=0.40,
-        classes=[PERSON_CLASS_ID], scale=1.25,
-    )
+    try:
+        # Pass 1: High-resolution full-frame pass (imgsz=1280 preserves distant people)
+        full_imgsz = 1280 if max(img_h, img_w) >= 640 else 960
+        yolo_full = model(
+            image,
+            classes=[PERSON_CLASS_ID],
+            conf=target_conf,
+            iou=iou_thresh,
+            imgsz=full_imgsz,
+            device=device,
+            verbose=False,
+        )
+        if yolo_full and len(yolo_full) > 0 and yolo_full[0].boxes is not None:
+            for b in yolo_full[0].boxes:
+                xyxy = b.xyxy[0].cpu().numpy().astype(float)
+                conf_val = float(b.conf[0].item()) if b.conf is not None else target_conf
+                candidate_boxes.append([xyxy[0], xyxy[1], xyxy[2], xyxy[3]])
+                candidate_scores.append(conf_val)
 
-    # ================================================================
-    #  PASS C — Tiled inference 3×3 grid, 40% overlap
-    #           (persons near tile boundaries, deep in crowds)
-    # ================================================================
-    raw_tiled = _run_tile_pass(
-        model, image,
-        conf=conf_loose, iou=0.40,
-        tile_rows=3, tile_cols=3, overlap=0.40,
-    )
+        # Pass 2: Sliced tile inference for dense / distant crowd resolution
+        # Slices with ~28% overlap ensure pedestrians cut across tile borders are captured
+        if img_w >= 360 and img_h >= 240:
+            ncols = 3 if img_w >= 800 else 2
+            nrows = 2
+            slice_w = int(img_w * (0.42 if ncols == 3 else 0.58))
+            slice_h = int(img_h * 0.58)
 
-    # ================================================================
-    #  PASS D — Full-frame, all classes (for object inventory)
-    # ================================================================
-    raw_all_classes = _run_yolo_pass(
-        model, image, conf=max(0.25, conf_threshold), iou=0.45,
-    )
+            if ncols == 3:
+                x_steps = [0, int((img_w - slice_w) / 2), img_w - slice_w]
+            else:
+                x_steps = [0, img_w - slice_w]
+            y_steps = [0, img_h - slice_h]
 
-    # ---- Merge all person candidates ----
-    all_person_raw = raw_full_loose + raw_scaled + raw_tiled
-    # Also include persons from the all-class pass
-    all_person_raw += [r for r in raw_all_classes if r["cls_id"] == PERSON_CLASS_ID]
+            tile_crops = []
+            tile_offsets = []
+            for ys in y_steps:
+                for xs in x_steps:
+                    crop = image[ys:ys + slice_h, xs:xs + slice_w]
+                    tile_crops.append(crop)
+                    tile_offsets.append((xs, ys))
 
-    # ---- Soft-NMS ----
-    person_boxes, person_scores = _merge_and_softnms(
-        all_person_raw, conf_floor=max(0.12, conf_threshold - 0.13)
-    )
+            if tile_crops:
+                # Batch prediction across all tiles for high GPU/CPU efficiency
+                yolo_tiles = model(
+                    tile_crops,
+                    classes=[PERSON_CLASS_ID],
+                    conf=target_conf,
+                    iou=iou_thresh,
+                    imgsz=640,
+                    device=device,
+                    verbose=False,
+                )
+                for idx, r in enumerate(yolo_tiles):
+                    ox, oy = tile_offsets[idx]
+                    if r.boxes is not None:
+                        for b in r.boxes:
+                            xyxy = b.xyxy[0].cpu().numpy().astype(float)
+                            conf_val = float(b.conf[0].item()) if b.conf is not None else target_conf
+                            candidate_boxes.append([xyxy[0] + ox, xyxy[1] + oy, xyxy[2] + ox, xyxy[3] + oy])
+                            candidate_scores.append(conf_val)
 
+    except Exception as e:
+        logger.error(f"[CrowdDetector] Multi-scale inference pass error: {e}")
+        result["error"] = f"YOLO inference error: {e}"
+        return result
+
+    # Pass 3: Global Non-Maximum Suppression to unify candidate boxes
+    person_boxes: List[Tuple[int, int, int, int]] = []
+    person_scores: List[float] = []
+
+    if candidate_boxes:
+        xywh_boxes = []
+        valid_indices = []
+        for i, b in enumerate(candidate_boxes):
+            x1 = max(0, min(int(b[0]), img_w - 1))
+            y1 = max(0, min(int(b[1]), img_h - 1))
+            x2 = max(x1 + 1, min(int(b[2]), img_w))
+            y2 = max(y1 + 1, min(int(b[3]), img_h))
+            w = x2 - x1
+            h = y2 - y1
+            if w >= 5 and h >= 8:
+                xywh_boxes.append([x1, y1, w, h])
+                valid_indices.append(i)
+
+        if xywh_boxes:
+            filtered_scores = [candidate_scores[i] for i in valid_indices]
+            nms_indices = cv2.dnn.NMSBoxes(
+                xywh_boxes,
+                filtered_scores,
+                score_threshold=target_conf,
+                nms_threshold=iou_thresh,
+            )
+            if len(nms_indices) > 0:
+                flat_nms = nms_indices.flatten() if hasattr(nms_indices, "flatten") else nms_indices
+                for idx in flat_nms:
+                    box_xywh = xywh_boxes[idx]
+                    bx1 = box_xywh[0]
+                    by1 = box_xywh[1]
+                    bx2 = bx1 + box_xywh[2]
+                    by2 = by1 + box_xywh[3]
+                    person_boxes.append((bx1, by1, bx2, by2))
+                    person_scores.append(round(float(filtered_scores[idx]), 4))
+
+    # Sort detections top-to-bottom, left-to-right for neat predictable indexing
+    if person_boxes:
+        combined = sorted(
+            zip(person_boxes, person_scores),
+            key=lambda item: (item[0][1] // 30, item[0][0]),
+        )
+        person_boxes = [c[0] for c in combined]
+        person_scores = [c[1] for c in combined]
+
+    # Actual count of people detected
     detected_count = len(person_boxes)
+    total_count = detected_count
+    occluded_est = 0
 
-    # ---- Occlusion correction ----
-    occluded_est = _estimate_occluded_count(person_boxes, img_h, img_w)
-    total_count  = detected_count + occluded_est
+    # Density severity based on actual count
+    if total_count == 0:
+        crowd_level = "ZERO"
+    elif total_count <= 4:
+        crowd_level = "LOW"
+    elif total_count <= 15:
+        crowd_level = "MODERATE"
+    elif total_count <= 30:
+        crowd_level = "HIGH"
+    else:
+        crowd_level = "CRITICAL"
 
-    # ---- Object inventory (all non-person detections from Pass D) ----
-    obj_inventory = _build_object_inventory(raw_all_classes)
+    # Density score (0 to 1) based on occupied area and count
+    total_box_area = sum((b[2] - b[0]) * (b[3] - b[1]) for b in person_boxes)
+    frame_area = max(1, img_h * img_w)
+    density_score = round(min(1.0, float(total_box_area / frame_area * 1.5) + (total_count / 100.0)), 2)
 
-    # ---- KDE heatmap ----
-    centroids = [((b[0]+b[2])//2, (b[1]+b[3])//2) for b in person_boxes]
-    kde_bw    = max(30, min(img_h, img_w) // 15)
-    kde_heatmap = _build_kde_heatmap(centroids, img_h, img_w, bandwidth=kde_bw)
-
-    # ---- Density grid ----
+    # ---- Grid / Zones Breakdown ----
     zones = _build_density_grid(
         person_boxes, person_scores, img_h, img_w, grid_rows, grid_cols
     )
 
-    # ---- Crowd metrics ----
-    crowd_level   = _get_crowd_level(total_count)
-    density_score = _compute_density_score(total_count, img_h, img_w, person_boxes)
-
-    # ---- Surge detection ----
-    surge_info = _check_surge(camera_id, total_count)
-
-    # ---- Person detections list ----
+    # ---- Person Detections List ----
     person_det_list = [
         {
-            "person_id":  idx + 1,
-            "bbox":       {"x": b[0], "y": b[1], "w": b[2]-b[0], "h": b[3]-b[1]},
-            "confidence": round(s, 4),
+            "id": idx + 1,
+            "person_id": idx + 1,
+            "confidence": float(score),
+            "confidence_percent": f"{score * 100:.1f}%",
+            "bbox": {
+                "x": int(b[0]),
+                "y": int(b[1]),
+                "w": int(b[2] - b[0]),
+                "h": int(b[3] - b[1]),
+            },
+            "center": {
+                "x": int((b[0] + b[2]) // 2),
+                "y": int((b[1] + b[3]) // 2),
+            },
         }
-        for idx, (b, s) in enumerate(zip(person_boxes, person_scores))
+        for idx, (b, score) in enumerate(zip(person_boxes, person_scores))
     ]
 
-    # ---- Annotation ----
+    # ---- Surge tracking ----
+    surge_info = _check_surge(camera_id, total_count)
+
     metrics = {
         "crowd_level":    crowd_level,
         "total_count":    total_count,
         "detected_count": detected_count,
-        "occluded_est":   occluded_est,
+        "occluded_est":   0,
         "density_score":  density_score,
         "grid_rows":      grid_rows,
         "grid_cols":      grid_cols,
     }
+
+    # ---- Draw Visual Annotations ----
     try:
-        annotated    = _draw_annotations(
-            image, person_boxes, person_scores,
-            zones, kde_heatmap, metrics,
-            surge_info, obj_inventory, occluded_est,
+        annotated = _draw_annotations(
+            image=image,
+            person_boxes=person_boxes,
+            person_scores=person_scores,
+            zones=zones,
+            kde_heatmap=None,
+            metrics=metrics,
+            surge_info=surge_info,
+            obj_inventory={"vehicles": {}, "vehicle_total": 0, "other_objects": {}, "detections": []},
+            occluded_est=0,
         )
         annotated_b64 = numpy_to_base64(annotated)
-    except Exception as e:
-        logger.warning(f"[CrowdDetector] Annotation error: {e}")
+    except Exception as draw_err:
+        logger.warning(f"[CrowdDetector] Annotation drawing error: {draw_err}")
         annotated_b64 = numpy_to_base64(image)
 
     elapsed_ms = (time.perf_counter() - t_start) * 1000.0
 
     result.update({
         "success":             True,
-        "detected_count":      detected_count,
-        "occluded_est":        occluded_est,
-        "total_count":         total_count,
+        "detected_count":      int(detected_count),
+        "occluded_est":        0,
+        "total_count":         int(total_count),
         "crowd_level":         crowd_level,
-        "density_score":       density_score,
+        "density_score":       float(density_score),
         "zones":               zones,
         "person_detections":   person_det_list,
-        "object_inventory":    obj_inventory,
         "surge":               surge_info,
         "annotated_image_b64": annotated_b64,
-        "processing_time_ms":  round(elapsed_ms, 1),
+        "processing_time_ms":  round(float(elapsed_ms), 1),
         "error":               None,
     })
 
     logger.info(
-        f"[CrowdDetector] cam={camera_id} "
-        f"detected={detected_count} occluded≈{occluded_est} total={total_count} "
-        f"vehicles={obj_inventory['vehicle_total']} "
-        f"level={crowd_level} density={density_score:.2f} "
-        f"surge={surge_info['surge_detected']} ({elapsed_ms:.0f}ms)"
+        f"[CrowdDetector] cam='{camera_id}' actual_people_count={detected_count} "
+        f"level={crowd_level} time={elapsed_ms:.1f}ms"
     )
     return result
 

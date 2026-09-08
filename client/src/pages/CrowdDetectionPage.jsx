@@ -1,99 +1,37 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { crowdAPI, streamAPI } from '../api';
+import React, { useState, useRef } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { crowdAPI } from '../api';
 import { useThemeStore } from '../store/themeStore';
-import useSocketStore from '../store/socketStore';
 import {
-  Users, Flame, Activity, Car, ShieldAlert, Sparkles, UploadCloud,
-  Camera, Sliders, RefreshCw, Layers, CheckCircle2, AlertTriangle,
-  Play, Radio, MapPin, Zap, Info, ArrowUpRight, HelpCircle
+  Users, UploadCloud, Sliders, RefreshCw, Sparkles, Image as ImageIcon,
+  CheckCircle2, AlertTriangle, Info, X, ChevronRight, FileCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import CrowdMetricsCards from '../components/crowd/CrowdMetricsCards';
 import CrowdFrameViewer from '../components/crowd/CrowdFrameViewer';
-import SceneInventoryCard from '../components/crowd/SceneInventoryCard';
+import PersonDetectionsList from '../components/crowd/PersonDetectionsList';
 import ZoneDensityGrid from '../components/crowd/ZoneDensityGrid';
-import CrowdAlertsTable from '../components/crowd/CrowdAlertsTable';
 
 export default function CrowdDetectionPage() {
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
-  const { socket } = useSocketStore();
   const queryClient = useQueryClient();
 
   // State
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
-  const [selectedCameraId, setSelectedCameraId] = useState('cam-01');
-  const [confThreshold, setConfThreshold] = useState(0.30);
-  const [gridConfig, setGridConfig] = useState('3x4'); // '3x4' | '4x4' | '2x2'
+  const [gridConfig, setGridConfig] = useState('3x4'); // '3x4' | '4x4'
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Fetch live Sentinel camera catalogue
-  const { data: streamResponse } = useQuery({
-    queryKey: ['liveFeeds'],
-    queryFn: () => streamAPI.getFeeds().then((r) => r.data),
-    staleTime: 60000,
-  });
-  const feeds = streamResponse?.data || [];
-
-  const selectedCamera = useMemo(() => {
-    return feeds.find((f) => f.id === selectedCameraId || f.cameraId === selectedCameraId) || feeds[0];
-  }, [feeds, selectedCameraId]);
-
-  // Socket listener for real-time crowd surge events
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleCrowdAlert = (data) => {
-      toast.custom(
-        (t) => (
-          <div
-            className={`max-w-md w-full p-4 rounded-2xl border shadow-xl flex items-start gap-3 pointer-events-auto transition-all ${
-              t.visible ? 'animate-enter' : 'animate-leave'
-            } ${
-              isLight
-                ? 'bg-red-50/95 border-red-200 text-red-900 shadow-red-500/10'
-                : 'bg-[#1a111a]/95 border-red-500/40 text-white shadow-red-500/20'
-            }`}
-          >
-            <div className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 animate-bounce">
-              <ShieldAlert className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-black uppercase tracking-wider text-red-500">
-                Gujarat Police Netram • Crowd Surge
-              </p>
-              <p className="text-sm font-bold mt-0.5">
-                {data.cameraName || data.cameraId}: {data.surgePercent ? `+${data.surgePercent}% surge` : 'Congestion detected'}
-              </p>
-              <p className="text-xs opacity-80 mt-0.5">
-                Estimated {data.totalCount || data.count || 'dense'} people in monitored sector.
-              </p>
-            </div>
-          </div>
-        ),
-        { duration: 6000 }
-      );
-      queryClient.invalidateQueries({ queryKey: ['crowdAlerts'] });
-      queryClient.invalidateQueries({ queryKey: ['crowdStats'] });
-    };
-
-    socket.on('crowd:alert', handleCrowdAlert);
-    return () => {
-      socket.off('crowd:alert', handleCrowdAlert);
-    };
-  }, [socket, isLight, queryClient]);
-
-  // Mutation to analyze frame
+  // Mutation to analyze uploaded image
   const analyzeMutation = useMutation({
-    mutationFn: async ({ file, cameraId }) => {
+    mutationFn: async ({ file }) => {
       const [rowsStr, colsStr] = gridConfig.split('x');
-      const res = await crowdAPI.analyzeFrame(file, cameraId, {
-        confThreshold,
+      const res = await crowdAPI.analyzeFrame(file, 'image-upload', {
+        confThreshold: 0.03, // Ultra-sensitive: include every person regardless of confidence
         gridRows: parseInt(rowsStr, 10) || 3,
         gridCols: parseInt(colsStr, 10) || 4,
       });
@@ -102,23 +40,25 @@ export default function CrowdDetectionPage() {
     onSuccess: (data) => {
       if (data?.data) {
         setAnalysisResult(data.data);
-        const count = data.data.total_count;
+        const count = data.data.total_count ?? data.data.detected_count ?? 0;
         const level = data.data.crowd_level;
-        toast.success(`Analysis complete: ${count} people (${level} density)`, { icon: '👥' });
-        queryClient.invalidateQueries({ queryKey: ['crowdAlerts'] });
+        toast.success(`Predicted ${count} ${count === 1 ? 'person' : 'people'} (${level} density)`, {
+          icon: '👥',
+        });
       } else {
         toast.error('Unexpected analysis response structure');
       }
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || err.message || 'Crowd analysis failed');
+      toast.error(err.response?.data?.message || err.message || 'People counting analysis failed');
     },
   });
 
   const handleFileChange = (file) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload a valid image file (JPEG/PNG)');
+    const isImg = (file.type && file.type.startsWith('image/')) || /\.(jpe?g|png|webp|bmp|tiff|gif)$/i.test(file.name || '');
+    if (!isImg) {
+      toast.error('Please upload a valid image file (JPEG, PNG, WebP)');
       return;
     }
     setSelectedFile(file);
@@ -126,8 +66,8 @@ export default function CrowdDetectionPage() {
     reader.onload = (e) => setFilePreview(e.target.result);
     reader.readAsDataURL(file);
 
-    // Auto-run analysis on file select
-    analyzeMutation.mutate({ file, cameraId: selectedCameraId });
+    // Run people detection analysis immediately
+    analyzeMutation.mutate({ file });
   };
 
   const handleDrop = (e) => {
@@ -138,245 +78,165 @@ export default function CrowdDetectionPage() {
     }
   };
 
-  // Helper to generate a realistic synthetic test frame so user can test without uploading their own file
-  const handleLoadSampleScenario = (scenarioType) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 960;
-    canvas.height = 540;
-    const ctx = canvas.getContext('2d');
-
-    // Background: Urban junction street
-    const grad = ctx.createLinearGradient(0, 0, 0, 540);
-    grad.addColorStop(0, '#2b3240');
-    grad.addColorStop(0.5, '#1e2430');
-    grad.addColorStop(1, '#151922');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 960, 540);
-
-    // Road markings & sidewalks
-    ctx.fillStyle = '#10141c';
-    ctx.fillRect(100, 200, 760, 300);
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([20, 15]);
-    ctx.beginPath();
-    ctx.moveTo(100, 350);
-    ctx.lineTo(860, 350);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Crosswalk zebra stripes
-    ctx.fillStyle = '#ffffff30';
-    for (let i = 250; i < 700; i += 40) {
-      ctx.fillRect(i, 220, 25, 260);
-    }
-
-    // Text watermark simulation
-    ctx.fillStyle = '#ffffff80';
-    ctx.font = 'bold 16px monospace';
-    ctx.fillText(`GUJARAT POLICE NETRAM CCTV • ${scenarioType.toUpperCase()} SCENARIO`, 30, 40);
-    ctx.fillText(new Date().toISOString(), 30, 65);
-
-    // Draw simulated persons & vehicles based on scenario
-    let personCount = 12;
-    let carCount = 4;
-
-    if (scenarioType === 'religious_mela') {
-      personCount = 68;
-      carCount = 1;
-    } else if (scenarioType === 'traffic_junction') {
-      personCount = 28;
-      carCount = 11;
-    } else if (scenarioType === 'market_bazaar') {
-      personCount = 48;
-      carCount = 3;
-    }
-
-    // Draw simulated cars
-    ctx.fillStyle = '#3b82f6';
-    for (let c = 0; c < carCount; c++) {
-      const cx = 150 + (c * 120) % 650;
-      const cy = 250 + (c * 45) % 180;
-      ctx.fillStyle = c % 2 === 0 ? '#2563eb' : '#0284c7';
-      ctx.beginPath();
-      ctx.roundRect(cx, cy, 85, 45, 6);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.font = '10px sans-serif';
-      ctx.fillText('CAR', cx + 25, cy + 25);
-    }
-
-    // Draw simulated persons
-    for (let p = 0; p < personCount; p++) {
-      const px = 120 + Math.random() * 720;
-      const py = 210 + Math.random() * 260;
-      // Head
-      ctx.fillStyle = '#fbbf24';
-      ctx.beginPath();
-      ctx.arc(px, py, 6, 0, Math.PI * 2);
-      ctx.fill();
-      // Body
-      ctx.fillStyle = p % 3 === 0 ? '#ef4444' : p % 3 === 1 ? '#10b981' : '#8b5cf6';
-      ctx.fillRect(px - 5, py + 6, 10, 18);
-    }
-
-    canvas.toBlob((blob) => {
-      const file = new File([blob], `${scenarioType}_cctv_frame.jpg`, { type: 'image/jpeg' });
+  // One-click real crowd photo sample loader
+  const handleLoadSamplePhoto = async () => {
+    try {
+      const res = await fetch('/sample_crowd.jpg');
+      if (!res.ok) throw new Error('Sample file not found');
+      const blob = await res.blob();
+      const file = new File([blob], 'sample_pedestrian_crowd.jpg', { type: 'image/jpeg' });
       handleFileChange(file);
-    }, 'image/jpeg', 0.92);
+      toast.success('Loaded sample crowd photo');
+    } catch (e) {
+      toast.error('Could not load sample image: ' + e.message);
+    }
+  };
+
+  const handleClearImage = () => {
+    setSelectedFile(null);
+    setFilePreview(null);
+    setAnalysisResult(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const [gridRows, gridCols] = gridConfig.split('x').map((n) => parseInt(n, 10));
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* ─── Top Header & Tactical Bar ─── */}
+      {/* ─── Top Header ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className={`text-xs font-mono font-bold uppercase tracking-wider ${
-              isLight ? 'text-blue-700' : 'text-blue-400'
-            }`}>
-              Gujarat Police Netram ICCC • AI Crowd Vision
+            <span
+              className={`text-xs font-mono font-bold uppercase tracking-wider ${
+                isLight ? 'text-blue-700' : 'text-blue-400'
+              }`}
+            >
+              Gujarat Police Netram Vision • AI People Counter
             </span>
             <span className="text-slate-400 text-xs">•</span>
-            <span className="text-xs font-mono text-slate-400">FastAPI Model :8000</span>
+            <span className="text-xs font-mono text-slate-400">YOLOv8 Single-Pass</span>
           </div>
           <h1 className={`text-2xl md:text-3xl font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
-            Crowd Intelligence & Object Inventory
+            Crowd & People Detection
           </h1>
           <p className={`text-xs md:text-sm mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-            ગુજરાત ક્રાઉડ સર્વેલન્સ — Multi-pass YOLOv8 person density estimation, JET KDE heatmap, spatial bottleneck analysis & COCO 80-class scene inventory.
+            Upload any image to accurately detect, count, and locate individuals with direct YOLOv8 person vision.
           </p>
         </div>
 
-        {/* Tactical Badges */}
+        {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <button
-            onClick={() => {
-              if (selectedFile) {
-                analyzeMutation.mutate({ file: selectedFile, cameraId: selectedCameraId });
-              } else {
-                handleLoadSampleScenario('market_bazaar');
-              }
-            }}
+            type="button"
+            onClick={handleLoadSamplePhoto}
             disabled={analyzeMutation.isPending}
-            className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all ${
               isLight
-                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+                ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
             }`}
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${analyzeMutation.isPending ? 'animate-spin' : ''}`} />
-            <span>{analyzeMutation.isPending ? 'Analyzing Density...' : 'Run Analysis'}</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>Try Sample Photo</span>
           </button>
+
+          {selectedFile && (
+            <button
+              type="button"
+              onClick={() => analyzeMutation.mutate({ file: selectedFile })}
+              disabled={analyzeMutation.isPending}
+              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all ${
+                isLight
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
+              }`}
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${analyzeMutation.isPending ? 'animate-spin' : ''}`} />
+              <span>{analyzeMutation.isPending ? 'Counting People...' : 'Re-count'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ─── Control Bar: Camera Selection & Presets & Parameters ─── */}
+      {/* ─── Control Bar: Upload Status & Sensitivity Sliders ─── */}
       <div
         className={`p-4 rounded-2xl border transition-all ${
           isLight
-            ? 'bg-white border-slate-200/90 shadow-xs'
+            ? 'bg-white border-slate-200 shadow-sm'
             : 'bg-[#141929] border-white/5 shadow-md'
         }`}
       >
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Left: CCTV Camera Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* File Selected Status or Quick Upload Button */}
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-              isLight ? 'bg-indigo-100 text-indigo-700' : 'bg-indigo-500/20 text-indigo-400'
-            }`}>
-              <Camera className="w-5 h-5" />
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                selectedFile
+                  ? isLight ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-400'
+                  : isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400'
+              }`}
+            >
+              {selectedFile ? <FileCheck className="w-5 h-5" /> : <UploadCloud className="w-5 h-5" />}
             </div>
             <div>
-              <label className={`text-[10px] font-bold uppercase tracking-wider block ${
-                isLight ? 'text-slate-500' : 'text-slate-400'
-              }`}>
-                Monitored CCTV Node
-              </label>
-              <select
-                value={selectedCameraId}
-                onChange={(e) => setSelectedCameraId(e.target.value)}
-                className={`text-xs font-mono font-bold bg-transparent border-b outline-hidden pb-0.5 cursor-pointer ${
-                  isLight
-                    ? 'border-slate-300 text-slate-900 focus:border-blue-600'
-                    : 'border-white/20 text-white focus:border-blue-400'
-                }`}
-              >
-                {feeds.length > 0 ? (
-                  feeds.map((cam) => (
-                    <option key={cam.id} value={cam.id} className="bg-slate-900 text-white">
-                      {cam.name || cam.id} ({cam.district || 'Gujarat'})
-                    </option>
-                  ))
-                ) : (
-                  <option value="cam-01" className="bg-slate-900 text-white">
-                    Ahmedabad Ashram Road Junction (GJ-01)
-                  </option>
-                )}
-              </select>
+              <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                {selectedFile ? selectedFile.name : 'No image loaded'}
+              </p>
+              <p className={`text-[11px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {selectedFile
+                  ? `${(selectedFile.size / 1024).toFixed(1)} KB • Ready for detection`
+                  : 'Upload an image below or use sample photo'}
+              </p>
             </div>
-          </div>
-
-          {/* Center: Quick One-Click Presets */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className={`text-[11px] font-bold mr-1 ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-              One-Click Presets:
-            </span>
-            {[
-              { id: 'market_bazaar', label: 'Bazaar Market', desc: '48p + 3 cars' },
-              { id: 'religious_mela', label: 'Religious Mela (Dense)', desc: '68p surge' },
-              { id: 'traffic_junction', label: 'Highway Junction', desc: '28p + 11 cars' },
-            ].map((preset) => (
+            {selectedFile && (
               <button
-                key={preset.id}
                 type="button"
-                onClick={() => handleLoadSampleScenario(preset.id)}
-                className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition-all ${
-                  isLight
-                    ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
-                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
-                }`}
-                title={preset.desc}
+                onClick={handleClearImage}
+                className="p-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-all ml-1"
+                title="Clear image"
               >
-                <Sparkles className="w-3 h-3 text-amber-400" />
-                <span>{preset.label}</span>
+                <X className="w-4 h-4" />
               </button>
-            ))}
+            )}
           </div>
 
-          {/* Right: Confidence Threshold & Grid Size */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-semibold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Conf: <b className="font-mono text-blue-500">{confThreshold.toFixed(2)}</b>
-              </span>
-              <input
-                type="range"
-                min="0.15"
-                max="0.75"
-                step="0.05"
-                value={confThreshold}
-                onChange={(e) => setConfThreshold(parseFloat(e.target.value))}
-                className="w-20 accent-blue-600 cursor-pointer"
-              />
-            </div>
+          {/* Mode Indicator & Grid Dimension Controls */}
+          <div className="flex items-center gap-3.5 flex-wrap">
+            {/* Ultra-sensitive mode indicator */}
+            <span
+              className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${
+                isLight
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 shadow-2xs'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+              }`}
+              title="All visible people included"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              All People Included
+            </span>
 
-            <div className="flex items-center gap-1">
-              <span className={`text-[11px] font-semibold mr-1 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                Grid:
+            {/* Grid Dimensions */}
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-semibold mr-1 ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+                Sector Grid:
               </span>
               {['3x4', '4x4'].map((grid) => (
                 <button
                   key={grid}
-                  onClick={() => setGridConfig(grid)}
-                  className={`px-2 py-0.5 rounded-md text-[11px] font-mono font-bold transition-all ${
+                  type="button"
+                  onClick={() => {
+                    setGridConfig(grid);
+                    if (selectedFile) {
+                      analyzeMutation.mutate({ file: selectedFile });
+                    }
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
                     gridConfig === grid
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-blue-600 text-white shadow-xs'
                       : isLight
-                      ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200'
                       : 'bg-white/5 text-slate-400 hover:bg-white/10'
                   }`}
                 >
@@ -391,17 +251,17 @@ export default function CrowdDetectionPage() {
       {/* ─── Top Telemetry Metric Cards ─── */}
       <CrowdMetricsCards data={analysisResult} isLight={isLight} />
 
-      {/* ─── Main Two-Column Analysis Workstation ─── */}
+      {/* ─── Main Two-Column Workstation ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Frame Viewer & Upload Zone (7 of 12 cols) */}
+        {/* Left Column: Image Viewer & Upload Dropzone (7 of 12 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <CrowdFrameViewer
             annotatedSrc={analysisResult?.annotated_image_b64}
             rawSrc={filePreview}
-            cameraName={selectedCamera?.name || selectedCameraId}
-            cameraId={selectedCameraId}
+            cameraName={selectedFile?.name || 'Uploaded Image'}
+            cameraId="image-upload"
             crowdLevel={analysisResult?.crowd_level || 'LOW'}
-            timingMs={analysisResult?.timing_ms}
+            timingMs={analysisResult?.processing_time_ms ?? analysisResult?.timing_ms}
             zones={analysisResult?.zones || []}
             gridRows={gridRows}
             gridCols={gridCols}
@@ -417,62 +277,79 @@ export default function CrowdDetectionPage() {
             onDragLeave={() => setIsDragOver(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 ${
+            className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200 ${
               isDragOver
                 ? 'border-blue-500 bg-blue-500/10'
                 : isLight
-                ? 'border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50/20'
-                : 'border-white/10 bg-[#141929]/50 hover:border-blue-500/50 hover:bg-[#141929]'
+                ? 'border-slate-300 bg-white hover:border-blue-500 hover:bg-blue-50/20 shadow-xs'
+                : 'border-white/15 bg-[#141929]/60 hover:border-blue-500/50 hover:bg-[#141929]'
             }`}
           >
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/jpg"
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.[0]) handleFileChange(e.target.files[0]);
               }}
             />
-            <div className="flex items-center justify-center gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400'
-              }`}>
-                <UploadCloud className="w-5 h-5" />
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                  isLight ? 'bg-blue-100 text-blue-700' : 'bg-blue-500/20 text-blue-400'
+                }`}
+              >
+                <UploadCloud className="w-6 h-6" />
               </div>
-              <div className="text-left">
-                <p className={`text-xs font-bold ${isLight ? 'text-slate-800' : 'text-white'}`}>
-                  {selectedFile ? `Selected: ${selectedFile.name}` : 'Drop CCTV Snapshot or Click to Browse'}
+              <div className="text-center sm:text-left">
+                <p className={`text-sm font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                  {selectedFile ? `Replace Image (${selectedFile.name})` : 'Upload Image to Count People'}
                 </p>
-                <p className={`text-[11px] ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Supports JPEG, JPG, PNG up to 20MB • Runs multi-pass inference & occlusion correction
+                <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
+                  Drag and drop JPG, PNG or WebP here, or click to browse from device
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Sector Density Matrix & Scene Object Inventory (5 of 12 cols) */}
+        {/* Right Column: Itemized Person Detections & Sector Matrix (5 of 12 cols) */}
         <div className="lg:col-span-5 space-y-4">
+          <PersonDetectionsList
+            detections={analysisResult?.person_detections || []}
+            totalCount={analysisResult?.total_count || 0}
+            isLight={isLight}
+          />
+
           <ZoneDensityGrid
             zones={analysisResult?.zones || []}
             gridRows={gridRows}
             gridCols={gridCols}
             isLight={isLight}
           />
-
-          <SceneInventoryCard
-            inventory={analysisResult?.object_inventory || {}}
-            isLight={isLight}
-          />
         </div>
       </div>
 
-      {/* ─── Bottom Section: Recent Crowd Surges & Incidents ─── */}
-      <CrowdAlertsTable
-        isLight={isLight}
-        onSelectCamera={(camId) => setSelectedCameraId(camId)}
-      />
+      {/* ─── Bottom Info Bar ─── */}
+      <div
+        className={`p-4 rounded-2xl border flex items-start gap-3 text-xs ${
+          isLight
+            ? 'bg-blue-50/90 border-blue-200 text-blue-950 shadow-2xs'
+            : 'bg-blue-950/20 border-blue-500/20 text-blue-200'
+        }`}
+      >
+        <Info className={`w-4 h-4 shrink-0 mt-0.5 ${isLight ? 'text-blue-700' : 'text-blue-400'}`} />
+        <div className="space-y-1 leading-relaxed">
+          <p className={`font-bold ${isLight ? 'text-blue-950' : 'text-white'}`}>How the AI People Counting Works:</p>
+          <p className={isLight ? 'text-blue-900/90 font-medium' : 'opacity-90'}>
+            DrishtiGrid uses a real-time YOLOv8 neural network trained on COCO person classes. Each person detected
+            in the image is assigned an individual ID, bounding box coordinates, and confidence score. The total count
+            reflects the exact number of people detected above your selected confidence threshold, without artificial
+            multipliers or synthetic fallbacks.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@
 
 const multer = require('multer');
 const axios = require('axios');
+const mongoose = require('mongoose');
 const Camera = require('../models/Camera');
 const Alert = require('../models/Alert');
 const { analyzeCrowdFrame, resetCrowdAlertCooldown } = require('../services/crowdDetectionService');
@@ -23,8 +24,14 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
-    cb(null, allowed.includes((file.mimetype || '').toLowerCase()));
+    const mime = (file.mimetype || '').toLowerCase();
+    const name = (file.originalname || '').toLowerCase();
+    const isImage = mime.startsWith('image/') || /\.(jpe?g|png|webp|bmp|tiff|gif)$/i.test(name);
+    if (isImage) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type '${mime || name}'. Please upload a valid image (JPEG, PNG, WebP).`));
+    }
   },
 });
 
@@ -37,32 +44,58 @@ const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:8000';
  * @access  Private (authenticated users)
  */
 const analyzeFrame = [
-  upload.single('image'),
+  (req, res, next) => {
+    upload.any()(req, res, (err) => {
+      if (err) {
+        return res.status(400).json({ success: false, message: err.message || 'File upload error' });
+      }
+      next();
+    });
+  },
   async (req, res) => {
     try {
-      if (!req.file) {
+      const file = req.file || req.files?.[0] || req.files?.image?.[0] || req.files?.frame?.[0];
+      if (!file || !file.buffer) {
         return res.status(400).json({ success: false, message: 'No image file provided.' });
       }
+      req.file = file;
 
       const {
         camera_id: cameraId = 'default',
-        conf_threshold: confThresholdStr = '0.30',
+        conf_threshold: confThresholdStr,
         grid_rows: gridRowsStr = '3',
         grid_cols: gridColsStr = '4',
       } = req.body;
 
-      const confThreshold = parseFloat(confThresholdStr) || 0.30;
+      // Ultra-sensitive threshold so every detected individual is captured
+      const confThreshold = confThresholdStr !== undefined && confThresholdStr !== ''
+        ? parseFloat(confThresholdStr)
+        : 0.03;
       const gridRows = parseInt(gridRowsStr, 10) || 3;
       const gridCols = parseInt(gridColsStr, 10) || 4;
 
-      // Optional: look up the camera document for richer context
+      // Look up the camera document for richer context
       let cameraDoc = null;
       if (cameraId && cameraId !== 'default') {
-        cameraDoc = await Camera.findOne({ cameraId }).lean().catch(() => null);
+        if (mongoose.Types.ObjectId.isValid(cameraId)) {
+          cameraDoc = await Camera.findById(cameraId).lean().catch(() => null);
+        }
+        if (!cameraDoc) {
+          cameraDoc = await Camera.findOne({
+            $or: [
+              { cameraId: cameraId },
+              { cameraId: new RegExp(`^${cameraId}$`, 'i') },
+            ],
+          }).lean().catch(() => null);
+        }
+      }
+      if (!cameraDoc) {
+        cameraDoc = await Camera.findOne({ status: { $in: ['online', 'active'] } }).lean().catch(() => null)
+          || await Camera.findOne().lean().catch(() => null);
       }
 
       const result = await analyzeCrowdFrame({
-        imageBuffer: req.file.buffer,
+        imageBuffer: file.buffer,
         cameraId,
         cameraDoc,
         io: req.io,

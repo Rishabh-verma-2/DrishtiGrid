@@ -40,7 +40,7 @@ export default function CameraManagementPage() {
   // Query all cameras
   const { data: cameras = [], isLoading, isFetching, refetch } = useQuery({
     queryKey: ['cameras', 'management'],
-    queryFn: () => cameraAPI.getAll({ limit: 1000 }).then((r) => r.data.data || []),
+    queryFn: () => cameraAPI.getAll({ limit: 0 }).then((r) => r.data.data || []),
     staleTime: 30000,
   });
 

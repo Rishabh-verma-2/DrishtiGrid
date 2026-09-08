@@ -227,6 +227,9 @@ def validate_image_bytes(data: bytes) -> bool:
     try:
         arr = np.frombuffer(data, dtype=np.uint8)
         img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-        return img is not None
+        if img is not None:
+            return True
+        pil_img = Image.open(io.BytesIO(data))
+        return pil_img is not None
     except Exception:
         return False

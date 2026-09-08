@@ -12,23 +12,39 @@ export default function ZoneDensityGrid({
 
   const levelColorMap = {
     clear: {
-      bg: isLight ? 'bg-emerald-50 hover:bg-emerald-100/70 border-emerald-200 text-emerald-800' : 'bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-500/20 text-emerald-300',
-      badge: isLight ? 'bg-emerald-100 text-emerald-800' : 'bg-emerald-500/20 text-emerald-300',
+      bg: isLight
+        ? 'bg-emerald-50/80 hover:bg-emerald-100/90 border-emerald-300/80 text-emerald-950 shadow-2xs'
+        : 'bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-500/20 text-emerald-300',
+      badge: isLight
+        ? 'bg-emerald-200/80 text-emerald-900 border-emerald-300'
+        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
       dot: 'bg-emerald-500',
     },
     moderate: {
-      bg: isLight ? 'bg-amber-50 hover:bg-amber-100/70 border-amber-200 text-amber-800' : 'bg-amber-950/30 hover:bg-amber-900/40 border-amber-500/20 text-amber-300',
-      badge: isLight ? 'bg-amber-100 text-amber-800' : 'bg-amber-500/20 text-amber-300',
+      bg: isLight
+        ? 'bg-amber-50/90 hover:bg-amber-100 border-amber-300 text-amber-950 shadow-2xs'
+        : 'bg-amber-950/30 hover:bg-amber-900/40 border-amber-500/20 text-amber-300',
+      badge: isLight
+        ? 'bg-amber-200/90 text-amber-950 border-amber-300'
+        : 'bg-amber-500/20 text-amber-300 border-amber-500/30',
       dot: 'bg-amber-500',
     },
     dense: {
-      bg: isLight ? 'bg-orange-50 hover:bg-orange-100/70 border-orange-200 text-orange-800' : 'bg-orange-950/40 hover:bg-orange-900/50 border-orange-500/30 text-orange-300',
-      badge: isLight ? 'bg-orange-100 text-orange-800' : 'bg-orange-500/20 text-orange-300',
+      bg: isLight
+        ? 'bg-orange-50/90 hover:bg-orange-100 border-orange-300 text-orange-950 shadow-2xs'
+        : 'bg-orange-950/40 hover:bg-orange-900/50 border-orange-500/30 text-orange-300',
+      badge: isLight
+        ? 'bg-orange-200/90 text-orange-950 border-orange-300'
+        : 'bg-orange-500/20 text-orange-300 border-orange-500/30',
       dot: 'bg-orange-500',
     },
     critical: {
-      bg: isLight ? 'bg-red-50 hover:bg-red-100/70 border-red-300 text-red-800 animate-pulse' : 'bg-red-950/50 hover:bg-red-900/60 border-red-500/40 text-red-300 animate-pulse',
-      badge: isLight ? 'bg-red-100 text-red-800' : 'bg-red-500/30 text-red-300',
+      bg: isLight
+        ? 'bg-red-50 hover:bg-red-100 border-red-400 text-red-950 shadow-sm animate-pulse'
+        : 'bg-red-950/50 hover:bg-red-900/60 border-red-500/40 text-red-300 animate-pulse',
+      badge: isLight
+        ? 'bg-red-200 text-red-950 border-red-300'
+        : 'bg-red-500/30 text-red-300 border-red-500/40',
       dot: 'bg-red-500',
     },
   };
@@ -40,7 +56,7 @@ export default function ZoneDensityGrid({
     <div
       className={`rounded-2xl border p-5 transition-all duration-300 ${
         isLight
-          ? 'bg-white border-slate-200/90 shadow-xs'
+          ? 'bg-white border-slate-200 shadow-xs'
           : 'bg-[#141929] border-white/5 shadow-md'
       }`}
     >
@@ -55,16 +71,16 @@ export default function ZoneDensityGrid({
             <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-white'}`}>
               Spatial Sector Density Matrix
             </h3>
-            <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className={`text-[11px] font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
               {gridRows}×{gridCols} Sector Bottleneck Detection
             </p>
           </div>
         </div>
 
         {worstSector && worstSector.count > 0 && (
-          <div className="flex items-center gap-1 text-[11px] font-medium text-orange-500">
+          <div className={`flex items-center gap-1 text-[11px] font-bold ${isLight ? 'text-orange-700' : 'text-orange-400'}`}>
             <Flame className="w-3.5 h-3.5 text-orange-500" />
-            <span>Pinch Point: <b>{worstSector.zone_name || `R${worstSector.row+1}C${worstSector.col+1}`}</b> ({worstSector.count}p)</span>
+            <span>Hotspot: <b>{worstSector.zone_name || `R${worstSector.row+1}C${worstSector.col+1}`}</b> ({worstSector.count}p)</span>
           </div>
         )}
       </div>
@@ -104,24 +120,30 @@ export default function ZoneDensityGrid({
               } ${isSelected ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] font-mono font-bold uppercase opacity-75">
+                <span className={`text-[10px] font-mono font-black uppercase ${
+                  isLight ? 'text-slate-700' : 'opacity-80 text-white'
+                }`}>
                   {zone.zone_name || `R${r + 1}C${c + 1}`}
                 </span>
                 <span className={`w-2 h-2 rounded-full ${style.dot}`} />
               </div>
 
               <div className="flex items-baseline justify-between mt-1">
-                <span className="text-base font-black font-mono">
+                <span className={`text-base font-black font-mono ${
+                  isLight ? 'text-slate-900' : 'text-white'
+                }`}>
                   {zone.count}
                 </span>
-                <span className="text-[9px] opacity-75">
+                <span className={`text-[10px] font-bold ${
+                  isLight ? 'text-slate-600' : 'opacity-70 text-slate-300'
+                }`}>
                   people
                 </span>
               </div>
 
-              <div className="mt-1">
-                <span className={`text-[9px] font-bold uppercase px-1 py-0.2 rounded ${style.badge}`}>
-                  {zone.density_level}
+              <div className="mt-1.5">
+                <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded border ${style.badge}`}>
+                  {zone.density_level || 'clear'}
                 </span>
               </div>
             </button>
@@ -130,22 +152,24 @@ export default function ZoneDensityGrid({
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center justify-between text-[10.5px] pt-2 border-t border-slate-100 dark:border-white/5">
+      <div className={`flex flex-wrap items-center justify-between text-[11px] pt-3 border-t ${
+        isLight ? 'border-slate-200' : 'border-white/5'
+      }`}>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-slate-500">
+          <span className={`flex items-center gap-1 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
             <span className="w-2 h-2 rounded-full bg-emerald-500" /> Clear (&lt;5)
           </span>
-          <span className="flex items-center gap-1 text-slate-500">
+          <span className={`flex items-center gap-1 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
             <span className="w-2 h-2 rounded-full bg-amber-500" /> Moderate (5–14)
           </span>
-          <span className="flex items-center gap-1 text-slate-500">
+          <span className={`flex items-center gap-1 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
             <span className="w-2 h-2 rounded-full bg-orange-500" /> Dense (15–29)
           </span>
-          <span className="flex items-center gap-1 text-slate-500">
+          <span className={`flex items-center gap-1 font-medium ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
             <span className="w-2 h-2 rounded-full bg-red-500" /> Critical (30+)
           </span>
         </div>
-        <span className={`text-[10px] ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>
+        <span className={`text-[11px] font-semibold ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
           Click sector to inspect
         </span>
       </div>
