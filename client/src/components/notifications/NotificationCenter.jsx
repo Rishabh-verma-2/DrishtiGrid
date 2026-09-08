@@ -138,7 +138,7 @@ export default function NotificationCenter() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative z-[2200]" ref={dropdownRef}>
       {/* Bell Icon Trigger */}
       <button
         onClick={() => setIsOpen((p) => !p)}
@@ -161,7 +161,7 @@ export default function NotificationCenter() {
       {/* Dropdown Popover */}
       {isOpen && (
         <div
-          className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl border z-50 overflow-hidden flex flex-col transition-all ${
+          className={`absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl shadow-2xl border z-[2300] overflow-hidden flex flex-col transition-all ${
             isLight
               ? 'bg-white border-slate-200 text-slate-900 shadow-slate-300/60'
               : 'bg-[#0f1422] border-white/10 text-slate-100 shadow-black/80'
