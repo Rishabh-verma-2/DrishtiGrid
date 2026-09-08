@@ -90,7 +90,7 @@ cv2.destroyAllWindows()`;
   };
 
   return (
-    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-[fadeIn_0.2s_ease]">
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-[fadeIn_0.2s_ease]">
       {/* Modal Container */}
       <div className="bg-white dark:bg-[#0f1422] border border-slate-200 dark:border-white/10 rounded-3xl w-full max-w-5xl overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
 

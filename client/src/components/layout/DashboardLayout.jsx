@@ -232,7 +232,7 @@ export default function DashboardLayout() {
         {/* Mobile overlay */}
         {mobileOpen && (
           <div
-            className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[3100] lg:hidden backdrop-blur-sm"
             onClick={() => setMobileOpen(false)}
           />
         )}
@@ -261,7 +261,7 @@ export default function DashboardLayout() {
 
         {/* Sidebar — mobile drawer */}
         <aside
-          className={`fixed inset-y-0 left-0 z-40 w-[260px] flex flex-col ${
+          className={`fixed inset-y-0 left-0 z-[3200] w-[260px] flex flex-col ${
             isLight ? 'bg-white border-r border-slate-200 shadow-xl' : 'bg-[#080c16] border-r border-white/5'
           } transition-transform duration-300 lg:hidden
             ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
@@ -273,7 +273,7 @@ export default function DashboardLayout() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Top Header */}
-          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors relative z-40 ${
+          <header className={`h-16 flex items-center justify-between px-4 lg:px-6 shrink-0 border-b transition-colors relative z-[2100] ${
             isLight
               ? 'bg-white border-slate-200 shadow-sm'
               : 'bg-[#0a0d14]/95 border-white/5 backdrop-blur-sm'
