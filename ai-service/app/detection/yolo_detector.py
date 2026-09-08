@@ -429,8 +429,18 @@ def detect_vehicles(
 ) -> List[Dict]:
     """
     Locate vehicles in the image across full-frame and tiled passes.
-    Returns list of dicts:
-      {"vehicle_id": str, "bbox": [x1, y1, x2, y2], "vehicle_type": str, "conf": float}
+    Returns list of dicts with full metadata:
+      {
+        "vehicle_id": str,
+        "bbox": [x1, y1, x2, y2],
+        "class": str,          # car, motorcycle, bus, truck, auto-rickshaw
+        "vehicle_type": str,   # identical alias for class
+        "confidence": float,
+        "center": (cx, cy),
+        "width": int,
+        "height": int,
+        "area": int,
+      }
     """
     img_h, img_w = image.shape[:2]
     coco = _load_coco_model()
@@ -456,11 +466,24 @@ def detect_vehicles(
         if any(_compute_iou(box, (v["bbox"][0], v["bbox"][1], v["bbox"][2], v["bbox"][3])) > 0.45 for v in vehicles):
             return
         cname = names.get(cls_id, "car")
+        cname_str = str(cname).lower()
+        # Classify auto-rickshaw heuristic for Indian traffic environments
+        # (3-wheelers detected as motorcycle with boxy cabin aspect ratio and area)
+        if cname_str == "motorcycle" and (vw * vh) >= 8000 and 0.70 <= (vh / max(1, vw)) <= 1.45:
+            cname_str = "auto-rickshaw"
+
+        cx = int((vx1 + vx2) / 2)
+        cy = int((vy1 + vy2) / 2)
         vehicles.append({
             "vehicle_id": f"veh_{len(vehicles)+1}",
             "bbox": [vx1, vy1, vx2, vy2],
-            "vehicle_type": str(cname).lower(),
-            "confidence": float(vconf),
+            "class": cname_str,
+            "vehicle_type": cname_str,
+            "confidence": round(float(vconf), 4),
+            "center": (cx, cy),
+            "width": vw,
+            "height": vh,
+            "area": vw * vh,
         })
 
     if veh_result is not None and veh_result.boxes is not None:
@@ -502,6 +525,235 @@ def detect_vehicles(
     # Sort vehicles by area descending
     vehicles.sort(key=lambda v: (v["bbox"][2] - v["bbox"][0]) * (v["bbox"][3] - v["bbox"][1]), reverse=True)
     return vehicles
+
+
+# ---------------------------------------------------------------------------
+# Vehicle-First ROI Plate Detector (Autonomous Per-Vehicle Processing Unit)
+# ---------------------------------------------------------------------------
+
+def detect_plates_in_vehicle_roi(
+    image: np.ndarray,
+    vehicle: Dict[str, Any],
+    lp_model: Any = None,
+    conf: float = 0.20,
+    iou: float = 0.35,
+    padding_ratio: float = 0.10,
+) -> Dict[str, Any]:
+    """
+    Detect license plates specifically inside an individual vehicle ROI.
+    Orientation-aware: scans full vehicle body without assuming plate is strictly lower 40%.
+    Converts all plate coordinates back to original image space.
+    Performs vehicle-local candidate fusion and returns ONE primary candidate (or None).
+    """
+    img_h, img_w = image.shape[:2]
+    vx1, vy1, vx2, vy2 = vehicle["bbox"]
+    vw = max(1, vx2 - vx1)
+    vh = max(1, vy2 - vy1)
+    v_type = vehicle.get("class") or vehicle.get("vehicle_type", "car")
+    v_id = vehicle.get("vehicle_id", "veh_1")
+
+    # 1. Configurable padding around vehicle bbox (8-15%, default 10%)
+    pad_x = max(6, int(vw * padding_ratio))
+    pad_y = max(6, int(vh * padding_ratio))
+    roi_x1 = max(0, vx1 - pad_x)
+    roi_y1 = max(0, vy1 - pad_y)
+    roi_x2 = min(img_w, vx2 + pad_x)
+    roi_y2 = min(img_h, vy2 + pad_y)
+
+    roi = image[roi_y1:roi_y2, roi_x1:roi_x2]
+    if roi.size == 0:
+        return {
+            "vehicle_id": v_id,
+            "primary_candidate": None,
+            "secondary_candidates": [],
+            "all_candidates": [],
+            "has_plate": False,
+        }
+
+    roi_h, roi_w = roi.shape[:2]
+    if lp_model is None:
+        lp_model = get_yolo_model()
+
+    local_candidates: List[Dict] = []
+
+    # 2. Orientation-Aware Multi-Scale Inference on Vehicle ROI
+    if lp_model is not None:
+        target_w = max(roi_w, 320)
+        up_scale = target_w / float(roi_w)
+        up_h = int(roi_h * up_scale)
+        try:
+            roi_up = cv2.resize(roi, (target_w, up_h), interpolation=cv2.INTER_LANCZOS4)
+        except Exception:
+            roi_up = roi
+            up_scale = 1.0
+
+        res_full = _run_yolo_inference(lp_model, roi_up, conf=max(CONF_FLOOR, conf - 0.06), iou=iou)
+        cands_full = _extract_lp_boxes(
+            res_full, img_w, img_h,
+            scale_x=up_scale, scale_y=up_scale,
+            offset_x=roi_x1, offset_y=roi_y1,
+            source_tag="vehicle_roi_full",
+        )
+        for c in cands_full:
+            c["vehicle_id"] = v_id
+            c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
+            c["vehicle_type"] = v_type
+        local_candidates.extend(cands_full)
+
+        # For tall/heavy vehicles (bus, truck), also scan bumper and mid grille bands
+        if vh > 180 or vw > 250:
+            sub_y1 = int(roi_h * 0.45)
+            sub_roi = roi[sub_y1:roi_h, :]
+            if sub_roi.size > 0:
+                s_h, s_w = sub_roi.shape[:2]
+                stgt_w = max(s_w, 400)
+                s_scale = stgt_w / float(s_w)
+                try:
+                    sub_up = cv2.resize(sub_roi, (stgt_w, int(s_h * s_scale)), interpolation=cv2.INTER_LANCZOS4)
+                    res_sub = _run_yolo_inference(lp_model, sub_up, conf=max(CONF_FLOOR, conf - 0.05), iou=iou)
+                    cands_sub = _extract_lp_boxes(
+                        res_sub, img_w, img_h,
+                        scale_x=s_scale, scale_y=s_scale,
+                        offset_x=roi_x1, offset_y=roi_y1 + sub_y1,
+                        source_tag="vehicle_roi_bumper",
+                    )
+                    for c in cands_sub:
+                        c["vehicle_id"] = v_id
+                        c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
+                        c["vehicle_type"] = v_type
+                    local_candidates.extend(cands_sub)
+                except Exception:
+                    pass
+
+    # 3. Vehicle-Local OCR Fallback (if no YOLO candidates found)
+    if not local_candidates and (vw >= 40 and vh >= 30):
+        try:
+            from app.ocr.paddle_ocr import get_ocr_engine
+            from app.validation.indian_plate import normalize_plate_text, validate_indian_plate
+            import re
+            engine = get_ocr_engine()
+            if engine is not None and roi.size > 0:
+                rgb_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+                ocr_out = engine.ocr(rgb_roi, cls=True)
+                if ocr_out and ocr_out[0]:
+                    for line in ocr_out[0]:
+                        if not line:
+                            continue
+                        pts, (txt, ocr_c) = line
+                        clean = re.sub(r"[^A-Z0-9]", "", txt.upper())
+                        if len(clean) >= 3:
+                            xs = [p[0] for p in pts]
+                            ys = [p[1] for p in pts]
+                            px1 = max(0, int(roi_x1 + min(xs)))
+                            py1 = max(0, int(roi_y1 + min(ys)))
+                            px2 = min(img_w, int(roi_x1 + max(xs)))
+                            py2 = min(img_h, int(roi_y1 + max(ys)))
+                            pw = px2 - px1
+                            ph = py2 - py1
+                            if ph > 0 and (pw / ph) >= 0.75:
+                                pad_c_x = max(6, int(pw * 0.15))
+                                pad_c_y = max(4, int(ph * 0.25))
+                                cx1 = max(0, px1 - pad_c_x)
+                                cy1 = max(0, py1 - pad_c_y)
+                                cx2 = min(img_w, px2 + pad_c_x)
+                                cy2 = min(img_h, py2 + pad_c_y)
+                                cw = cx2 - cx1
+                                ch = cy2 - cy1
+                                norm = normalize_plate_text(clean)
+                                status, _ = validate_indian_plate(norm)
+                                conf_score = min(0.99, float(ocr_c) + (0.35 if status == "VALID_FORMAT" else 0.15 if status == "POSSIBLE_FORMAT" else 0.05))
+                                local_candidates.append({
+                                    "box": (cx1, cy1, cx2, cy2),
+                                    "bbox": {"x": cx1, "y": cy1, "width": cw, "height": ch},
+                                    "conf": conf_score,
+                                    "crop": image[cy1:cy2, cx1:cx2].copy(),
+                                    "source": "vehicle_roi_ocr_fallback",
+                                    "vehicle_id": v_id,
+                                    "vehicle_bbox": {"x": vx1, "y": vy1, "width": vw, "height": vh},
+                                    "vehicle_type": v_type,
+                                })
+        except Exception as e:
+            logger.debug("Vehicle ROI OCR fallback error: %s", e)
+
+    # 4. Vehicle-Local Contour Fallback (if still 0 candidates)
+    if not local_candidates and (vw >= 50 and vh >= 40):
+        try:
+            h_cands = _heuristic_plate_regions(roi, offset_x=roi_x1, offset_y=roi_y1, img_w=img_w, img_h=img_h, max_results=2)
+            for c in h_cands:
+                c["source"] = "vehicle_roi_contour_fallback"
+                c["vehicle_id"] = v_id
+                c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
+                c["vehicle_type"] = v_type
+                local_candidates.append(c)
+        except Exception as e:
+            logger.debug("Vehicle ROI contour fallback error: %s", e)
+
+    # Fill in crops for local candidates
+    for cand in local_candidates:
+        if cand.get("crop") is None:
+            b = cand["bbox"]
+            cand["crop"] = safe_crop(image, b["x"], b["y"], b["width"], b["height"], pad=4)
+
+    local_candidates = [c for c in local_candidates if c.get("crop") is not None and c["crop"].size > 0]
+
+    # 5. Vehicle-Local Candidate Fusion
+    if not local_candidates:
+        return {
+            "vehicle_id": v_id,
+            "primary_candidate": None,
+            "secondary_candidates": [],
+            "all_candidates": [],
+            "has_plate": False,
+        }
+
+    # Score each local candidate using probabilistic geometric prior within THIS vehicle
+    for cand in local_candidates:
+        bx1, by1, bx2, by2 = cand["box"]
+        pw = max(1, bx2 - bx1)
+        ph = max(1, by2 - by1)
+        pcx = (bx1 + bx2) / 2.0
+        pcy = (by1 + by2) / 2.0
+        rel_y = (pcy - vy1) / max(1.0, float(vh))
+        area_ratio = (pw * ph) / max(1.0, float(vw * vh))
+
+        # Geometric prior score
+        if "motorcycle" in v_type or "bike" in v_type:
+            geom_prior = 1.0 if 0.35 <= rel_y <= 0.98 else 0.6
+        elif "bus" in v_type or "truck" in v_type:
+            geom_prior = 1.0 if 0.35 <= rel_y <= 0.98 else 0.7
+        else:
+            geom_prior = 1.0 if 0.45 <= rel_y <= 0.98 else 0.75
+
+        if 0.001 <= area_ratio <= 0.20:
+            area_prior = 1.0
+        else:
+            area_prior = 0.5
+
+        composite_score = cand["conf"] * 0.60 + geom_prior * 0.25 + area_prior * 0.15
+        cand["composite_score"] = composite_score
+
+    # Cluster / NMS locally within this vehicle
+    local_candidates.sort(key=lambda c: c.get("composite_score", c["conf"]), reverse=True)
+    fused: List[Dict] = []
+    for cand in local_candidates:
+        overlap = False
+        for f in fused:
+            if _compute_iou(cand["box"], f["box"]) > 0.35:
+                overlap = True
+                break
+        if not overlap:
+            fused.append(cand)
+
+    primary = fused[0] if fused else None
+    secondary = fused[1:] if len(fused) > 1 else []
+
+    return {
+        "vehicle_id": v_id,
+        "primary_candidate": primary,
+        "secondary_candidates": secondary,
+        "all_candidates": local_candidates,
+        "has_plate": primary is not None,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -916,7 +1168,83 @@ def _global_nms(candidates: List[Dict], iou_threshold: float = NMS_IOU_THR) -> L
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Public API: Vehicle-First Primary ANPR
+# ---------------------------------------------------------------------------
+
+def detect_plates_vehicle_first(
+    image: np.ndarray,
+    conf_threshold: Optional[float] = None,
+    iou_threshold: Optional[float] = None,
+) -> Tuple[List[Dict], List[Dict], Dict[str, Any]]:
+    """
+    Primary Vehicle-First ANPR Detection Pipeline:
+    1. Detect all vehicles in the image.
+    2. For each detected vehicle, run individual ROI plate detection.
+    3. Perform vehicle-local candidate fusion.
+    4. Pick ONE primary plate per vehicle.
+    5. If 0 vehicles are found, trigger full-frame global fallback.
+    
+    Returns:
+      (plate_candidates, vehicles, debug_info)
+    """
+    if image is None or image.size == 0:
+        return [], [], {}
+
+    img_h, img_w = image.shape[:2]
+    model = get_yolo_model()
+    conf = conf_threshold if conf_threshold is not None else float(MODEL_CONFIG.get("YOLO_CONFIDENCE_THRESHOLD", 0.25))
+    conf = max(CONF_FLOOR, conf)
+    iou = iou_threshold if iou_threshold is not None else float(MODEL_CONFIG.get("YOLO_IOU_THRESHOLD", 0.45))
+
+    # Step 1: Detect all vehicles first
+    vehicles = detect_vehicles(image)
+    plate_candidates: List[Dict] = []
+    vehicle_roi_debug: List[Dict] = []
+
+    if vehicles:
+        for idx, veh in enumerate(vehicles, start=1):
+            roi_res = detect_plates_in_vehicle_roi(image, veh, lp_model=model, conf=conf, iou=iou)
+            vehicle_roi_debug.append(roi_res)
+            primary = roi_res.get("primary_candidate")
+            if primary is not None:
+                pbox = primary["bbox"]
+                crop = primary.get("crop")
+                if crop is None or crop.size == 0:
+                    crop = safe_crop(image, pbox["x"], pbox["y"], pbox["width"], pbox["height"], pad=4)
+                if crop is not None and crop.size > 0:
+                    plate_candidates.append({
+                        "plate_id": len(plate_candidates) + 1,
+                        "bbox": pbox,
+                        "box": primary["box"],
+                        "detection_confidence": round(float(primary.get("conf", 0.75)), 4),
+                        "original_crop": crop,
+                        "sources": [primary.get("source", "vehicle_roi")],
+                        "source_count": 1,
+                        "is_contour_only": "contour" in primary.get("source", ""),
+                        "best_source": primary.get("source", "vehicle_roi"),
+                        "vehicle_id": veh["vehicle_id"],
+                        "vehicle_bbox": {"x": veh["bbox"][0], "y": veh["bbox"][1],
+                                        "width": veh["bbox"][2] - veh["bbox"][0],
+                                        "height": veh["bbox"][3] - veh["bbox"][1]},
+                        "vehicle_type": veh.get("vehicle_type", "car"),
+                        "secondary_candidates": roi_res.get("secondary_candidates", []),
+                    })
+    else:
+        # Step 2: Global Fallback when 0 vehicles detected
+        logger.info("Vehicle-first: 0 vehicles detected. Activating global full-frame plate fallback.")
+        plate_candidates = detect_license_plates(image, conf_threshold=conf, iou_threshold=iou, return_vehicles=False)
+
+    debug_info = {
+        "vehicle_count": len(vehicles),
+        "vehicle_roi_results": vehicle_roi_debug,
+        "is_global_fallback": len(vehicles) == 0,
+    }
+
+    return plate_candidates, vehicles, debug_info
+
+
+# ---------------------------------------------------------------------------
+# Global Fallback & Backward Compatible API
 # ---------------------------------------------------------------------------
 
 def detect_license_plates(

@@ -77,10 +77,12 @@ function generateFallbackAIDetection(filename, activeRecords) {
   }
 
   const rawOcr = samplePlate.replace(/(.{2})(.{2})(.{2})?(.{4})/, '$1 $2 $3 $4').trim();
+  const normPlate = normalizePlateNumber(samplePlate);
 
   return {
     success: true,
     total_plates_detected: 1,
+    vehicles_detected: 1,
     simulated: true,
     ai_service_status: 'offline_fallback',
     original_image: '',
@@ -88,19 +90,37 @@ function generateFallbackAIDetection(filename, activeRecords) {
     plates: [
       {
         plate_id: 1,
-        bbox: { x1: 180, y1: 220, x2: 400, y2: 285 },
+        bbox: { x: 180, y: 220, width: 220, height: 65 },
         original_crop_b64: '',
         enhanced_crop_b64: '',
         raw_ocr: rawOcr,
-        normalized_plate: normalizePlateNumber(samplePlate),
-        detection_confidence: 0.942,
-        ocr_confidence: 0.968,
-        overall_confidence: 0.955,
+        normalized_plate: normPlate,
+        corrected_plate: normPlate,
+        detection_confidence: 0.94,
+        ocr_confidence: 0.96,
+        overall_confidence: 0.95,
         car_color: 'White',
         vehicle_type: 'car',
         car_model: null,
         validation_status: 'VALID_FORMAT',
+        result_state: 'VERIFIED',
         validation_note: 'Validated Indian Registration Syntax (Gujarat/State Standard)',
+      },
+    ],
+    vehicle_results: [
+      {
+        vehicle_id: 'veh_1',
+        vehicle_number: 1,
+        vehicle_type: 'Car',
+        car_color: 'White',
+        has_plate: true,
+        number_plate: normPlate,
+        plate_confidence: 94,
+        overall_confidence: 95,
+        status: 'VERIFIED',
+        plate_id: 1,
+        vehicle_bbox: { x: 100, y: 80, width: 380, height: 260 },
+        plate_bbox: { x: 180, y: 220, width: 220, height: 65 },
       },
     ],
     timings: { total_ms: 120, simulated: true },
@@ -363,6 +383,25 @@ const analyzeVehicleImages = async (req, res) => {
         ? (aiData.processed_image.startsWith('data:') ? aiData.processed_image : `data:image/jpeg;base64,${aiData.processed_image}`)
         : originalImage;
 
+      // Ensure vehicle_results is populated (either directly from AI service or mapped from plates)
+      let vehicleResults = aiData.vehicle_results || [];
+      if (vehicleResults.length === 0 && enrichedPlates.length > 0) {
+        vehicleResults = enrichedPlates.map((p, pIdx) => ({
+          vehicle_id: p.vehicle_id || `veh_${pIdx + 1}`,
+          vehicle_number: pIdx + 1,
+          vehicle_type: (p.vehicle_type || 'Car').charAt(0).toUpperCase() + (p.vehicle_type || 'car').slice(1),
+          car_color: p.car_color || 'Unknown',
+          has_plate: p.normalized_plate !== 'UNREADABLE',
+          number_plate: p.corrected_plate || p.normalized_plate || p.raw_ocr,
+          plate_confidence: Math.round((p.detection_confidence || 0.9) * 100),
+          overall_confidence: Math.round((p.overall_confidence || 0.9) * 100),
+          status: p.result_state || (p.validation_status === 'VALID_FORMAT' ? 'VERIFIED' : 'REVIEW'),
+          plate_id: p.plate_id || pIdx + 1,
+          vehicle_bbox: p.vehicle_bbox || null,
+          plate_bbox: p.bbox || null,
+        }));
+      }
+
       results.push({
         image_index: i + 1,
         image_name: file.originalname,
@@ -371,11 +410,13 @@ const analyzeVehicleImages = async (req, res) => {
         analyzed_at: new Date().toISOString(),
         analyzed_time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         plates_detected: plates.length,
+        vehicles_detected: aiData.vehicles_detected || vehicleResults.length || plates.length,
         matched_plates: matchCount,
         alerts_generated: alertCount,
         original_image: originalImage,
         processed_image: processedImage,
         plates: enrichedPlates,
+        vehicle_results: vehicleResults,
         simulated: aiData.simulated || false,
         timings: {
           ...aiData.timings,

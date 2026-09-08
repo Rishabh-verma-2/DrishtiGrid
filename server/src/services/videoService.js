@@ -169,8 +169,29 @@ async function sendFrameToAIService(imageBuffer, frameSecond) {
 }
 
 /**
- * Find matching active vehicle track within 30-second temporal deduplication window
- * using plate text similarity, vehicle bounding box proximity, class, and color.
+ * Calculate multi-factor frame evidence score for best-frame selection:
+ * plate size + sharpness + detector confidence + OCR confidence + image quality.
+ */
+function computeFrameEvidenceScore(plate) {
+  const detConf = plate.detection_confidence || 0.80;
+  const ocrConf = plate.ocr_confidence || 0.80;
+  const bbox = plate.bbox || {};
+  const pw = bbox.width || (bbox.x2 ? bbox.x2 - bbox.x1 : 80);
+  const ph = bbox.height || (bbox.y2 ? bbox.y2 - bbox.y1 : 30);
+  const sizeScore = Math.min(1.0, (pw * ph) / 6000.0);
+
+  const quality = plate.quality_assessment || {};
+  const sharpness = quality.sharpness ? Math.min(1.0, quality.sharpness / 100.0) : 0.70;
+  const contrast = quality.contrast ? Math.min(1.0, quality.contrast / 70.0) : 0.70;
+  const qualityScore = (sharpness + contrast) / 2.0;
+
+  return 0.30 * detConf + 0.30 * ocrConf + 0.20 * sizeScore + 0.20 * qualityScore;
+}
+
+/**
+ * Find matching active vehicle track.
+ * Enforces: NEVER dedup by plate text globally.
+ * Must verify: vehicle_id + spatial location + time + vehicle appearance + plate evidence.
  */
 function findMatchingTrack(tracks, plateData, frameSec) {
   const plateNumber = typeof plateData === "string"
@@ -180,19 +201,27 @@ function findMatchingTrack(tracks, plateData, frameSec) {
   const pVehBbox = typeof plateData === "object" ? plateData.vehicle_bbox : null;
   const pVehType = typeof plateData === "object" ? (plateData.vehicle_type || "").toLowerCase() : "";
   const pColor = typeof plateData === "object" ? plateData.car_color : null;
+  const pVehId = typeof plateData === "object" ? plateData.vehicle_id : null;
 
   for (const track of tracks) {
-    const withinTimeWindow = Math.abs(frameSec - track.last_seen_second) <= 30;
-    if (!withinTimeWindow) continue;
+    const timeDelta = Math.abs(frameSec - track.last_seen_second);
 
-    // 1. Text similarity
-    const isSamePlate = arePlatesSimilar(track.plate_number, plateNumber);
-    if (isSamePlate) {
+    // 1. Two vehicles in the exact same frame cannot be the same physical vehicle
+    if (track.last_seen_second === frameSec) {
+      continue;
+    }
+
+    // 2. Beyond temporal tracking horizon (30 seconds)
+    if (timeDelta > 30) continue;
+
+    // 3. Exact vehicle ID match within short timeframe (e.g. from vehicle-first pipeline)
+    if (pVehId && track.vehicle_id && pVehId === track.vehicle_id && timeDelta <= 4) {
       return track;
     }
 
-    // 2. Spatial proximity if vehicle bboxes exist
+    // 4. Spatial proximity check
     let isSpatialMatch = false;
+    let isSpatialConflict = false;
     if (track.last_vehicle_bbox && pVehBbox) {
       const tb = track.last_vehicle_bbox;
       const tcx = tb.x + tb.width / 2;
@@ -201,16 +230,34 @@ function findMatchingTrack(tracks, plateData, frameSec) {
       const pcy = pVehBbox.y + pVehBbox.height / 2;
       const dist = Math.hypot(tcx - pcx, tcy - pcy);
       const avgDim = (tb.width + tb.height + pVehBbox.width + pVehBbox.height) / 4;
-      if (dist < avgDim * 0.8) {
+
+      if (dist < avgDim * 0.9) {
         isSpatialMatch = true;
+      } else if (dist > avgDim * 1.6 && timeDelta <= 2) {
+        // Vehicle moved an impossible distance in <= 2 seconds -> physically separate vehicle
+        isSpatialConflict = true;
       }
     }
 
-    // 3. Class and color consistency
-    const isClassMatch = track.vehicle_type && pVehType && track.vehicle_type.toLowerCase() === pVehType;
-    const isColorMatch = track.colors && pColor && track.colors.includes(pColor);
+    // Prevent false merging of two distinct vehicles
+    if (isSpatialConflict) {
+      continue;
+    }
 
-    if (isSpatialMatch && (isClassMatch || isColorMatch) && Math.abs(frameSec - track.last_seen_second) <= 3) {
+    // 5. Appearance consistency
+    const isClassMatch = !track.vehicle_type || !pVehType || track.vehicle_type.toLowerCase() === pVehType;
+    const isColorMatch = !pColor || !track.colors || track.colors.length === 0 || track.colors.includes(pColor);
+
+    // 6. Plate text similarity
+    const isSamePlate = plateNumber && track.plate_number && arePlatesSimilar(track.plate_number, plateNumber);
+
+    // If spatial matches and class matches: positive match
+    if (isSpatialMatch && isClassMatch) {
+      return track;
+    }
+
+    // If plate matches AND appearance matches AND no spatial conflict AND within 10s:
+    if (isSamePlate && isClassMatch && isColorMatch && timeDelta <= 10) {
       return track;
     }
   }
@@ -336,18 +383,21 @@ async function runVideoProcessingJob({
             sec: frameSecond,
           });
 
-          // Update best crop if confidence is higher
-          const thisConf = plate.overall_confidence || plate.ocr_confidence || 0;
+          // Update best crop using multi-metric frame evidence score:
+          // plate size, sharpness, detector confidence, OCR confidence, and image quality
+          const frameEvidenceScore = computeFrameEvidenceScore(plate);
           if (
-            thisConf > (existingTrack.bestConf || 0) &&
+            frameEvidenceScore > (existingTrack.bestFrameScore || 0) &&
             (plate.enhanced_crop_b64 || plate.original_crop_b64)
           ) {
             existingTrack.bestCropB64 = plate.enhanced_crop_b64 || plate.original_crop_b64;
-            existingTrack.bestConf = thisConf;
+            existingTrack.bestConf = plate.overall_confidence || plate.ocr_confidence || 0;
+            existingTrack.bestFrameScore = frameEvidenceScore;
             existingTrack.bestCropSec = frameSecond;
           }
         } else {
           const frameTime = new Date(baseTimestamp + (frameSecond - 1) * 1000).toISOString();
+          const initialEvidenceScore = computeFrameEvidenceScore(plate);
           const newTrack = {
             trackId: `TRK_${videoId}_${frameSecond}_${tracks.length + 1}`,
             plate_number: plateNumber,
@@ -373,6 +423,7 @@ async function runVideoProcessingJob({
             ],
             bestCropB64: plate.enhanced_crop_b64 || plate.original_crop_b64 || "",
             bestConf: plate.overall_confidence || 0,
+            bestFrameScore: initialEvidenceScore,
             bestCropSec: frameSecond,
             bestCropPIdx: plate.plate_id || 1,
             match_status: matchResult.matchStatus,

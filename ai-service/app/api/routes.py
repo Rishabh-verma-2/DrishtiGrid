@@ -144,9 +144,11 @@ async def process_image(
     response = {
         "success": pipeline_result.get("success", False),
         "total_plates_detected": pipeline_result.get("total_plates_detected", 0),
+        "vehicles_detected": pipeline_result.get("vehicles_detected", 0),
         "original_image": pipeline_result.get("original_image_b64", ""),
         "processed_image": pipeline_result.get("processed_image_b64", ""),
         "plates": plates_response,
+        "vehicle_results": pipeline_result.get("vehicle_results", []),
         "timings": pipeline_result.get("timings", {}),
     }
 

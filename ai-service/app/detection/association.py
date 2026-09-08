@@ -196,15 +196,19 @@ def associate_plates_to_vehicles(
     min_association_plausibility: float = 0.30,
 ) -> List[AssociationMatch]:
     """
-    Associate a list of plate candidate boxes with detected vehicles.
-    Resolves multi-vehicle overlaps and preserves orphan candidate plates.
+    Associate a list of plate candidate boxes with detected vehicles using
+    global maximum-score bipartite matching (Hungarian algorithm).
+    Resolves multi-vehicle overlaps deterministically and preserves orphan candidate plates.
     """
     matches: List[AssociationMatch] = []
 
     if not plate_candidates:
         return matches
 
-    if not vehicles:
+    num_plates = len(plate_candidates)
+    num_vehicles = len(vehicles)
+
+    if not vehicles or num_vehicles == 0:
         # All plates are orphans
         for p_idx, p in enumerate(plate_candidates):
             matches.append(
@@ -222,50 +226,86 @@ def associate_plates_to_vehicles(
             )
         return matches
 
+    # Build score matrix [N_plates x N_vehicles]
+    score_matrix = np.zeros((num_plates, num_vehicles), dtype=np.float32)
+    diag_matrix: List[List[Dict[str, Any]]] = [[{} for _ in range(num_vehicles)] for _ in range(num_plates)]
+
     for p_idx, plate in enumerate(plate_candidates):
         pbox = plate.get("bbox") or plate.get("box") or [0, 0, 0, 0]
-
-        best_v_idx = None
-        best_score = -1.0
-        best_diag = {}
+        plate_assigned_vid = plate.get("vehicle_id")
 
         for v_idx, veh in enumerate(vehicles):
             vbox = veh.get("bbox") or veh.get("box") or [0, 0, 0, 0]
-            vtype = veh.get("vehicle_type") or veh.get("class_name") or "car"
+            vtype = veh.get("vehicle_type") or veh.get("class") or veh.get("class_name") or "car"
+            vid = veh.get("vehicle_id")
 
             score, diag = score_plate_vehicle_pair(pbox, vbox, vtype)
-            if score > best_score:
-                best_score = score
-                best_v_idx = v_idx
-                best_diag = diag
+            # If candidate was produced directly by this vehicle's ROI, boost confidence
+            if plate_assigned_vid and vid and plate_assigned_vid == vid:
+                score = min(1.0, score + 0.20)
+                diag["inside"] = True
 
-        if best_v_idx is not None and best_score >= min_association_plausibility:
-            v_obj = vehicles[best_v_idx]
-            vid = v_obj.get("vehicle_id") or f"veh_{best_v_idx}"
+            score_matrix[p_idx, v_idx] = score
+            diag_matrix[p_idx][v_idx] = diag
+
+    # Global Maximum-Score Assignment
+    # Use scipy.optimize.linear_sum_assignment if available, else max-score greedy pairing
+    plate_to_veh: Dict[int, int] = {}
+    try:
+        from scipy.optimize import linear_sum_assignment
+        # Cost is negative score to maximize total plausibility
+        cost_matrix = -score_matrix
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        for r, c in zip(row_ind, col_ind):
+            if score_matrix[r, c] >= min_association_plausibility:
+                plate_to_veh[int(r)] = int(c)
+    except Exception as e:
+        logger.debug(f"Linear sum assignment fallback to greedy optimal: {e}")
+        used_veh = set()
+        # Sort all (score, p_idx, v_idx) pairs descending
+        flat_pairs = []
+        for p in range(num_plates):
+            for v in range(num_vehicles):
+                flat_pairs.append((score_matrix[p, v], p, v))
+        flat_pairs.sort(key=lambda x: x[0], reverse=True)
+        for score, p, v in flat_pairs:
+            if p not in plate_to_veh and v not in used_veh and score >= min_association_plausibility:
+                plate_to_veh[p] = v
+                used_veh.add(v)
+
+    # Build final AssociationMatch list
+    for p_idx in range(num_plates):
+        matched_v_idx = plate_to_veh.get(p_idx)
+        if matched_v_idx is not None:
+            v_obj = vehicles[matched_v_idx]
+            vid = v_obj.get("vehicle_id") or f"veh_{matched_v_idx}"
+            score = float(score_matrix[p_idx, matched_v_idx])
+            diag = diag_matrix[p_idx][matched_v_idx]
             matches.append(
                 AssociationMatch(
                     plate_index=p_idx,
-                    vehicle_index=best_v_idx,
+                    vehicle_index=matched_v_idx,
                     vehicle_id=vid,
-                    plausibility_score=best_score,
-                    vertical_rel_pos=best_diag.get("rel_y", 0.0),
-                    horizontal_offset=best_diag.get("rel_x_offset", 0.0),
-                    area_ratio=best_diag.get("area_ratio", 0.0),
-                    inside_vehicle=best_diag.get("inside", False),
+                    plausibility_score=round(score, 3),
+                    vertical_rel_pos=diag.get("rel_y", 0.0),
+                    horizontal_offset=diag.get("rel_x_offset", 0.0),
+                    area_ratio=diag.get("area_ratio", 0.0),
+                    inside_vehicle=diag.get("inside", False),
                     is_orphan=False,
                 )
             )
         else:
-            # Orphan plate candidate
+            # Orphan candidate
+            best_score = float(np.max(score_matrix[p_idx])) if num_vehicles > 0 else 0.0
             matches.append(
                 AssociationMatch(
                     plate_index=p_idx,
                     vehicle_index=None,
                     vehicle_id=None,
-                    plausibility_score=max(0.0, best_score if best_score > 0 else 0.0),
-                    vertical_rel_pos=best_diag.get("rel_y", 0.0) if best_diag else 0.0,
-                    horizontal_offset=best_diag.get("rel_x_offset", 0.0) if best_diag else 0.0,
-                    area_ratio=best_diag.get("area_ratio", 0.0) if best_diag else 0.0,
+                    plausibility_score=round(max(0.0, best_score), 3),
+                    vertical_rel_pos=0.0,
+                    horizontal_offset=0.0,
+                    area_ratio=0.0,
                     inside_vehicle=False,
                     is_orphan=True,
                 )

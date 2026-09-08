@@ -50,6 +50,7 @@ export default function ANPRPage() {
   const [viewModeMap, setViewModeMap] = useState({}); // { [imageIndex]: 'ANNOTATED' | 'ORIGINAL' | 'SIDE_BY_SIDE' }
   const [inspectModalImage, setInspectModalImage] = useState(null);
   const [modalZoom, setModalZoom] = useState(1);
+  const [selectedVehicle, setSelectedVehicle] = useState(null); // { imgIndex, vehicleIndex, vehicle }
 
   // Watchlist state
   const [search, setSearch] = useState('');
@@ -838,6 +839,30 @@ export default function ANPRPage() {
                               className="max-h-72 w-full object-contain rounded-xl shadow-md transition-transform duration-300 group-hover:scale-[1.01]"
                             />
 
+                            {/* Selected Vehicle Focus Banner */}
+                            {selectedVehicle && selectedVehicle.imgIndex === idx && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="absolute top-2 inset-x-2 z-20 bg-blue-600/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl border border-blue-400/50 flex items-center justify-between text-xs shadow-lg"
+                              >
+                                <span className="font-bold flex items-center gap-1.5">
+                                  <Car className="w-3.5 h-3.5 text-cyan-300" />
+                                  <span>Focused: Vehicle #{selectedVehicle.vehicle.vehicle_index || selectedVehicle.vehicleIndex + 1}</span>
+                                  <span className="opacity-80 font-normal">({selectedVehicle.vehicle.vehicle_type || 'Vehicle'} • {selectedVehicle.vehicle.vehicle_color || 'Unknown'})</span>
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedVehicle(null);
+                                  }}
+                                  className="text-[10px] bg-white/20 hover:bg-white/30 text-white font-semibold px-2 py-0.5 rounded-md transition-colors"
+                                >
+                                  Clear Focus
+                                </button>
+                              </div>
+                            )}
+
                             <div className="absolute bottom-2 inset-x-2 z-10 bg-black/75 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-white/10 flex items-center justify-between text-[10px] text-white opacity-90 group-hover:opacity-100 transition-opacity">
                               <div className="flex items-center gap-1.5 flex-wrap truncate max-w-[260px]">
                                 {imgRes.plates && imgRes.plates.length > 0 ? (
@@ -862,6 +887,319 @@ export default function ANPRPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Analyzed Vehicles Summary Section */}
+                    {(() => {
+                      const detectedVehicles = (imgRes.vehicle_results && imgRes.vehicle_results.length > 0)
+                        ? imgRes.vehicle_results
+                        : (imgRes.plates || []).map((p, pIdx) => ({
+                            vehicle_index: pIdx + 1,
+                            vehicle_id: p.vehicle_id || `veh_${pIdx + 1}`,
+                            vehicle_type: p.vehicle_type || 'Car',
+                            vehicle_color: p.car_color || 'Unknown',
+                            vehicle_confidence: p.detector_confidence || 0.9,
+                            vehicle_bbox: p.vehicle_bbox || p.bbox || [0, 0, 0, 0],
+                            plate: p,
+                            status: p.plate_status === 'UNREADABLE' ? 'PLATE_DETECTED_OCR_UNREADABLE' : 'RECOGNIZED',
+                          }));
+
+                      const getColorHex = (cName) => {
+                        if (!cName) return '#94a3b8';
+                        const c = cName.toLowerCase();
+                        if (c.includes('white')) return '#ffffff';
+                        if (c.includes('black')) return '#0f172a';
+                        if (c.includes('red')) return '#ef4444';
+                        if (c.includes('blue')) return '#3b82f6';
+                        if (c.includes('green')) return '#22c55e';
+                        if (c.includes('silver') || c.includes('grey') || c.includes('gray')) return '#cbd5e1';
+                        if (c.includes('yellow')) return '#eab308';
+                        if (c.includes('orange')) return '#f97316';
+                        if (c.includes('brown')) return '#92400e';
+                        return '#64748b';
+                      };
+
+                      return (
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <div className="flex items-center gap-2">
+                              <Car className="w-4 h-4 text-blue-500" />
+                              <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
+                                Analyzed Vehicles ({detectedVehicles.length})
+                              </h4>
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px]">
+                              <span className={`px-2 py-0.5 rounded-full border ${
+                                isLight ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
+                              }`}>
+                                {imgRes.plates_detected || imgRes.plates?.length || 0} Plates Detected
+                              </span>
+                              {selectedVehicle && selectedVehicle.imgIndex === idx && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedVehicle(null)}
+                                  className="text-xs text-blue-500 hover:text-blue-400 font-semibold"
+                                >
+                                  Reset Selection
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {detectedVehicles.length === 0 ? (
+                            <div className={`p-4 rounded-xl text-center border ${
+                              isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-white/5 border-white/10 text-slate-400'
+                            }`}>
+                              <p className="text-xs italic">No vehicles or license plates detected in this frame.</p>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Desktop / Tablet Results Table */}
+                              <div className="hidden md:block overflow-x-auto rounded-xl border border-white/10 bg-black/20">
+                                <table className="w-full text-left text-xs border-collapse">
+                                  <thead>
+                                    <tr className={`border-b text-[11px] font-bold uppercase tracking-wider ${
+                                      isLight ? 'bg-slate-100/80 border-slate-200 text-slate-600' : 'bg-white/5 border-white/10 text-slate-400'
+                                    }`}>
+                                      <th className="py-2.5 px-3">#</th>
+                                      <th className="py-2.5 px-3">Vehicle Type</th>
+                                      <th className="py-2.5 px-3">Color</th>
+                                      <th className="py-2.5 px-3">Number Plate</th>
+                                      <th className="py-2.5 px-3 text-center">Plate Conf</th>
+                                      <th className="py-2.5 px-3 text-center">Overall Conf</th>
+                                      <th className="py-2.5 px-3 text-right">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-white/5 font-sans">
+                                    {detectedVehicles.map((veh, vIdx) => {
+                                      const isSelected = selectedVehicle && selectedVehicle.imgIndex === idx && selectedVehicle.vehicleIndex === vIdx;
+                                      const plate = veh.plate;
+                                      const isMatch = plate && (plate.match_status === 'MATCH_FOUND' || plate.match_status === 'POSSIBLE_MATCH');
+                                      const isUnreadable = veh.status === 'PLATE_DETECTED_OCR_UNREADABLE' || (plate && plate.plate_status === 'UNREADABLE');
+                                      const hasPlate = plate && !isUnreadable && (plate.normalized_plate || plate.raw_ocr);
+
+                                      return (
+                                        <tr
+                                          key={vIdx}
+                                          onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
+                                          onMouseEnter={() => setSelectedVehicle({ imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
+                                          className={`cursor-pointer transition-colors ${
+                                            isSelected
+                                              ? (isLight ? 'bg-blue-50/90 ring-1 ring-blue-400' : 'bg-blue-950/40 ring-1 ring-blue-500')
+                                              : (isLight ? 'hover:bg-slate-50' : 'hover:bg-white/[0.03]')
+                                          }`}
+                                        >
+                                          {/* Vehicle # */}
+                                          <td className="py-3 px-3 font-semibold text-slate-300">
+                                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold ${
+                                              isSelected ? 'bg-blue-600 text-white' : isLight ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-300'
+                                            }`}>
+                                              {veh.vehicle_index || vIdx + 1}
+                                            </span>
+                                          </td>
+
+                                          {/* Vehicle Type */}
+                                          <td className="py-3 px-3 font-medium">
+                                            <span className="capitalize">{veh.vehicle_type || 'Car'}</span>
+                                          </td>
+
+                                          {/* Color */}
+                                          <td className="py-3 px-3">
+                                            <div className="flex items-center gap-1.5">
+                                              <span
+                                                className="w-3 h-3 rounded-full border border-black/20 shadow-xs shrink-0"
+                                                style={{ backgroundColor: getColorHex(veh.vehicle_color || veh.car_color) }}
+                                              />
+                                              <span className="capitalize">{veh.vehicle_color || veh.car_color || 'Unknown'}</span>
+                                            </div>
+                                          </td>
+
+                                          {/* Number Plate */}
+                                          <td className="py-3 px-3 font-mono">
+                                            {hasPlate ? (
+                                              <div className="inline-flex items-center rounded overflow-hidden border border-slate-800 shadow-xs text-xs">
+                                                <span className="bg-[#003399] text-white text-[9px] px-1.5 py-0.5 font-sans font-black">
+                                                  IND
+                                                </span>
+                                                <span className="bg-white text-slate-950 px-2 py-0.5 font-extrabold tracking-wider">
+                                                  {plate.normalized_plate || plate.raw_ocr}
+                                                </span>
+                                              </div>
+                                            ) : isUnreadable ? (
+                                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                                isLight ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                                              }`}>
+                                                <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                                <span>OCR UNREADABLE</span>
+                                              </span>
+                                            ) : (
+                                              <span className="text-[11px] text-slate-400 italic font-sans">
+                                                No plate detected
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* Plate Confidence */}
+                                          <td className="py-3 px-3 text-center font-mono">
+                                            {plate?.detector_confidence != null ? (
+                                              <span className="font-semibold text-slate-200">
+                                                {Math.round(plate.detector_confidence * 100)}%
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-500">—</span>
+                                            )}
+                                          </td>
+
+                                          {/* Overall Confidence */}
+                                          <td className="py-3 px-3 text-center font-mono">
+                                            {plate?.overall_confidence != null ? (
+                                              <span className="font-semibold text-blue-400">
+                                                {Math.round(plate.overall_confidence * 100)}%
+                                              </span>
+                                            ) : plate?.ocr_confidence != null ? (
+                                              <span className="font-semibold text-blue-400">
+                                                {Math.round(plate.ocr_confidence * 100)}%
+                                              </span>
+                                            ) : (
+                                              <span className="text-slate-500">—</span>
+                                            )}
+                                          </td>
+
+                                          {/* Status */}
+                                          <td className="py-3 px-3 text-right">
+                                            {isMatch ? (
+                                              <div className="inline-flex items-center gap-1.5 justify-end">
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-black tracking-wider uppercase bg-red-600 text-white shadow-xs animate-pulse">
+                                                  MATCH
+                                                </span>
+                                                {plate?.matched_record && (
+                                                  <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setActiveMatchModal(plate);
+                                                    }}
+                                                    className="text-[10px] text-red-300 hover:text-white underline font-semibold"
+                                                  >
+                                                    Dossier
+                                                  </button>
+                                                )}
+                                              </div>
+                                            ) : isUnreadable ? (
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                                                isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                              }`}>
+                                                UNREADABLE
+                                              </span>
+                                            ) : !hasPlate ? (
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
+                                                isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-slate-400 border-white/10'
+                                              }`}>
+                                                NO PLATE
+                                              </span>
+                                            ) : (
+                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
+                                                isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                              }`}>
+                                                CLEAR
+                                              </span>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Mobile Cards View */}
+                              <div className="block md:hidden space-y-2">
+                                {detectedVehicles.map((veh, vIdx) => {
+                                  const isSelected = selectedVehicle && selectedVehicle.imgIndex === idx && selectedVehicle.vehicleIndex === vIdx;
+                                  const plate = veh.plate;
+                                  const isMatch = plate && (plate.match_status === 'MATCH_FOUND' || plate.match_status === 'POSSIBLE_MATCH');
+                                  const isUnreadable = veh.status === 'PLATE_DETECTED_OCR_UNREADABLE' || (plate && plate.plate_status === 'UNREADABLE');
+                                  const hasPlate = plate && !isUnreadable && (plate.normalized_plate || plate.raw_ocr);
+
+                                  return (
+                                    <div
+                                      key={vIdx}
+                                      onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
+                                      className={`p-3 rounded-xl border transition-all ${
+                                        isSelected
+                                          ? (isLight ? 'bg-blue-50/90 border-blue-400 shadow-sm' : 'bg-blue-950/40 border-blue-500')
+                                          : (isLight ? 'bg-slate-50 border-slate-200' : 'bg-black/30 border-white/10')
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                          <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                            {veh.vehicle_index || vIdx + 1}
+                                          </span>
+                                          <span className="text-xs font-bold capitalize">{veh.vehicle_type || 'Car'}</span>
+                                          <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                                            <span
+                                              className="w-2 h-2 rounded-full border border-black/20"
+                                              style={{ backgroundColor: getColorHex(veh.vehicle_color || veh.car_color) }}
+                                            />
+                                            <span className="capitalize">{veh.vehicle_color || veh.car_color || 'Unknown'}</span>
+                                          </div>
+                                        </div>
+
+                                        {isMatch ? (
+                                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white animate-pulse">
+                                            MATCH
+                                          </span>
+                                        ) : isUnreadable ? (
+                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                            UNREADABLE
+                                          </span>
+                                        ) : !hasPlate ? (
+                                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/5 text-slate-400 border border-white/10">
+                                            NO PLATE
+                                          </span>
+                                        ) : (
+                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                            CLEAR
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <div className="flex items-center justify-between gap-2 mt-2">
+                                        <div>
+                                          {hasPlate ? (
+                                            <div className="inline-flex items-center rounded overflow-hidden border border-slate-800 text-xs">
+                                              <span className="bg-[#003399] text-white text-[9px] px-1.5 py-0.5 font-bold">
+                                                IND
+                                              </span>
+                                              <span className="bg-white text-slate-950 px-2 py-0.5 font-black tracking-wider">
+                                                {plate.normalized_plate || plate.raw_ocr}
+                                              </span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-[11px] text-slate-400 italic">
+                                              {isUnreadable ? 'Plate detected, text unreadable' : 'No plate detected'}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {plate && (
+                                          <div className="text-right text-[11px] font-mono">
+                                            <span className="text-slate-400">Conf: </span>
+                                            <span className="font-bold text-blue-400">
+                                              {Math.round((plate.overall_confidence || plate.ocr_confidence || plate.detector_confidence || 0.9) * 100)}%
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {imgRes.plates?.length === 0 ? (
                       <p className={`text-xs italic py-2 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
