@@ -165,6 +165,8 @@ async def crowd_detection(
     conf_threshold: float = Form(default=0.15),
     grid_rows: int = Form(default=3),
     grid_cols: int = Form(default=4),
+    roi: Optional[str] = Form(default=None),
+    debug: bool = Form(default=False),
 ):
     """
     Crowd Detection & Density Analysis endpoint.
@@ -180,9 +182,11 @@ async def crowd_detection(
     ----------
     image          : Uploaded image file (JPG/PNG, max 20 MB)
     camera_id      : Unique camera identifier for surge baseline tracking
-    conf_threshold : YOLO detection confidence threshold (default 0.30)
+    conf_threshold : YOLO detection confidence threshold (default 0.15)
     grid_rows      : Density grid row divisions (default 3)
     grid_cols      : Density grid column divisions (default 4)
+    roi            : Optional ROI bounding box or polygon JSON
+    debug          : Optional flag to include debug_info diagnostics
 
     Returns
     -------
@@ -229,6 +233,14 @@ async def crowd_detection(
         f"({len(image_bytes)/1024:.1f} KB)"
     )
 
+    parsed_roi = None
+    if roi:
+        try:
+            import json
+            parsed_roi = json.loads(roi)
+        except Exception as roi_err:
+            logger.warning(f"[Crowd] Could not parse roi JSON: {roi_err}")
+
     try:
         from app.detection.crowd_detector import detect_crowd
         crowd_result = detect_crowd(
@@ -237,6 +249,8 @@ async def crowd_detection(
             conf_threshold=max(0.15, min(0.95, conf_threshold)),
             grid_rows=max(1, min(8, grid_rows)),
             grid_cols=max(1, min(8, grid_cols)),
+            roi=parsed_roi,
+            debug=debug,
         )
     except Exception as e:
         logger.error(f"[Crowd] Detection error: {e}", exc_info=True)

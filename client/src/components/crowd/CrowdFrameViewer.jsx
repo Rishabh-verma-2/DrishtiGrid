@@ -48,7 +48,13 @@ export default function CrowdFrameViewer({
     toast.success('Annotated image downloaded');
   };
 
-  const currentSrc = viewMode === 'raw' && rawSrc ? rawSrc : annotatedSrc;
+  React.useEffect(() => {
+    if (annotatedSrc) {
+      setViewMode('annotated');
+    }
+  }, [annotatedSrc]);
+
+  const currentSrc = viewMode === 'raw' && rawSrc ? rawSrc : (annotatedSrc || rawSrc);
 
   return (
     <div

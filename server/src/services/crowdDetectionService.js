@@ -61,7 +61,8 @@ async function callCrowdAIService(
   cameraId = 'default',
   confThreshold = 0.15,
   gridRows = 3,
-  gridCols = 4
+  gridCols = 4,
+  roi = null
 ) {
   const form = new FormData();
   form.append('image', imageBuffer, {
@@ -69,9 +70,12 @@ async function callCrowdAIService(
     contentType: 'image/jpeg',
   });
   form.append('camera_id', String(cameraId));
-  form.append('conf_threshold', String(confThreshold));
+  form.append('conf_threshold', String(Math.max(0.15, confThreshold)));
   form.append('grid_rows', String(gridRows));
   form.append('grid_cols', String(gridCols));
+  if (roi) {
+    form.append('roi', typeof roi === 'string' ? roi : JSON.stringify(roi));
+  }
 
   const response = await axios.post(`${AI_SERVICE_URL}/crowd`, form, {
     headers: form.getHeaders(),
@@ -102,6 +106,7 @@ async function callCrowdAIService(
  * @param {number}  [params.confThreshold] - Detection confidence threshold
  * @param {number}  [params.gridRows]    - Grid rows for zone map
  * @param {number}  [params.gridCols]    - Grid columns for zone map
+ * @param {Object}  [params.roi]         - Optional Camera ROI coordinates
  * @returns {Promise<Object>} Combined result: AI metrics + alert info
  */
 async function analyzeCrowdFrame({
@@ -109,9 +114,10 @@ async function analyzeCrowdFrame({
   cameraId = 'default',
   cameraDoc = null,
   io = null,
-  confThreshold = 0.03,
+  confThreshold = 0.15,
   gridRows = 3,
   gridCols = 4,
+  roi = null,
 }) {
   const analysisResult = {
     success:             false,
@@ -136,12 +142,14 @@ async function analyzeCrowdFrame({
     // ---- 1. Call Python AI service for actual YOLO person detection ----
     let aiResult;
     try {
+      const activeRoi = roi || cameraDoc?.roi || null;
       aiResult = await callCrowdAIService(
         imageBuffer,
         cameraId,
         confThreshold,
         gridRows,
-        gridCols
+        gridCols,
+        activeRoi
       );
     } catch (aiErr) {
       const errMsg = aiErr.response?.data?.detail || aiErr.message;

@@ -402,23 +402,48 @@ def detect_crowd(
     conf_threshold: float = 0.15,
     grid_rows: int = DEFAULT_GRID_ROWS,
     grid_cols: int = DEFAULT_GRID_COLS,
+    roi: Optional[Any] = None,
+    perspective_zones: Optional[List[Dict[str, Any]]] = None,
+    is_video: bool = False,
+    debug: bool = False,
 ) -> Dict[str, Any]:
     """
     Government-Grade High-Accuracy Crowd Detection & Density Analysis.
+    Upgraded with multi-pass tiled inference, class filtering, geometric sanity
+    validation, cross-source deduplication, anatomical head-body association,
+    optional ROI filtering, and temporal stabilization.
 
     Parameters
     ----------
-    image          : BGR NumPy array
-    camera_id      : Unique camera identifier for surge baseline tracking
-    conf_threshold : Minimum confidence threshold (default 0.15 / 15%)
-    grid_rows      : Density grid row divisions (default 4)
-    grid_cols      : Density grid column divisions (default 4)
+    image             : BGR NumPy array
+    camera_id         : Unique camera identifier for surge baseline & temporal tracking
+    conf_threshold    : Minimum candidate confidence threshold (default 0.15 / 15%)
+    grid_rows         : Density grid row divisions (default 4)
+    grid_cols         : Density grid column divisions (default 4)
+    roi               : Optional camera ROI ([x1,y1,x2,y2] or [[x1,y1],...])
+    perspective_zones : Optional perspective zones configuration
+    is_video          : Enable temporal stabilization across sequential video frames
+    debug             : Include pipeline diagnostics (debug_info) in response
 
     Returns
     -------
     Structured JSON with exact people count, detected individuals, density level,
-    object inventory, surge tracking, and annotated image.
+    object inventory, surge tracking, annotated image, and optional debug_info.
     """
+    from app.detection.crowd_postprocess import (
+        filter_person_class,
+        validate_bbox_geometry,
+        deduplicate_detections,
+        associate_heads_to_bodies,
+        apply_roi_filter,
+        assign_zones,
+        compute_crowd_level,
+        compute_density_score,
+        get_camera_tracker,
+        reset_camera_tracker,
+        CROWD_MIN_CONF,
+    )
+
     t_start = time.perf_counter()
 
     result: Dict[str, Any] = {
@@ -453,8 +478,8 @@ def detect_crowd(
 
     img_h, img_w = image.shape[:2]
 
-    # Enforce minimum 15% confidence threshold as requested
-    target_conf = max(0.15, min(0.85, float(conf_threshold)))
+    # Enforce minimum 15% confidence threshold as strictly required
+    target_conf = max(CROWD_MIN_CONF, min(0.85, float(conf_threshold)))
     device = _get_device()
 
     # Load specialized models
@@ -466,35 +491,70 @@ def detect_crowd(
         result["error"] = f"Model load error: {e}"
         return result
 
-    raw_persons: List[List[float]] = []
-    raw_heads: List[List[float]] = []
+    raw_body_cands: List[Dict[str, Any]] = []
+    raw_head_cands: List[Dict[str, Any]] = []
+
+    debug_tracker: Dict[str, Any] = {
+        "raw_detections": 0,
+        "person_candidates": 0,
+        "head_candidates": 0,
+        "geometry_valid": 0,
+        "tile_detections": 0,
+        "merged_detections": 0,
+        "head_body_matches": 0,
+        "unmatched_heads": 0,
+        "validated_persons": 0,
+        "rejected": {
+            "non_person": 0,
+            "too_small": 0,
+            "too_large": 0,
+            "bad_aspect_ratio": 0,
+            "low_confidence_invalid": 0,
+            "duplicate": 0,
+            "head_body_duplicate": 0,
+            "outside_roi": 0,
+            "perspective_mismatch": 0,
+        },
+    }
 
     try:
         # Dynamic high-resolution inference size
         max_dim = max(img_w, img_h)
         infer_imgsz = 1280 if max_dim >= 1000 else (960 if max_dim >= 640 else 640)
 
+        # Check if m_person has COCO classes (where class 0 is person)
+        is_coco_model = hasattr(m_person, "names") and len(m_person.names) > 10
+        classes_filter = [0] if is_coco_model else None
+
         # -------------------------------------------------------------------
-        # Pass 1: Full-Frame CrowdHuman Person Detection
+        # Pass 1: Full-Frame Person Detection (with strict class filtering)
         # -------------------------------------------------------------------
         res_p = m_person(
             image,
             conf=target_conf,
             iou=0.50,
+            classes=classes_filter,
             max_det=3000,
             imgsz=infer_imgsz,
             device=device,
             verbose=False,
         )
         if res_p and len(res_p) > 0 and res_p[0].boxes is not None:
-            for b in res_p.boxes:
+            for b in res_p[0].boxes:
                 xyxy = b.xyxy[0].cpu().numpy().astype(float)
                 c_val = float(b.conf[0].item()) if b.conf is not None else target_conf
-                if c_val >= 0.15:
-                    raw_persons.append([xyxy[0], xyxy[1], xyxy[2], xyxy[3], c_val])
+                cls_id = int(b.cls[0].item()) if b.cls is not None else 0
+                if c_val >= CROWD_MIN_CONF:
+                    raw_body_cands.append({
+                        "box": [float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])],
+                        "confidence": c_val,
+                        "class_id": cls_id,
+                        "source": "full_frame",
+                        "type": "body",
+                    })
 
         # -------------------------------------------------------------------
-        # Pass 2: Full-Frame Crowd Head Detection
+        # Pass 2: Full-Frame Crowd Head Detection (if model available)
         # -------------------------------------------------------------------
         if m_head is not None:
             res_h = m_head(
@@ -507,23 +567,31 @@ def detect_crowd(
                 verbose=False,
             )
             if res_h and len(res_h) > 0 and res_h[0].boxes is not None:
-                for b in res_h.boxes:
+                for b in res_h[0].boxes:
                     xyxy = b.xyxy[0].cpu().numpy().astype(float)
                     c_val = float(b.conf[0].item()) if b.conf is not None else target_conf
-                    if c_val >= 0.15:
-                        raw_heads.append([xyxy[0], xyxy[1], xyxy[2], xyxy[3], c_val])
+                    cls_id = int(b.cls[0].item()) if b.cls is not None else 0
+                    if c_val >= CROWD_MIN_CONF:
+                        raw_head_cands.append({
+                            "box": [float(xyxy[0]), float(xyxy[1]), float(xyxy[2]), float(xyxy[3])],
+                            "confidence": c_val,
+                            "class_id": cls_id,
+                            "source": "head_model",
+                            "type": "head_visible",
+                        })
 
         # -------------------------------------------------------------------
-        # Pass 3: Sliced Tile Inference for High-Resolution Scenes
+        # Pass 3: Sliced Overlapping Tile Inference for Small/Distant People
         # -------------------------------------------------------------------
+        tile_det_count = 0
         if img_w >= 800 and img_h >= 480:
-            tile_w = int(img_w * 0.60)
-            tile_h = int(img_h * 0.60)
+            tile_w = int(img_w * 0.58)
+            tile_h = int(img_h * 0.58)
             tiles = []
             offsets = []
             for ty in [0, img_h - tile_h]:
                 for tx in [0, img_w - tile_w]:
-                    crop = image[ty:ty + tile_h, tx:tx + tile_w]
+                    crop = image[ty : ty + tile_h, tx : tx + tile_w]
                     tiles.append(crop)
                     offsets.append((tx, ty))
 
@@ -532,6 +600,7 @@ def detect_crowd(
                 tiles,
                 conf=target_conf,
                 iou=0.50,
+                classes=classes_filter,
                 max_det=1000,
                 imgsz=640,
                 device=device,
@@ -543,8 +612,16 @@ def detect_crowd(
                     for b in res.boxes:
                         xyxy = b.xyxy[0].cpu().numpy().astype(float)
                         c_val = float(b.conf[0].item()) if b.conf is not None else target_conf
-                        if c_val >= 0.15:
-                            raw_persons.append([xyxy[0] + ox, xyxy[1] + oy, xyxy[2] + ox, xyxy[3] + oy, c_val])
+                        cls_id = int(b.cls[0].item()) if b.cls is not None else 0
+                        if c_val >= CROWD_MIN_CONF:
+                            tile_det_count += 1
+                            raw_body_cands.append({
+                                "box": [float(xyxy[0] + ox), float(xyxy[1] + oy), float(xyxy[2] + ox), float(xyxy[3] + oy)],
+                                "confidence": c_val,
+                                "class_id": cls_id,
+                                "source": f"tile_{idx}",
+                                "type": "body",
+                            })
 
             if m_head is not None:
                 h_tiles = m_head(
@@ -562,8 +639,20 @@ def detect_crowd(
                         for b in res.boxes:
                             xyxy = b.xyxy[0].cpu().numpy().astype(float)
                             c_val = float(b.conf[0].item()) if b.conf is not None else target_conf
-                            if c_val >= 0.15:
-                                raw_heads.append([xyxy[0] + ox, xyxy[1] + oy, xyxy[2] + ox, xyxy[3] + oy, c_val])
+                            cls_id = int(b.cls[0].item()) if b.cls is not None else 0
+                            if c_val >= CROWD_MIN_CONF:
+                                raw_head_cands.append({
+                                    "box": [float(xyxy[0] + ox), float(xyxy[1] + oy), float(xyxy[2] + ox), float(xyxy[3] + oy)],
+                                    "confidence": c_val,
+                                    "class_id": cls_id,
+                                    "source": f"head_tile_{idx}",
+                                    "type": "head_visible",
+                                })
+
+        debug_tracker["raw_detections"] = len(raw_body_cands) + len(raw_head_cands)
+        debug_tracker["person_candidates"] = len(raw_body_cands)
+        debug_tracker["head_candidates"] = len(raw_head_cands)
+        debug_tracker["tile_detections"] = tile_det_count
 
     except Exception as e:
         logger.error(f"[CrowdDetector] Inference pass error: {e}")
@@ -571,157 +660,140 @@ def detect_crowd(
         return result
 
     # -----------------------------------------------------------------------
-    # Pass 4: NMS Deduplication per category
+    # Pass 4: Defensive Class Filtering (Phase 3)
     # -----------------------------------------------------------------------
-    # Deduplicate persons
-    final_persons: List[Tuple[int, int, int, int, float]] = []
-    if raw_persons:
-        p_xywh = []
-        p_scores = []
-        for b in raw_persons:
-            bx1 = max(0, min(int(b[0]), img_w - 1))
-            by1 = max(0, min(int(b[1]), img_h - 1))
-            bx2 = max(bx1 + 1, min(int(b[2]), img_w))
-            by2 = max(by1 + 1, min(int(b[3]), img_h))
-            pw = bx2 - bx1
-            ph = by2 - by1
-            if pw >= 5 and ph >= 8:
-                p_xywh.append([bx1, by1, pw, ph])
-                p_scores.append(float(b[4]))
-
-        if p_xywh:
-            nms_p = cv2.dnn.NMSBoxes(p_xywh, p_scores, score_threshold=target_conf, nms_threshold=0.45)
-            if len(nms_p) > 0:
-                for idx in nms_p.flatten():
-                    bw = p_xywh[idx]
-                    final_persons.append((bw[0], bw[1], bw[0] + bw[2], bw[1] + bw[3], p_scores[idx]))
-
-    # Deduplicate heads
-    final_heads: List[Tuple[int, int, int, int, float]] = []
-    if raw_heads:
-        h_xywh = []
-        h_scores = []
-        for b in raw_heads:
-            bx1 = max(0, min(int(b[0]), img_w - 1))
-            by1 = max(0, min(int(b[1]), img_h - 1))
-            bx2 = max(bx1 + 1, min(int(b[2]), img_w))
-            by2 = max(by1 + 1, min(int(b[3]), img_h))
-            hw = bx2 - bx1
-            hh = by2 - by1
-            if hw >= 4 and hh >= 4:
-                h_xywh.append([bx1, by1, hw, hh])
-                h_scores.append(float(b[4]))
-
-        if h_xywh:
-            nms_h = cv2.dnn.NMSBoxes(h_xywh, h_scores, score_threshold=target_conf, nms_threshold=0.40)
-            if len(nms_h) > 0:
-                for idx in nms_h.flatten():
-                    bw = h_xywh[idx]
-                    final_heads.append((bw[0], bw[1], bw[0] + bw[2], bw[1] + bw[3], h_scores[idx]))
+    person_candidates = filter_person_class(raw_body_cands, expected_class_id=0, debug_tracker=debug_tracker)
 
     # -----------------------------------------------------------------------
-    # Pass 5: Dual-Modal Spatial Association & Occlusion Resolution
+    # Pass 5: Bounding Box Geometry Sanity Validation (Phase 4)
     # -----------------------------------------------------------------------
-    # For every detected head, check if it falls inside an already-detected person body.
-    # If not, it represents an occluded person in the dense crowd!
-    unmatched_heads: List[Tuple[int, int, int, int, float]] = []
-    for hx1, hy1, hx2, hy2, hconf in final_heads:
-        hcx = (hx1 + hx2) / 2
-        hcy = (hy1 + hy2) / 2
-        # Check containment inside any body box
-        inside_body = any(
-            px1 <= hcx <= px2 and py1 <= hcy <= py2
-            for px1, py1, px2, py2, _ in final_persons
+    valid_bodies: List[Dict[str, Any]] = []
+    for cand in person_candidates:
+        is_valid, _ = validate_bbox_geometry(
+            candidate=cand,
+            img_w=img_w,
+            img_h=img_h,
+            perspective_zones=perspective_zones,
+            debug_tracker=debug_tracker,
         )
-        if not inside_body:
-            unmatched_heads.append((hx1, hy1, hx2, hy2, hconf))
+        if is_valid:
+            valid_bodies.append(cand)
+
+    valid_heads: List[Dict[str, Any]] = []
+    for cand in raw_head_cands:
+        is_valid, _ = validate_bbox_geometry(
+            candidate=cand,
+            img_w=img_w,
+            img_h=img_h,
+            perspective_zones=perspective_zones,
+            debug_tracker=debug_tracker,
+        )
+        if is_valid:
+            valid_heads.append(cand)
+
+    debug_tracker["geometry_valid"] = len(valid_bodies) + len(valid_heads)
 
     # -----------------------------------------------------------------------
-    # Pass 6: Assemble Final Detections List
+    # Pass 6: Cross-Tile & Cross-Source Deduplication (Phase 6)
     # -----------------------------------------------------------------------
-    combined_detections: List[Dict[str, Any]] = []
+    merged_bodies = deduplicate_detections(valid_bodies, debug_tracker=debug_tracker)
+    debug_tracker["merged_detections"] = len(merged_bodies)
 
-    # Add full-body detections
-    for x1, y1, x2, y2, score in final_persons:
-        if score >= 0.15:
-            combined_detections.append({
-                "type": "body",
-                "confidence": round(float(score), 4),
-                "bbox": {"x": int(x1), "y": int(y1), "w": int(x2 - x1), "h": int(y2 - y1)},
-                "center": {"x": int((x1 + x2) // 2), "y": int((y1 + y2) // 2)},
-                "sort_key": (y1 // 30, x1),
-            })
+    # -----------------------------------------------------------------------
+    # Pass 7: Anatomical Head-to-Body Association (Phase 7)
+    # -----------------------------------------------------------------------
+    final_bodies, unmatched_heads = associate_heads_to_bodies(
+        body_detections=merged_bodies,
+        head_detections=valid_heads,
+        debug_tracker=debug_tracker,
+    )
 
-    # Add head-only occluded persons
-    for x1, y1, x2, y2, score in unmatched_heads:
-        if score >= 0.15:
-            combined_detections.append({
-                "type": "head_visible",
-                "confidence": round(float(score), 4),
-                "bbox": {"x": int(x1), "y": int(y1), "w": int(x2 - x1), "h": int(y2 - y1)},
-                "center": {"x": int((x1 + x2) // 2), "y": int((y1 + y2) // 2)},
-                "sort_key": (y1 // 30, x1),
-            })
+    # -----------------------------------------------------------------------
+    # Pass 8: Optional ROI Filtering (Phase 8)
+    # -----------------------------------------------------------------------
+    if roi is not None:
+        final_bodies = apply_roi_filter(final_bodies, roi=roi, img_w=img_w, img_h=img_h, debug_tracker=debug_tracker)
+        unmatched_heads = apply_roi_filter(unmatched_heads, roi=roi, img_w=img_w, img_h=img_h, debug_tracker=debug_tracker)
+
+    # -----------------------------------------------------------------------
+    # Pass 9: Assemble Final Validated Detections List
+    # -----------------------------------------------------------------------
+    validated_raw: List[Dict[str, Any]] = []
+    for b in final_bodies:
+        b["type"] = "body"
+        validated_raw.append(b)
+    for h in unmatched_heads:
+        h["type"] = "head_visible"
+        validated_raw.append(h)
 
     # Sort spatially (top-to-bottom, left-to-right)
-    combined_detections.sort(key=lambda d: d["sort_key"])
+    validated_raw.sort(key=lambda d: ((d["box"][1] // 30), d["box"][0]))
 
-    # Re-index
-    for idx, d in enumerate(combined_detections, start=1):
-        d["id"] = idx
-        d["person_id"] = idx
-        d["confidence_percent"] = f"{d['confidence'] * 100:.1f}%"
-        del d["sort_key"]
-
-    # Calculate exact counts
-    total_count = len(combined_detections)
-    detected_count = total_count
-    body_count = sum(1 for d in combined_detections if d["type"] == "body")
-    head_count = sum(1 for d in combined_detections if d["type"] == "head_visible")
-
-    # Determine crowd level
-    if total_count == 0:
-        crowd_level = "ZERO"
-    elif total_count <= 4:
-        crowd_level = "LOW"
-    elif total_count <= 15:
-        crowd_level = "MODERATE"
-    elif total_count <= 40:
-        crowd_level = "HIGH"
-    else:
-        crowd_level = "CRITICAL"
-
-    # Normalized density score
-    total_box_area = sum(d["bbox"]["w"] * d["bbox"]["h"] for d in combined_detections)
-    frame_area = max(1, img_h * img_w)
-    density_score = round(min(1.0, float(total_box_area / frame_area * 1.5) + (total_count / 120.0)), 2)
+    detected_count = len(final_bodies)
+    occluded_est = len(unmatched_heads)
+    total_count = detected_count + occluded_est
+    debug_tracker["validated_persons"] = total_count
 
     # -----------------------------------------------------------------------
-    # Pass 7: Density Grid & Object Inventory
+    # Pass 10: Video Temporal Stabilization & Tracking (Phase 13 & 14)
     # -----------------------------------------------------------------------
-    all_boxes_tuples = [
-        (d["bbox"]["x"], d["bbox"]["y"], d["bbox"]["x"] + d["bbox"]["w"], d["bbox"]["y"] + d["bbox"]["h"])
-        for d in combined_detections
-    ]
-    zones = _build_density_grid(all_boxes_tuples, img_h, img_w, grid_rows, grid_cols)
+    tracker = get_camera_tracker(camera_id)
+    stabilized_detections, stabilized_count, surge_info = tracker.update(
+        detections=validated_raw,
+        raw_count=total_count,
+    )
+
+    if is_video and stabilized_count != total_count and total_count > 0:
+        scale_factor = stabilized_count / float(total_count)
+        detected_count = int(round(len(final_bodies) * scale_factor))
+        occluded_est = max(0, stabilized_count - detected_count)
+        total_count = detected_count + occluded_est
+
+    # -----------------------------------------------------------------------
+    # Pass 11: Zone Assignment & Mathematical Consistency (Phase 11 & 12)
+    # -----------------------------------------------------------------------
+    zones = assign_zones(stabilized_detections, img_h, img_w, grid_rows, grid_cols)
+    density_score = compute_density_score(stabilized_detections, img_w, img_h, total_count)
+    crowd_level = compute_crowd_level(total_count)
+
+    # Format person_detections for API
+    formatted_detections: List[Dict[str, Any]] = []
+    for idx, p in enumerate(stabilized_detections, start=1):
+        bx1, by1, bx2, by2 = p["box"]
+        conf_f = float(p.get("confidence", 0.15))
+        formatted_detections.append({
+            "id": idx,
+            "person_id": idx,
+            "type": p.get("type", "body"),
+            "confidence": round(conf_f, 4),
+            "confidence_percent": f"{conf_f * 100:.1f}%",
+            "bbox": {
+                "x": int(round(bx1)),
+                "y": int(round(by1)),
+                "w": int(round(max(1.0, bx2 - bx1))),
+                "h": int(round(max(1.0, by2 - by1))),
+            },
+            "center": {
+                "x": int(round((bx1 + bx2) / 2.0)),
+                "y": int(round((by1 + by2) / 2.0)),
+            },
+            "track_id": p.get("track_id"),
+        })
 
     # Object inventory (vehicles, other objects)
     obj_inventory = _build_object_inventory(image, conf_thresh=0.25)
 
-    # Surge detection
-    surge_info = _check_surge(camera_id, total_count)
-
     # -----------------------------------------------------------------------
-    # Pass 8: Visual Annotations
+    # Pass 12: Visual Annotations (Phase 21)
     # -----------------------------------------------------------------------
     try:
         annotated = _draw_annotations(
             image=image,
-            detections=combined_detections,
+            detections=formatted_detections,
             crowd_level=crowd_level,
             total_count=total_count,
-            body_count=body_count,
-            head_count=head_count,
+            body_count=detected_count,
+            head_count=occluded_est,
             grid_rows=grid_rows,
             grid_cols=grid_cols,
         )
@@ -735,12 +807,12 @@ def detect_crowd(
     result.update({
         "success": True,
         "detected_count": int(detected_count),
-        "occluded_est": int(head_count),
+        "occluded_est": int(occluded_est),
         "total_count": int(total_count),
         "crowd_level": crowd_level,
         "density_score": float(density_score),
         "zones": zones,
-        "person_detections": combined_detections,
+        "person_detections": formatted_detections,
         "object_inventory": obj_inventory,
         "surge": surge_info,
         "annotated_image_b64": annotated_b64,
@@ -748,17 +820,23 @@ def detect_crowd(
         "error": None,
     })
 
+    if debug:
+        result["debug_info"] = debug_tracker
+
     logger.info(
         f"[CrowdDetector] cam='{camera_id}' EXACT_COUNT={total_count} "
-        f"(body={body_count}, occluded_heads={head_count}) "
+        f"(body={detected_count}, occluded_heads={occluded_est}) "
         f"level={crowd_level} time={elapsed_ms:.1f}ms"
     )
     return result
 
 
 def reset_camera_baseline(camera_id: str) -> None:
-    """Clear the surge detection baseline for a specific camera."""
+    """Clear the surge detection baseline and temporal tracker for a specific camera."""
     global _camera_baselines
     if camera_id in _camera_baselines:
         del _camera_baselines[camera_id]
-        logger.info(f"[CrowdDetector] Baseline reset for camera: {camera_id}")
+    from app.detection.crowd_postprocess import reset_camera_tracker
+    reset_camera_tracker(camera_id)
+    logger.info(f"[CrowdDetector] Baseline and tracker reset for camera: {camera_id}")
+
