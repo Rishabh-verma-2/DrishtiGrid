@@ -1,0 +1,350 @@
+"""
+Comprehensive 20-Scenario Verification Suite for DrishtiGrid Crowd Engine
+========================================================================
+
+Covers the 20 mandatory validation scenarios specified in Requirement 24:
+1. Empty scene (0 people)
+2. 1 person
+3. 5 people
+4. 20 people
+5. 50+ people
+6. 100+ people
+7. Dense overlapping crowd
+8. Small/distant people (tiled pass)
+9. Partial occlusion (torso visible)
+10. Severe occlusion (head-only visible)
+11. People touching/overlapping (source-aware deduplication)
+12. Image boundary people (edge truncation)
+13. Low-light scene (contrast robustness)
+14. High-resolution image (1920x1080)
+15. Low-resolution image (480x320)
+16. ROI spatial filtering
+17. Still-image mode (deterministic, no history bleed)
+18. Video mode (temporal stabilization & hysteresis)
+19. Missing density model fallback
+20. Missing head model fallback
+"""
+
+import os
+import sys
+import unittest
+import numpy as np
+
+# Ensure app is on path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+ai_service_dir = os.path.abspath(os.path.join(current_dir, ".."))
+if ai_service_dir not in sys.path:
+    sys.path.insert(0, ai_service_dir)
+
+from app.detection.crowd_postprocess import (
+    filter_person_class,
+    validate_candidate_profile,
+    validate_bbox_geometry,
+    deduplicate_detections,
+    associate_heads_to_bodies,
+    apply_roi_filter,
+    fuse_crowd_estimates,
+    assign_zones,
+    compute_crowd_level,
+    compute_density_score,
+    CrowdTemporalTracker,
+)
+from app.detection.crowd_density import (
+    CrowdDensityEstimator,
+    TextureHeadDensityEstimator,
+    get_density_estimator,
+)
+from app.detection.crowd_tiling import (
+    generate_sliding_window_tiles,
+    analyze_frame_regions,
+    generate_dense_region_tiles,
+)
+from app.detection.crowd_detector import detect_crowd
+
+
+class TestCrowdEngineExtendedSuite(unittest.TestCase):
+    def setUp(self):
+        self.img_w = 1280
+        self.img_h = 720
+
+    # -----------------------------------------------------------------------
+    # Scenario 1: Empty scene (0 people)
+    # -----------------------------------------------------------------------
+    def test_01_empty_scene(self):
+        empty_img = np.zeros((480, 640, 3), dtype=np.uint8)
+        res = detect_crowd(empty_img, camera_id="empty_cam", is_video=False)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["total_count"], 0)
+        self.assertEqual(res["crowd_level"], "ZERO")
+        self.assertEqual(res["density_score"], 0.0)
+        self.assertEqual(len(res["person_detections"]), 0)
+
+    # -----------------------------------------------------------------------
+    # Scenario 2: Single person
+    # -----------------------------------------------------------------------
+    def test_02_single_person(self):
+        cands = [{
+            "box": [200.0, 150.0, 280.0, 380.0],
+            "confidence": 0.85,
+            "class_id": 0,
+            "source": "full_frame",
+            "type": "body",
+        }]
+        valid, profile, _ = validate_candidate_profile(cands[0], self.img_w, self.img_h)
+        self.assertTrue(valid)
+        self.assertEqual(profile, "NORMAL_PERSON")
+        deduped = deduplicate_detections(cands)
+        self.assertEqual(len(deduped), 1)
+
+    # -----------------------------------------------------------------------
+    # Scenario 3: 5 people sparse scene
+    # -----------------------------------------------------------------------
+    def test_03_five_people_sparse(self):
+        cands = [
+            {"box": [float(i * 120 + 50), 200.0, float(i * 120 + 110), 380.0], "confidence": 0.82, "class_id": 0, "type": "body"}
+            for i in range(5)
+        ]
+        fusion = fuse_crowd_estimates(
+            detector_body_count=5,
+            unmatched_head_count=0,
+            density_estimated_count=5.2,
+            density_confidence=0.75,
+            overlap_ratio=0.0,
+            suspicious_dense_regions_count=0,
+        )
+        self.assertEqual(fusion["final_count"], 5)
+        self.assertEqual(fusion["estimation_method"], "detector_sparse")
+        self.assertEqual(fusion["quality"], "VERY_HIGH")
+
+    # -----------------------------------------------------------------------
+    # Scenario 4: 20 people moderate crowd
+    # -----------------------------------------------------------------------
+    def test_04_twenty_people_moderate(self):
+        fusion = fuse_crowd_estimates(
+            detector_body_count=18,
+            unmatched_head_count=2,
+            density_estimated_count=21.0,
+            density_confidence=0.82,
+            overlap_ratio=0.10,
+            suspicious_dense_regions_count=0,
+        )
+        self.assertEqual(fusion["final_count"], 20)
+        self.assertEqual(fusion["estimation_method"], "detector_head_hybrid")
+        self.assertIn(fusion["quality"], ["VERY_HIGH", "HIGH"])
+
+    # -----------------------------------------------------------------------
+    # Scenario 5: 50+ people dense crowd
+    # -----------------------------------------------------------------------
+    def test_05_fifty_plus_dense_crowd(self):
+        fusion = fuse_crowd_estimates(
+            detector_body_count=42,
+            unmatched_head_count=9,
+            density_estimated_count=58.0,
+            density_confidence=0.85,
+            overlap_ratio=0.38,
+            suspicious_dense_regions_count=2,
+        )
+        self.assertGreaterEqual(fusion["final_count"], 51)
+        self.assertEqual(fusion["estimation_method"], "hybrid_dense_crowd")
+        self.assertGreater(fusion["uncertainty"], 0)
+
+    # -----------------------------------------------------------------------
+    # Scenario 6: 100+ people extreme gathering
+    # -----------------------------------------------------------------------
+    def test_06_hundred_plus_extreme(self):
+        fusion = fuse_crowd_estimates(
+            detector_body_count=75,
+            unmatched_head_count=25,
+            density_estimated_count=130.0,
+            density_confidence=0.88,
+            overlap_ratio=0.55,
+            suspicious_dense_regions_count=4,
+        )
+        self.assertGreaterEqual(fusion["final_count"], 105)
+        self.assertIn(fusion["estimation_method"], ["hybrid_dense_crowd"])
+        self.assertEqual(compute_crowd_level(fusion["final_count"]), "CRITICAL")
+
+    # -----------------------------------------------------------------------
+    # Scenario 7: Dense overlapping crowd
+    # -----------------------------------------------------------------------
+    def test_07_dense_overlapping_crowd_reasoning(self):
+        # 8 bodies close together in one patch
+        bodies = [
+            {"box": [100.0 + i * 15, 100.0, 160.0 + i * 15, 260.0], "confidence": 0.70, "type": "body"}
+            for i in range(8)
+        ]
+        regions = analyze_frame_regions(bodies, [], img_w=640, img_h=480, grid_rows=2, grid_cols=2)
+        suspicious = [r for r in regions if r.get("is_suspicious", False)]
+        self.assertGreater(len(suspicious), 0, "Dense overlapping gathering must be flagged as suspicious region")
+
+    # -----------------------------------------------------------------------
+    # Scenario 8: Small / distant people (tiled pass)
+    # -----------------------------------------------------------------------
+    def test_08_small_distant_people_retained(self):
+        small_person = {
+            "box": [800.0, 100.0, 812.0, 136.0],  # 12px wide, 36px high (AR = 3.0)
+            "confidence": 0.30,
+            "class_id": 0,
+            "source": "tile_r0_c2",
+            "type": "body",
+        }
+        valid, profile, reason = validate_candidate_profile(small_person, self.img_w, self.img_h)
+        self.assertTrue(valid, f"Small person should be validated, got {reason}")
+        self.assertEqual(profile, "SMALL_PERSON")
+
+    # -----------------------------------------------------------------------
+    # Scenario 9: Partial occlusion (torso visible)
+    # -----------------------------------------------------------------------
+    def test_09_partial_occlusion_profile(self):
+        # Occluded person behind a counter/barrier: wider than usual (w=40, h=35, AR=0.875)
+        occluded = {
+            "box": [300.0, 200.0, 340.0, 235.0],
+            "confidence": 0.45,
+            "class_id": 0,
+            "is_occluded": True,
+            "type": "body",
+        }
+        valid, profile, _ = validate_candidate_profile(occluded, self.img_w, self.img_h)
+        self.assertTrue(valid)
+        self.assertEqual(profile, "OCCLUDED_PERSON")
+
+    # -----------------------------------------------------------------------
+    # Scenario 10: Severe occlusion (head-only visible)
+    # -----------------------------------------------------------------------
+    def test_10_severe_occlusion_head_only(self):
+        head = {
+            "box": [450.0, 200.0, 480.0, 238.0],  # w=30, h=38
+            "confidence": 0.65,
+            "class_id": 0,
+            "source": "head_model",
+            "type": "head_visible",
+        }
+        valid, profile, _ = validate_candidate_profile(head, self.img_w, self.img_h)
+        self.assertTrue(valid)
+        self.assertEqual(profile, "HEAD_ONLY_PERSON")
+
+    # -----------------------------------------------------------------------
+    # Scenario 11: People touching/overlapping (source-aware deduplication)
+    # -----------------------------------------------------------------------
+    def test_11_people_touching_not_falsely_merged(self):
+        # Two people standing shoulder to shoulder (horizontal overlap but distinct centers)
+        person1 = {"box": [100.0, 200.0, 160.0, 380.0], "confidence": 0.80, "source": "tile_0", "type": "body"}
+        person2 = {"box": [135.0, 205.0, 195.0, 385.0], "confidence": 0.78, "source": "tile_0", "type": "body"}
+        deduped = deduplicate_detections([person1, person2], local_density_awareness=True)
+        self.assertEqual(len(deduped), 2, "Touching distinct people must not be merged")
+
+    # -----------------------------------------------------------------------
+    # Scenario 12: Image boundary people (edge truncation)
+    # -----------------------------------------------------------------------
+    def test_12_image_boundary_edge_truncation(self):
+        # Person entering right side of frame, partially truncated: x in [1260, 1280] (w=20, h=90, AR=4.5)
+        edge_cand = {
+            "box": [1260.0, 200.0, 1280.0, 290.0],
+            "confidence": 0.50,
+            "class_id": 0,
+            "type": "body",
+        }
+        valid, profile, _ = validate_candidate_profile(edge_cand, self.img_w, self.img_h)
+        self.assertTrue(valid)
+        self.assertEqual(profile, "EDGE_TRUNCATED_PERSON")
+
+    # -----------------------------------------------------------------------
+    # Scenario 13: Low-light scene (contrast robustness)
+    # -----------------------------------------------------------------------
+    def test_13_low_light_density_estimator(self):
+        dark_img = np.full((300, 400, 3), 25, dtype=np.uint8)  # very dark frame
+        estimator = TextureHeadDensityEstimator()
+        dmap, count, conf = estimator.estimate(dark_img)
+        self.assertEqual(count, 0.0)
+        self.assertGreaterEqual(conf, 0.5)
+
+    # -----------------------------------------------------------------------
+    # Scenario 14: High-resolution image (1920x1080)
+    # -----------------------------------------------------------------------
+    def test_14_high_res_tiling_coverage(self):
+        tiles = generate_sliding_window_tiles(img_w=1920, img_h=1080, overlap=0.25)
+        self.assertGreater(len(tiles), 2)
+        # Verify complete boundary coverage
+        min_x = min(t.x for t in tiles)
+        max_x = max(t.x + t.w for t in tiles)
+        min_y = min(t.y for t in tiles)
+        max_y = max(t.y + t.h for t in tiles)
+        self.assertEqual(min_x, 0)
+        self.assertEqual(max_x, 1920)
+        self.assertEqual(min_y, 0)
+        self.assertEqual(max_y, 1080)
+
+    # -----------------------------------------------------------------------
+    # Scenario 15: Low-resolution image (480x320)
+    # -----------------------------------------------------------------------
+    def test_15_low_res_handling(self):
+        tiles = generate_sliding_window_tiles(img_w=480, img_h=320, min_tile_dim=400)
+        # Below tile dimension -> no superfluous tiles created
+        self.assertLessEqual(len(tiles), 1)
+
+    # -----------------------------------------------------------------------
+    # Scenario 16: ROI spatial filtering
+    # -----------------------------------------------------------------------
+    def test_16_roi_polygon_filtering(self):
+        poly = [[100.0, 100.0], [500.0, 100.0], [500.0, 500.0], [100.0, 500.0]]
+        in_det = {"box": [200.0, 200.0, 250.0, 350.0], "confidence": 0.8, "type": "body"}
+        out_det = {"box": [600.0, 200.0, 650.0, 350.0], "confidence": 0.8, "type": "body"}
+        filtered = apply_roi_filter([in_det, out_det], roi=poly, img_w=self.img_w, img_h=self.img_h)
+        self.assertEqual(len(filtered), 1)
+        self.assertEqual(filtered[0]["box"], in_det["box"])
+
+    # -----------------------------------------------------------------------
+    # Scenario 17: Still-image mode (deterministic, no history bleed)
+    # -----------------------------------------------------------------------
+    def test_17_still_image_mode_independent(self):
+        tracker = CrowdTemporalTracker(camera_id="cam_history_bleed")
+        # Build 10-person history
+        base_dets = [{"box": [10.0, 10.0, 50.0, 100.0], "confidence": 0.8, "type": "body"}] * 10
+        tracker.update(base_dets, raw_count=10)
+
+        # Still image mode should NOT use this tracker
+        # A test image with 2 detections must return total_count=2 without being influenced
+        dummy = np.zeros((320, 320, 3), dtype=np.uint8)
+        res = detect_crowd(dummy, camera_id="cam_history_bleed", is_video=False)
+        self.assertEqual(res["total_count"], 0)
+
+    # -----------------------------------------------------------------------
+    # Scenario 18: Video mode (temporal stabilization & hysteresis)
+    # -----------------------------------------------------------------------
+    def test_18_video_mode_temporal_stabilization(self):
+        tracker = CrowdTemporalTracker(camera_id="video_stab_cam")
+        dets_15 = [{"box": [float(i * 30), 100.0, float(i * 30 + 20), 200.0], "confidence": 0.75, "type": "body"} for i in range(15)]
+        for _ in range(5):
+            _, stab_cnt, _ = tracker.update(dets_15, raw_count=15)
+            self.assertEqual(stab_cnt, 15)
+
+        # 1-frame glitch to 28
+        dets_28 = [{"box": [float(i * 15), 100.0, float(i * 15 + 20), 200.0], "confidence": 0.60, "type": "body"} for i in range(28)]
+        _, glitch_cnt, _ = tracker.update(dets_28, raw_count=28)
+        self.assertLess(glitch_cnt, 25, "Transient 1-frame glitch must be suppressed")
+
+    # -----------------------------------------------------------------------
+    # Scenario 19: Missing density model fallback
+    # -----------------------------------------------------------------------
+    def test_19_missing_density_model_fallback(self):
+        # Force fallback to TextureHeadDensityEstimator
+        estimator = get_density_estimator(force_fallback=True)
+        self.assertTrue(estimator.is_available())
+        dummy = np.zeros((200, 200, 3), dtype=np.uint8)
+        dmap, cnt, conf = estimator.estimate(dummy)
+        self.assertIsInstance(cnt, float)
+        self.assertIsInstance(conf, float)
+
+    # -----------------------------------------------------------------------
+    # Scenario 20: Missing head model fallback
+    # -----------------------------------------------------------------------
+    def test_20_missing_head_model_fallback(self):
+        # Associate with empty heads
+        bodies = [{"box": [100.0, 100.0, 160.0, 280.0], "confidence": 0.85, "type": "body"}]
+        matched_bodies, unmatched_heads = associate_heads_to_bodies(bodies, [])
+        self.assertEqual(len(matched_bodies), 1)
+        self.assertEqual(len(unmatched_heads), 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -2,73 +2,71 @@
 Crowd Detection Post-Processing, Spatial Fusion & Temporal Engine
 ================================================================
 
-Modular post-processing pipeline for DrishtiGrid crowd counting.
+Comprehensive post-processing pipeline for DrishtiGrid crowd counting.
 Responsible for:
-1. Class filtering (ensuring only human/person detections enter candidate pool)
-2. Bounding-box sanity and perspective-aware geometry validation
-3. Cross-tile and full-frame deduplication and fusion (IoU, IoMin/containment, centroid distance)
-4. Anatomical head-to-body association (eliminates double counting)
-5. Optional Camera ROI (polygon or rectangle) spatial filtering
-6. Image-space zone assignment guaranteeing exact mathematical consistency
-7. Lightweight temporal tracking and count stabilization with alert hysteresis
-8. Comprehensive pipeline diagnostics and rejection tracking (debug_info)
+1. Defensive class filtering (only human/person candidates).
+2. Contextual validation profiles (NORMAL, SMALL, OCCLUDED, HEAD_ONLY, EDGE_TRUNCATED).
+3. Source-aware cross-tile and multi-scale deduplication with local density protection.
+4. Optimal bipartite Hungarian head-to-body association.
+5. Ground-plane camera ROI spatial filtering.
+6. Mathematically consistent zone assignment.
+7. Confidence-aware hybrid count fusion layer (detector + head + density estimator).
+8. Comprehensive quality scoring & uncertainty estimation.
+9. Lightweight video temporal tracking with surge hysteresis (strictly bypassed for still images).
 """
 
 from __future__ import annotations
+
 import math
 import logging
 from collections import deque
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Default Configuration Thresholds
+# Core Configuration Constants
 # ---------------------------------------------------------------------------
-# Minimum confidence floor (strictly preserved as 0.15)
-CROWD_MIN_CONF: float = 0.15
+CROWD_MIN_CONF: float = 0.15           # Strictly enforced confidence floor (15%)
+LOW_CONF_CEILING: float = 0.25         # Low confidence band
 
-# Low-confidence band where stricter validation is applied
-LOW_CONF_CEILING: float = 0.25
-
-# Standard human bounding box aspect ratio (height / width)
-# Typical upright person ~1.8–3.5, seated/crouched ~1.0–1.8, perspective skew ~0.7–5.5
+# Aspect ratio bounds (height / width)
 DEFAULT_ASPECT_RATIO_RANGE: Tuple[float, float] = (0.70, 5.50)
-
-# Stricter aspect ratio for low-confidence candidates (0.15 <= conf < 0.25)
 STRICT_ASPECT_RATIO_RANGE: Tuple[float, float] = (0.85, 4.80)
+OCCLUDED_ASPECT_RATIO_RANGE: Tuple[float, float] = (0.35, 3.80)
+HEAD_ASPECT_RATIO_RANGE: Tuple[float, float] = (0.45, 2.00)
 
-# Scale bounds relative to frame and absolute
-MIN_PERSON_ABS_WIDTH: float = 5.0
-MIN_PERSON_ABS_HEIGHT: float = 10.0
-MIN_PERSON_ABS_AREA: float = 50.0  # px^2 (allows distant tiny pedestrians)
+# Scale bounds
+MIN_PERSON_ABS_WIDTH: float = 4.0
+MIN_PERSON_ABS_HEIGHT: float = 8.0
+MIN_PERSON_ABS_AREA: float = 32.0
 
 MAX_RELATIVE_WIDTH: float = 0.95
 MAX_RELATIVE_HEIGHT: float = 0.95
 MAX_RELATIVE_AREA: float = 0.85
 
-# Cross-source / Cross-tile Deduplication Thresholds
+# Deduplication Thresholds
 DEDUP_IOU_THRESH: float = 0.35
-DEDUP_IOMIN_THRESH: float = 0.65  # Containment threshold
+DEDUP_IOMIN_THRESH: float = 0.65
 DEDUP_CENTROID_NORM_DIST: float = 0.30
 
-# Anatomical Head-to-Body Association Parameters
-HEAD_UPPER_BODY_RATIO: float = 0.45  # Head center must be within top 45% of body
-HEAD_MAX_WIDTH_RATIO: float = 0.80   # Head width cannot exceed 80% of body width
-HEAD_MAX_HORIZ_OFFSET: float = 0.35  # Centroid horizontal distance <= 35% of body width
-HEAD_ASPECT_RATIO_RANGE: Tuple[float, float] = (0.45, 2.00)
-HEAD_MIN_CONF_UNMATCHED: float = 0.20 # Higher threshold to promote unassociated head to person
+# Head-to-Body Association Parameters
+HEAD_UPPER_BODY_RATIO: float = 0.45
+HEAD_MAX_WIDTH_RATIO: float = 0.85
+HEAD_MAX_HORIZ_OFFSET: float = 0.40
+HEAD_MIN_CONF_UNMATCHED: float = 0.20
+HEAD_ASSOC_MIN_SCORE: float = 0.38
 
-# Temporal Tracking & Count Smoothing
+# Temporal Tracking
 TRACKER_MAX_DISAPPEARED: int = 5
-TRACKER_DIST_THRESH: float = 80.0    # pixel distance for frame-to-frame association
+TRACKER_DIST_THRESH: float = 80.0
 TEMPORAL_WINDOW_SIZE: int = 7
 SURGE_HYSTERESIS_CONSECUTIVE_RAISE: int = 3
 SURGE_HYSTERESIS_CONSECUTIVE_CLEAR: int = 4
 
-# Person class ID in COCO
 COCO_PERSON_CLASS_ID: int = 0
 
 
@@ -77,7 +75,7 @@ COCO_PERSON_CLASS_ID: int = 0
 # ---------------------------------------------------------------------------
 
 def compute_box_iou(box1: Sequence[float], box2: Sequence[float]) -> float:
-    """Compute Intersection-over-Union between two (x1, y1, x2, y2) boxes."""
+    """Compute Intersection-over-Union between two [x1, y1, x2, y2] boxes."""
     xA = max(box1[0], box2[0])
     yA = max(box1[1], box2[1])
     xB = min(box1[2], box2[2])
@@ -121,7 +119,7 @@ def point_in_polygon(x: float, y: float, polygon: List[Tuple[float, float]]) -> 
     """Ray-casting algorithm to test if point (x, y) is inside polygon vertices."""
     n = len(polygon)
     if n < 3:
-        return True  # Degenerate polygon treated as no restriction
+        return True
     inside = False
     p1x, p1y = polygon[0]
     for i in range(1, n + 1):
@@ -138,7 +136,7 @@ def point_in_polygon(x: float, y: float, polygon: List[Tuple[float, float]]) -> 
 
 
 # ---------------------------------------------------------------------------
-# Phase 3 & 4: Candidate Filtering & Geometry Validation
+# Phase 3 & 4: Candidate Filtering & Contextual Profile Validation
 # ---------------------------------------------------------------------------
 
 def filter_person_class(
@@ -146,11 +144,7 @@ def filter_person_class(
     expected_class_id: int = COCO_PERSON_CLASS_ID,
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
-    """
-    Phase 3: Defensive Class Filtering.
-    Only allows detections corresponding to the person class (class_id == 0).
-    Rejects vehicles, chairs, luggage, animals, etc.
-    """
+    """Only allows detections corresponding to the person class (class_id == 0)."""
     person_candidates: List[Dict[str, Any]] = []
     for det in raw_detections:
         cid = det.get("class_id", expected_class_id)
@@ -162,6 +156,118 @@ def filter_person_class(
     return person_candidates
 
 
+def validate_candidate_profile(
+    candidate: Dict[str, Any],
+    img_w: int,
+    img_h: int,
+    perspective_zones: Optional[List[Dict[str, Any]]] = None,
+    debug_tracker: Optional[Dict[str, Any]] = None,
+) -> Tuple[bool, str, str]:
+    """
+    Contextual validation profiles for crowd scenes:
+    - NORMAL_PERSON: standard upright person
+    - SMALL_PERSON: tiny distant pedestrian in high-res frame
+    - OCCLUDED_PERSON: partially occluded torso or seated/crouched
+    - HEAD_ONLY_PERSON: head detection
+    - EDGE_TRUNCATED_PERSON: person cut off by image boundary
+    Returns: (is_valid, profile_name, rejection_reason)
+    """
+    x1, y1, x2, y2 = candidate["box"]
+    w = max(1.0, float(x2 - x1))
+    h = max(1.0, float(y2 - y1))
+    area = w * h
+    conf = float(candidate.get("confidence", 0.15))
+    det_type = candidate.get("type", "body")
+    aspect_ratio = round(h / w, 3)
+    candidate["aspect_ratio"] = aspect_ratio
+
+    # 1. Profile: HEAD_ONLY_PERSON
+    if det_type == "head_visible":
+        if not (HEAD_ASPECT_RATIO_RANGE[0] <= aspect_ratio <= HEAD_ASPECT_RATIO_RANGE[1]):
+            if debug_tracker:
+                debug_tracker["rejected"]["head_bad_aspect_ratio"] = debug_tracker["rejected"].get("head_bad_aspect_ratio", 0) + 1
+            return False, "HEAD_ONLY_PERSON", "head_bad_aspect_ratio"
+        if w < 4.0 or h < 4.0 or area < 16.0:
+            if debug_tracker:
+                debug_tracker["rejected"]["too_small"] = debug_tracker["rejected"].get("too_small", 0) + 1
+            return False, "HEAD_ONLY_PERSON", "head_too_small"
+        return True, "HEAD_ONLY_PERSON", "valid"
+
+    # 2. Absolute noise check
+    if w < MIN_PERSON_ABS_WIDTH or h < MIN_PERSON_ABS_HEIGHT or area < MIN_PERSON_ABS_AREA:
+        if debug_tracker:
+            debug_tracker["rejected"]["too_small"] = debug_tracker["rejected"].get("too_small", 0) + 1
+        return False, "UNKNOWN", "too_small"
+
+    # 3. Relative frame sanity bounds
+    rel_w = w / max(1.0, float(img_w))
+    rel_h = h / max(1.0, float(img_h))
+    rel_area = area / max(1.0, float(img_w * img_h))
+
+    if rel_w > MAX_RELATIVE_WIDTH or rel_h > MAX_RELATIVE_HEIGHT or rel_area > MAX_RELATIVE_AREA:
+        if debug_tracker:
+            debug_tracker["rejected"]["too_large"] = debug_tracker["rejected"].get("too_large", 0) + 1
+        return False, "UNKNOWN", "too_large"
+
+    # 4. Check if touching image borders -> EDGE_TRUNCATED_PERSON
+    is_edge = (x1 <= 3.0 or y1 <= 3.0 or x2 >= img_w - 3.0 or y2 >= img_h - 3.0)
+    if is_edge:
+        # Edge people can be cut horizontally or vertically
+        if 0.35 <= aspect_ratio <= 6.0:
+            return True, "EDGE_TRUNCATED_PERSON", "valid"
+
+    # 5. Check if candidate is marked as occluded or multi-pass
+    is_occluded = candidate.get("is_occluded", False) or candidate.get("multi_pass", False)
+    if is_occluded:
+        if OCCLUDED_ASPECT_RATIO_RANGE[0] <= aspect_ratio <= OCCLUDED_ASPECT_RATIO_RANGE[1]:
+            return True, "OCCLUDED_PERSON", "valid"
+
+    # 6. Check if small distant person -> SMALL_PERSON
+    if h <= 45.0 or w <= 20.0:
+        if 0.80 <= aspect_ratio <= 4.80:
+            return True, "SMALL_PERSON", "valid"
+
+    # 7. Low confidence candidate validation
+    if conf < LOW_CONF_CEILING:
+        is_multipass = candidate.get("multi_pass", False)
+        active_ar = DEFAULT_ASPECT_RATIO_RANGE if is_multipass else STRICT_ASPECT_RATIO_RANGE
+        if not (active_ar[0] <= aspect_ratio <= active_ar[1]):
+            if debug_tracker:
+                debug_tracker["rejected"]["low_confidence_invalid"] = debug_tracker["rejected"].get("low_confidence_invalid", 0) + 1
+            return False, "NORMAL_PERSON", "low_confidence_invalid"
+    else:
+        if not (DEFAULT_ASPECT_RATIO_RANGE[0] <= aspect_ratio <= DEFAULT_ASPECT_RATIO_RANGE[1]):
+            if debug_tracker:
+                debug_tracker["rejected"]["bad_aspect_ratio"] = debug_tracker["rejected"].get("bad_aspect_ratio", 0) + 1
+            return False, "NORMAL_PERSON", "bad_aspect_ratio"
+
+    # 8. Perspective Zone validation
+    if perspective_zones:
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        for pz in perspective_zones:
+            region = pz.get("region")
+            scale_expected = pz.get("expected_person_scale", "medium")
+            in_zone = False
+            if isinstance(region, list) and len(region) == 4 and isinstance(region[0], (int, float)):
+                in_zone = region[0] <= cx <= region[2] and region[1] <= cy <= region[3]
+            elif isinstance(region, list) and len(region) >= 3 and isinstance(region[0], (list, tuple)):
+                in_zone = point_in_polygon(cx, cy, region)
+
+            if in_zone:
+                if scale_expected == "small" and (rel_h > 0.40 or rel_w > 0.25):
+                    if debug_tracker:
+                        debug_tracker["rejected"]["perspective_mismatch"] = debug_tracker["rejected"].get("perspective_mismatch", 0) + 1
+                    return False, "NORMAL_PERSON", "perspective_mismatch"
+                elif scale_expected == "large" and (h < 25.0 or w < 12.0):
+                    if debug_tracker:
+                        debug_tracker["rejected"]["perspective_mismatch"] = debug_tracker["rejected"].get("perspective_mismatch", 0) + 1
+                    return False, "NORMAL_PERSON", "perspective_mismatch"
+                break
+
+    return True, "NORMAL_PERSON", "valid"
+
+
 def validate_bbox_geometry(
     candidate: Dict[str, Any],
     img_w: int,
@@ -171,97 +277,15 @@ def validate_bbox_geometry(
     perspective_zones: Optional[List[Dict[str, Any]]] = None,
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> Tuple[bool, str]:
-    """
-    Phase 4: Bounding Box Geometry Sanity Validation.
-    Validates width, height, aspect ratio, and scale.
-    Applies stricter rules to low-confidence candidates (0.15 <= conf < 0.25).
-    Does NOT reject small distant persons if geometry is valid.
-    """
-    x1, y1, x2, y2 = candidate["box"]
-    w = max(1.0, float(x2 - x1))
-    h = max(1.0, float(y2 - y1))
-    area = w * h
-    conf = float(candidate.get("confidence", 0.15))
-    det_type = candidate.get("type", "body")
-
-    # Head detections use head-specific aspect ratio checks
-    if det_type == "head_visible":
-        head_ar = h / w
-        if not (HEAD_ASPECT_RATIO_RANGE[0] <= head_ar <= HEAD_ASPECT_RATIO_RANGE[1]):
-            if debug_tracker:
-                debug_tracker["rejected"]["head_bad_aspect_ratio"] = debug_tracker["rejected"].get("head_bad_aspect_ratio", 0) + 1
-            return False, "head_bad_aspect_ratio"
-        if w < 4.0 or h < 4.0 or area < 20.0:
-            if debug_tracker:
-                debug_tracker["rejected"]["too_small"] = debug_tracker["rejected"].get("too_small", 0) + 1
-            return False, "head_too_small"
-        return True, "valid"
-
-    # Absolute bounds (reject 1-2 pixel noise)
-    if w < MIN_PERSON_ABS_WIDTH or h < MIN_PERSON_ABS_HEIGHT or area < MIN_PERSON_ABS_AREA:
-        if debug_tracker:
-            debug_tracker["rejected"]["too_small"] = debug_tracker["rejected"].get("too_small", 0) + 1
-        return False, "too_small"
-
-    # Relative frame bounds
-    rel_w = w / max(1.0, float(img_w))
-    rel_h = h / max(1.0, float(img_h))
-    rel_area = area / max(1.0, float(img_w * img_h))
-
-    if rel_w > MAX_RELATIVE_WIDTH or rel_h > MAX_RELATIVE_HEIGHT or rel_area > MAX_RELATIVE_AREA:
-        if debug_tracker:
-            debug_tracker["rejected"]["too_large"] = debug_tracker["rejected"].get("too_large", 0) + 1
-        return False, "too_large"
-
-    # Aspect ratio check
-    aspect_ratio = h / w
-    candidate["aspect_ratio"] = round(aspect_ratio, 3)
-
-    # Low confidence band requires tighter aspect ratio
-    if conf < LOW_CONF_CEILING:
-        # If candidate was confirmed by a tile or multi-pass, be slightly more tolerant
-        is_multipass = candidate.get("multi_pass", False)
-        active_ar = ar_range if is_multipass else strict_ar_range
-        if not (active_ar[0] <= aspect_ratio <= active_ar[1]):
-            if debug_tracker:
-                debug_tracker["rejected"]["low_confidence_invalid"] = debug_tracker["rejected"].get("low_confidence_invalid", 0) + 1
-            return False, "low_confidence_invalid"
-    else:
-        if not (ar_range[0] <= aspect_ratio <= ar_range[1]):
-            if debug_tracker:
-                debug_tracker["rejected"]["bad_aspect_ratio"] = debug_tracker["rejected"].get("bad_aspect_ratio", 0) + 1
-            return False, "bad_aspect_ratio"
-
-    # Optional Perspective-Aware Validation
-    if perspective_zones:
-        cx = (x1 + x2) / 2.0
-        cy = (y1 + y2) / 2.0
-        for pz in perspective_zones:
-            region = pz.get("region")  # [[x1, y1], [x2, y2], ...] or [x1, y1, x2, y2]
-            scale_expected = pz.get("expected_person_scale", "medium")
-            in_zone = False
-            if isinstance(region, list) and len(region) == 4 and isinstance(region[0], (int, float)):
-                in_zone = region[0] <= cx <= region[2] and region[1] <= cy <= region[3]
-            elif isinstance(region, list) and len(region) >= 3 and isinstance(region[0], (list, tuple)):
-                in_zone = point_in_polygon(cx, cy, region)
-
-            if in_zone:
-                # Validate scale compatibility
-                if scale_expected == "small" and (rel_h > 0.40 or rel_w > 0.25):
-                    if debug_tracker:
-                        debug_tracker["rejected"]["perspective_mismatch"] = debug_tracker["rejected"].get("perspective_mismatch", 0) + 1
-                    return False, "perspective_mismatch"
-                elif scale_expected == "large" and (h < 25.0 or w < 12.0):
-                    if debug_tracker:
-                        debug_tracker["rejected"]["perspective_mismatch"] = debug_tracker["rejected"].get("perspective_mismatch", 0) + 1
-                    return False, "perspective_mismatch"
-                break
-
-    return True, "valid"
+    """Backward-compatible wrapper for geometry validation."""
+    valid, _, reason = validate_candidate_profile(
+        candidate, img_w, img_h, perspective_zones, debug_tracker
+    )
+    return valid, reason
 
 
 # ---------------------------------------------------------------------------
-# Phase 5 & 6: Cross-Source Deduplication & Tile Merging
+# Phase 5 & 6: Source-Aware Cross-Tile Deduplication
 # ---------------------------------------------------------------------------
 
 def deduplicate_detections(
@@ -269,19 +293,17 @@ def deduplicate_detections(
     iou_thresh: float = DEDUP_IOU_THRESH,
     iomin_thresh: float = DEDUP_IOMIN_THRESH,
     centroid_norm_thresh: float = DEDUP_CENTROID_NORM_DIST,
+    local_density_awareness: bool = True,
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Phase 6: Robust Cross-Source & Cross-Tile Deduplication.
-    Merges duplicate detections of the same physical person originating from:
-    - Full-frame pass
-    - Tile 1, Tile 2, etc.
+    Source-Aware Cross-Tile Deduplication.
+    Prevents accidentally merging two distinct neighboring people in dense crowds.
     Considers:
-    1. IoU >= iou_thresh (default 0.35)
-    2. Containment / IoMin >= iomin_thresh (default 0.65)
-    3. Normalized centroid distance + scale similarity
-    Preserves the most informative box (prefers higher confidence; for small/distant
-    persons, prefers tile detection which has higher resolution).
+    - Source pass identity (same tile vs adjacent tiles vs full-frame vs dense region)
+    - Local crowd density (tightens merge threshold in dense clusters)
+    - Vertical alignment and aspect ratio consistency
+    - Centroid distance normalized by box dimension
     """
     if not candidates:
         return []
@@ -293,51 +315,72 @@ def deduplicate_detections(
     for cand in sorted_cands:
         b_box = cand["box"]
         b_conf = float(cand.get("confidence", 0.0))
-        b_src = cand.get("source", "full_frame")
-        b_w = b_box[2] - b_box[0]
-        b_h = b_box[3] - b_box[1]
+        b_src = str(cand.get("source", "full_frame"))
+        b_w = max(1.0, b_box[2] - b_box[0])
+        b_h = max(1.0, b_box[3] - b_box[1])
         b_cx = (b_box[0] + b_box[2]) / 2.0
         b_cy = (b_box[1] + b_box[3]) / 2.0
 
         is_duplicate = False
+
         for kept in kept_detections:
             k_box = kept["box"]
-            k_w = k_box[2] - k_box[0]
-            k_h = k_box[3] - k_box[1]
+            k_conf = float(kept.get("confidence", 0.0))
+            k_src = str(kept.get("source", "full_frame"))
+            k_w = max(1.0, k_box[2] - k_box[0])
+            k_h = max(1.0, k_box[3] - k_box[1])
             k_cx = (k_box[0] + k_box[2]) / 2.0
             k_cy = (k_box[1] + k_box[3]) / 2.0
 
-            # 1. IoU overlap
+            # Compute pairwise spatial metrics
             iou = compute_box_iou(b_box, k_box)
-            if iou >= iou_thresh:
+            iomin = compute_box_iomin(b_box, k_box)
+            horiz_center_diff = abs(b_cx - k_cx) / min(b_w, k_w)
+            vert_center_diff = abs(b_cy - k_cy) / min(b_h, k_h)
+            center_dist = math.hypot(b_cx - k_cx, b_cy - k_cy)
+            avg_dim = (b_w + b_h + k_w + k_h) / 4.0
+            norm_dist = center_dist / avg_dim
+
+            # Source relation
+            same_source = (b_src == k_src)
+            cross_tile = ("tile" in b_src and "tile" in k_src and b_src != k_src)
+            full_vs_tile = ("full" in b_src and "tile" in k_src) or ("tile" in b_src and "full" in k_src)
+
+            # In dense crowds, two people standing side by side have low center overlap
+            # Even if IoU is ~0.35, if horizontal center difference > 0.45 * width, they are distinct people!
+            if horiz_center_diff > 0.45 and vert_center_diff < 0.35:
+                # Distinct adjacent people standing side by side: DO NOT MERGE unless IoU is very high (> 0.65)
+                if iou < 0.65:
+                    continue
+
+            # Case A: Substantial IoU overlap
+            active_iou = 0.50 if local_density_awareness and same_source else iou_thresh
+            if iou >= active_iou:
                 is_duplicate = True
                 kept["multi_pass"] = True
-                # If cand is from tile and person is small (< 80px), prefer tile coordinates
-                if "tile" in b_src and b_h < 80 and b_conf > 0.30:
+                if "tile" in b_src and b_h < 90 and b_conf > 0.28:
                     kept["box"] = b_box
-                kept["confidence"] = max(kept["confidence"], b_conf)
+                kept["confidence"] = max(k_conf, b_conf)
                 break
 
-            # 2. Containment (one box inside another)
-            iomin = compute_box_iomin(b_box, k_box)
+            # Case B: Heavy Containment (one box inside another)
             if iomin >= iomin_thresh:
-                # Check that horizontal alignment is consistent
-                norm_horiz_diff = abs(b_cx - k_cx) / max(1.0, min(b_w, k_w))
-                if norm_horiz_diff <= 0.60:
+                # Must have reasonable center alignment
+                if horiz_center_diff <= 0.45 and vert_center_diff <= 0.45:
                     is_duplicate = True
                     kept["multi_pass"] = True
-                    kept["confidence"] = max(kept["confidence"], b_conf)
+                    kept["confidence"] = max(k_conf, b_conf)
                     break
 
-            # 3. Normalized centroid proximity and comparable size
-            avg_dim = max(1.0, (b_w + b_h + k_w + k_h) / 4.0)
-            center_dist = math.hypot(b_cx - k_cx, b_cy - k_cy)
-            if center_dist / avg_dim <= centroid_norm_thresh:
+            # Case C: Cross-Tile / Full-Frame vs Tile Proximity
+            if (cross_tile or full_vs_tile) and norm_dist <= centroid_norm_thresh:
                 scale_ratio = (b_w * b_h) / max(1.0, (k_w * k_h))
-                if 0.35 <= scale_ratio <= 2.85:
+                if 0.40 <= scale_ratio <= 2.50:
                     is_duplicate = True
                     kept["multi_pass"] = True
-                    kept["confidence"] = max(kept["confidence"], b_conf)
+                    if "tile" in b_src and b_conf > k_conf:
+                        kept["box"] = b_box
+                    kept["confidence"] = max(k_conf, b_conf)
                     break
 
         if is_duplicate:
@@ -350,7 +393,7 @@ def deduplicate_detections(
 
 
 # ---------------------------------------------------------------------------
-# Phase 7: Anatomical Head-to-Body Association
+# Phase 7: Anatomical Head-to-Body Association with Hungarian Matching
 # ---------------------------------------------------------------------------
 
 def associate_heads_to_bodies(
@@ -363,70 +406,103 @@ def associate_heads_to_bodies(
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Phase 7: Robust Head-to-Body Association.
-    Determines which heads belong to existing body detections vs which represent
-    genuine separate occluded individuals.
-
-    A head is associated with a body if:
-    1. Head centroid is in the upper ~45% of the body box (or directly above within tolerance).
-    2. Horizontal center distance <= 35% of body width.
-    3. Head width <= 80% of body width.
-    4. Head box overlaps or sits on the shoulders of the body box.
-
-    An unassociated head is ONLY promoted to a counted person if:
-    - It does not associate with any detected body.
-    - Confidence is >= unmatched_min_conf (0.20) or multi-pass validated.
-    - Its geometry passes head sanity (aspect ratio ~ 0.5–1.8).
+    Optimal Bipartite Hungarian Head-to-Body Association.
+    Assigns each head to at most one body using a composite affinity score:
+    - Horizontal alignment (head centered on body torso)
+    - Vertical alignment (head in top 40% of body or on shoulders)
+    - Size ratio (head width is 20-80% of body width)
+    - Overlap score (IoU with shoulder region)
+    Unassociated heads with confidence >= unmatched_min_conf become counted occluded individuals.
     """
-    matched_head_indices = set()
-    unmatched_head_candidates: List[Dict[str, Any]] = []
+    if not head_detections:
+        return body_detections, []
 
-    for h_idx, head in enumerate(head_detections):
+    if not body_detections:
+        # All valid heads become occluded person candidates
+        valid_unmatched = []
+        for h in head_detections:
+            if float(h.get("confidence", 0.0)) >= unmatched_min_conf:
+                hp = h.copy()
+                hp["type"] = "head_visible"
+                valid_unmatched.append(hp)
+        if debug_tracker:
+            debug_tracker["head_body_matches"] = 0
+            debug_tracker["unmatched_heads"] = len(valid_unmatched)
+        return body_detections, valid_unmatched
+
+    num_heads = len(head_detections)
+    num_bodies = len(body_detections)
+
+    # Build affinity score matrix (num_heads x num_bodies)
+    score_matrix = np.zeros((num_heads, num_bodies), dtype=np.float32)
+
+    for i, head in enumerate(head_detections):
         hx1, hy1, hx2, hy2 = head["box"]
         hcx = (hx1 + hx2) / 2.0
         hcy = (hy1 + hy2) / 2.0
         hw = max(1.0, hx2 - hx1)
         hh = max(1.0, hy2 - hy1)
 
-        belongs_to_body = False
-        for body in body_detections:
+        for j, body in enumerate(body_detections):
             bx1, by1, bx2, by2 = body["box"]
+            bcx = (bx1 + bx2) / 2.0
             bw = max(1.0, bx2 - bx1)
             bh = max(1.0, by2 - by1)
-            bcx = (bx1 + bx2) / 2.0
 
-            # 1. Horizontal alignment check
+            # 1. Horizontal score: 1.0 when perfectly centered, decaying to 0 at max_horiz_offset * bw
             horiz_dist = abs(hcx - bcx)
-            if horiz_dist > max_horiz_offset * bw and (hcx < bx1 - 0.1 * bw or hcx > bx2 + 0.1 * bw):
-                continue
+            max_allowed_h = max_horiz_offset * bw
+            s_horiz = max(0.0, 1.0 - (horiz_dist / max(1.0, max_allowed_h)))
 
-            # 2. Vertical position: head must be in the upper portion or immediately above neck
-            # Upper boundary: allows head to sit slightly above body box (up to 0.5 * head height)
-            # Lower boundary: must be within the top upper_ratio (e.g. 45%) of body height
-            upper_limit = by1 - 0.5 * hh
-            lower_limit = by1 + head_upper_ratio * bh
+            # 2. Vertical score: head must sit in upper part of body or slightly above neck
+            # Preferred head vertical center: between (by1 - 0.25*hh) and (by1 + 0.30*bh)
+            upper_bound = by1 - 0.50 * hh
+            lower_bound = by1 + head_upper_ratio * bh
+            if upper_bound <= hcy <= lower_bound:
+                # Centered in shoulder region
+                optimal_cy = by1 + 0.15 * bh
+                s_vert = max(0.2, 1.0 - (abs(hcy - optimal_cy) / max(1.0, 0.35 * bh)))
+            else:
+                s_vert = 0.0
 
-            if upper_limit <= hcy <= lower_limit:
-                # 3. Relative scale sanity: head width should be smaller than body width
-                if hw <= max_width_ratio * bw:
-                    belongs_to_body = True
-                    matched_head_indices.add(h_idx)
-                    break
+            # 3. Size compatibility score: head width should be ~25-70% of body width
+            width_ratio = hw / bw
+            if 0.15 <= width_ratio <= max_width_ratio:
+                s_size = 1.0 - abs(width_ratio - 0.40) / 0.40
+                s_size = max(0.2, min(1.0, s_size))
+            else:
+                s_size = 0.0
 
-            # 4. Fallback IoU with upper third of body box
-            body_head_roi = [bx1, by1, bx2, by1 + 0.35 * bh]
-            if compute_box_iou(head["box"], body_head_roi) > 0.20:
-                belongs_to_body = True
-                matched_head_indices.add(h_idx)
-                break
+            # 4. Upper body IoU score
+            shoulder_roi = [bx1, by1 - 0.2 * hh, bx2, by1 + 0.35 * bh]
+            s_overlap = compute_box_iou(head["box"], shoulder_roi)
 
-        if not belongs_to_body:
-            # Candidate for occluded person
+            # Composite affinity score
+            if s_horiz > 0.1 and s_vert > 0.1 and s_size > 0.1:
+                affinity = 0.35 * s_horiz + 0.35 * s_vert + 0.15 * s_size + 0.15 * min(1.0, s_overlap * 2.0)
+            else:
+                affinity = 0.0
+
+            score_matrix[i, j] = float(affinity)
+
+    # Hungarian assignment (minimize cost = 1.0 - score)
+    cost_matrix = 1.0 - score_matrix
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+
+    matched_head_indices = set()
+    for r, c in zip(row_ind, col_ind):
+        if score_matrix[r, c] >= HEAD_ASSOC_MIN_SCORE:
+            matched_head_indices.add(r)
+
+    # Process unmatched heads
+    unmatched_head_candidates: List[Dict[str, Any]] = []
+    for h_idx, head in enumerate(head_detections):
+        if h_idx not in matched_head_indices:
             h_conf = float(head.get("confidence", 0.0))
             if h_conf >= unmatched_min_conf:
-                head_person = head.copy()
-                head_person["type"] = "head_visible"
-                unmatched_head_candidates.append(head_person)
+                hp = head.copy()
+                hp["type"] = "head_visible"
+                unmatched_head_candidates.append(hp)
             else:
                 if debug_tracker:
                     debug_tracker["rejected"]["low_confidence_unmatched_head"] = (
@@ -456,15 +532,7 @@ def apply_roi_filter(
     img_h: int,
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
-    """
-    Phase 8: Optional ROI Filtering.
-    Supports:
-    - Rectangle: [x1, y1, x2, y2] (pixel or normalized)
-    - Polygon: [[x1, y1], [x2, y2], ...] (pixel or normalized)
-    - Dict with "polygon" or "bbox" key
-    Uses bottom-center point of bounding box (feet position on ground plane)
-    for accurate ground-plane ROI containment.
-    """
+    """Ground-plane reference point ROI filtering."""
     if roi is None:
         return detections
 
@@ -479,14 +547,12 @@ def apply_roi_filter(
 
     if isinstance(roi, list):
         if len(roi) == 4 and all(isinstance(v, (int, float)) for v in roi):
-            # Bounding box [x1, y1, x2, y2]
             rx1, ry1, rx2, ry2 = [float(v) for v in roi]
             if max(rx1, rx2) <= 1.0 and max(ry1, ry2) <= 1.0:
                 rx1, rx2 = rx1 * img_w, rx2 * img_w
                 ry1, ry2 = ry1 * img_h, ry2 * img_h
             parsed_bbox = (min(rx1, rx2), min(ry1, ry2), max(rx1, rx2), max(ry1, ry2))
         elif len(roi) >= 3 and all(isinstance(pt, (list, tuple)) and len(pt) >= 2 for pt in roi):
-            # Polygon vertices
             poly_pts = []
             for pt in roi:
                 px, py = float(pt[0]), float(pt[1])
@@ -502,7 +568,6 @@ def apply_roi_filter(
     filtered: List[Dict[str, Any]] = []
     for det in detections:
         x1, y1, x2, y2 = det["box"]
-        # Ground-contact reference point (bottom-center)
         ref_x = (x1 + x2) / 2.0
         ref_y = y2 - 0.05 * (y2 - y1)
 
@@ -522,7 +587,90 @@ def apply_roi_filter(
 
 
 # ---------------------------------------------------------------------------
-# Phase 11 & 12: Zone Assignment & Mathematical Metric Consistency
+# Phase 9: Hybrid Count Fusion & Quality Assessment
+# ---------------------------------------------------------------------------
+
+def fuse_crowd_estimates(
+    detector_body_count: int,
+    unmatched_head_count: int,
+    density_estimated_count: float,
+    density_confidence: float,
+    overlap_ratio: float,
+    suspicious_dense_regions_count: int,
+) -> Dict[str, Any]:
+    """
+    Confidence-aware multi-signal hybrid count fusion.
+    Combines:
+    - detector_count (verified body boxes)
+    - occluded_est (unmatched verified head boxes)
+    - density_estimated_count (density model / texture energy)
+    Produces: final_count, uncertainty, confidence, estimation_method, quality.
+    """
+    det_total = detector_body_count + unmatched_head_count
+
+    # Determine scene complexity regime
+    if det_total < 10 and suspicious_dense_regions_count == 0:
+        # Sparse scene: trust bounding boxes fully
+        final_count = det_total
+        uncertainty = max(1, int(round(0.06 * final_count))) if final_count > 0 else 0
+        fused_confidence = 0.94 if final_count > 0 else 0.98
+        method = "detector_sparse"
+    elif det_total <= 35 and suspicious_dense_regions_count == 0 and overlap_ratio < 0.25:
+        # Moderate scene: hybrid body + head evidence
+        final_count = det_total
+        uncertainty = max(1, int(round(0.08 * final_count)))
+        fused_confidence = 0.91
+        method = "detector_head_hybrid"
+    else:
+        # Dense / Occluded scene: incorporate density estimator signal
+        if density_estimated_count > det_total and density_confidence >= 0.60:
+            # Detector is likely undercounting due to severe occlusion
+            # Blend detector anchor with density estimate
+            density_weight = min(0.45, 0.20 + 0.05 * suspicious_dense_regions_count)
+            det_weight = 1.0 - density_weight
+            blended = det_weight * det_total + density_weight * density_estimated_count
+            final_count = int(round(blended))
+            uncertainty = max(2, int(round(0.12 * final_count)))
+            fused_confidence = round(0.85 * (1.0 - min(0.25, overlap_ratio)), 2)
+            method = "hybrid_dense_crowd"
+        else:
+            final_count = det_total
+            uncertainty = max(2, int(round(0.10 * final_count)))
+            fused_confidence = 0.88
+            method = "detector_dense_anchor"
+
+    # Uncertainty range [min_bound, max_bound]
+    min_bound = max(0, final_count - uncertainty)
+    max_bound = final_count + uncertainty
+
+    # Quality classification
+    if fused_confidence >= 0.90 and uncertainty <= max(2, int(0.08 * max(1, final_count))):
+        quality = "VERY_HIGH"
+    elif fused_confidence >= 0.80:
+        quality = "HIGH"
+    elif fused_confidence >= 0.65:
+        quality = "MEDIUM"
+    elif fused_confidence >= 0.50:
+        quality = "LOW"
+    else:
+        quality = "UNRELIABLE"
+
+    return {
+        "final_count": final_count,
+        "detector_count": detector_body_count,
+        "head_count": unmatched_head_count,
+        "density_count": round(float(density_estimated_count), 1),
+        "fused_confidence": round(fused_confidence, 2),
+        "uncertainty": uncertainty,
+        "uncertainty_range": [min_bound, max_bound],
+        "estimation_method": method,
+        "quality": quality,
+        "detector_recall_warning": (density_estimated_count > det_total * 1.35 and det_total >= 15),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Phase 11 & 12: Zone Assignment & Mathematical Consistency
 # ---------------------------------------------------------------------------
 
 def assign_zones(
@@ -533,8 +681,8 @@ def assign_zones(
     grid_cols: int = 4,
 ) -> List[Dict[str, Any]]:
     """
-    Phase 11: Guarantees every validated person belongs to EXACTLY ONE zone cell.
-    sum(zone["count"] for zone in zones) == total_count
+    Assign each detected person to exactly one zone.
+    sum(zone["count"]) == len(detections).
     """
     grid_rows = max(1, grid_rows)
     grid_cols = max(1, grid_cols)
@@ -544,7 +692,6 @@ def assign_zones(
     counts = [[0 for _ in range(grid_cols)] for _ in range(grid_rows)]
 
     for det in detections:
-        # Use detection center point
         x1, y1, x2, y2 = det["box"]
         cx = (x1 + x2) / 2.0
         cy = (y1 + y2) / 2.0
@@ -590,7 +737,7 @@ def assign_zones(
 
 
 def compute_crowd_level(total_count: int) -> str:
-    """Classify crowd level based on total validated person count."""
+    """Classify crowd level based on validated person count."""
     if total_count == 0:
         return "ZERO"
     elif total_count <= 4:
@@ -609,11 +756,7 @@ def compute_density_score(
     img_h: int,
     total_count: int,
 ) -> float:
-    """
-    Phase 10 & 12: Image-space heuristic density score normalized to [0.0, 1.0].
-    Combines occupied image area fraction and person count capacity.
-    Documented as an image-space distribution metric, not physical persons/m^2.
-    """
+    """Image-space distribution heuristic in [0.0, 1.0]."""
     if total_count == 0 or img_w <= 0 or img_h <= 0:
         return 0.0
 
@@ -628,11 +771,10 @@ def compute_density_score(
 
 
 # ---------------------------------------------------------------------------
-# Phase 13, 14 & 15: Lightweight Video Tracking & Temporal Count Stabilizer
+# Phase 13, 14 & 15: Video Temporal Tracking & Count Stabilizer
 # ---------------------------------------------------------------------------
 
 class TrackItem:
-    """Representation of an active tracked individual."""
     def __init__(self, track_id: int, box: List[float], conf: float, det_type: str):
         self.track_id = track_id
         self.box = list(box)
@@ -657,12 +799,10 @@ class TrackItem:
 
 class CrowdTemporalTracker:
     """
-    Phase 13 & 14: Lightweight per-camera temporal consistency engine.
-    - Centroid/IoU tracking across consecutive video frames
-    - Bounded temporal smoothing (EMA + median filter) to prevent count flickering
-    - Transient false-positive suppression (short-lived single-frame noise)
-    - Surge alert hysteresis (Phase 15: N consecutive frames to raise, M to clear)
+    Per-camera video temporal tracker.
+    Bypassed when is_video=False to guarantee deterministic still-image counts.
     """
+
     def __init__(
         self,
         camera_id: str,
@@ -685,14 +825,6 @@ class CrowdTemporalTracker:
         detections: List[Dict[str, Any]],
         raw_count: int,
     ) -> Tuple[List[Dict[str, Any]], int, Dict[str, Any]]:
-        """
-        Update tracker with current frame detections.
-        Returns:
-        - track-annotated detections list
-        - temporally stabilized crowd count
-        - surge alert status with hysteresis
-        """
-        # Age existing tracks
         for track in self.tracks.values():
             track.time_since_update += 1
             track.age += 1
@@ -708,29 +840,24 @@ class CrowdTemporalTracker:
                 for d in detections
             ]
 
-            # Pairwise distance matrix
             dist_matrix = np.zeros((len(track_ids), len(detections)), dtype=np.float32)
             for i, tc in enumerate(track_centroids):
                 for j, dc in enumerate(det_centroids):
                     dist_matrix[i, j] = math.hypot(tc[0] - dc[0], tc[1] - dc[1])
 
-            # Greedy Hungarian-style matching
-            row_ind = np.argsort(dist_matrix.min(axis=1))
-            for r in row_ind:
-                min_c = int(np.argmin(dist_matrix[r]))
-                min_dist = dist_matrix[r, min_c]
-                if min_dist <= self.dist_threshold and min_c not in matched_dets:
+            row_ind, col_ind = linear_sum_assignment(dist_matrix)
+            for r, c in zip(row_ind, col_ind):
+                if dist_matrix[r, c] <= self.dist_threshold:
                     tid = track_ids[r]
                     self.tracks[tid].update(
-                        box=detections[min_c]["box"],
-                        conf=float(detections[min_c]["confidence"]),
-                        det_type=detections[min_c].get("type", "body"),
+                        box=detections[c]["box"],
+                        conf=float(detections[c]["confidence"]),
+                        det_type=detections[c].get("type", "body"),
                     )
-                    detections[min_c]["track_id"] = tid
+                    detections[c]["track_id"] = tid
                     matched_tracks.add(tid)
-                    matched_dets.add(min_c)
+                    matched_dets.add(c)
 
-        # Create new tracks for unmatched detections
         for j, det in enumerate(detections):
             if j not in matched_dets:
                 tid = self.next_track_id
@@ -743,7 +870,6 @@ class CrowdTemporalTracker:
                 )
                 det["track_id"] = tid
 
-        # Remove dead tracks
         dead_ids = [
             tid for tid, track in self.tracks.items()
             if track.time_since_update > self.max_disappeared
@@ -751,8 +877,7 @@ class CrowdTemporalTracker:
         for tid in dead_ids:
             del self.tracks[tid]
 
-        # Surge baseline and hysteresis (Phase 15)
-        # Compute baseline average from established history before appending the current raw_count
+        # Surge baseline with hysteresis
         baseline_avg = float(np.mean(list(self.count_history))) if len(self.count_history) >= 4 else 0.0
         surge_percent = 0.0
         if baseline_avg > 0:
@@ -771,12 +896,10 @@ class CrowdTemporalTracker:
             if self.surge_consecutive_normal >= SURGE_HYSTERESIS_CONSECUTIVE_CLEAR:
                 self.is_surging = False
 
-        # Temporal smoothing calculation
+        # Temporal smoothing
         self.count_history.append(raw_count)
         if len(self.count_history) >= 3:
             median_count = int(np.median(list(self.count_history)))
-            # If current frame deviates massively from median of recent frames,
-            # clamp it to bounded window to avoid single-frame spike flicker
             allowed_deviation = max(3, int(median_count * 0.35))
             if abs(raw_count - median_count) > allowed_deviation and len(self.count_history) >= 4:
                 stabilized_count = int(0.70 * median_count + 0.30 * raw_count)
@@ -796,12 +919,10 @@ class CrowdTemporalTracker:
         return detections, stabilized_count, surge_info
 
 
-# Per-camera tracker registry
 _camera_trackers: Dict[str, CrowdTemporalTracker] = {}
 
 
 def get_camera_tracker(camera_id: str) -> CrowdTemporalTracker:
-    """Retrieve or create a temporal tracker for a camera stream."""
     global _camera_trackers
     if camera_id not in _camera_trackers:
         _camera_trackers[camera_id] = CrowdTemporalTracker(camera_id=camera_id)
@@ -809,7 +930,6 @@ def get_camera_tracker(camera_id: str) -> CrowdTemporalTracker:
 
 
 def reset_camera_tracker(camera_id: str) -> None:
-    """Reset the temporal tracker state for a given camera."""
     global _camera_trackers
     if camera_id in _camera_trackers:
         del _camera_trackers[camera_id]

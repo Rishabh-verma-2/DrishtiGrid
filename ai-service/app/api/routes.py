@@ -166,6 +166,10 @@ async def crowd_detection(
     grid_rows: int = Form(default=3),
     grid_cols: int = Form(default=4),
     roi: Optional[str] = Form(default=None),
+    is_video: bool = Form(default=False),
+    enable_tiles: bool = Form(default=True),
+    tile_overlap: float = Form(default=0.25),
+    use_density: bool = Form(default=True),
     debug: bool = Form(default=False),
 ):
     """
@@ -186,12 +190,16 @@ async def crowd_detection(
     grid_rows      : Density grid row divisions (default 3)
     grid_cols      : Density grid column divisions (default 4)
     roi            : Optional ROI bounding box or polygon JSON
+    is_video       : Enable temporal stabilization across sequential video frames (default False)
+    enable_tiles   : Enable multi-scale sliding window tiling (default True)
+    tile_overlap   : Sliding window overlap ratio (default 0.25)
+    use_density    : Enable density estimation fallback (default True)
     debug          : Optional flag to include debug_info diagnostics
 
     Returns
     -------
     JSON with crowd metrics, zone breakdown, detections list,
-    surge info, and annotated image (base64).
+    surge info, annotated image (base64), quality object, and timing.
     """
     # ---- Validate file type ----
     content_type = (image.content_type or "").lower()
@@ -250,6 +258,10 @@ async def crowd_detection(
             grid_rows=max(1, min(8, grid_rows)),
             grid_cols=max(1, min(8, grid_cols)),
             roi=parsed_roi,
+            is_video=is_video,
+            enable_tiles=enable_tiles,
+            tile_overlap=tile_overlap,
+            use_density=use_density,
             debug=debug,
         )
     except Exception as e:

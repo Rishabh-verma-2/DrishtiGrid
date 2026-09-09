@@ -21,8 +21,16 @@ Tests cover:
 16. End-to-end API regression test on an actual image array.
 """
 
+import os
+import sys
 import unittest
 import numpy as np
+
+# Ensure app is on path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+ai_service_dir = os.path.abspath(os.path.join(current_dir, ".."))
+if ai_service_dir not in sys.path:
+    sys.path.insert(0, ai_service_dir)
 
 from app.detection.crowd_postprocess import (
     compute_box_iou,
