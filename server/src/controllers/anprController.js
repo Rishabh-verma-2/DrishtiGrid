@@ -328,7 +328,15 @@ async function processPlatesAndGenerateAlerts(plates, sourceImageName, activeRec
  */
 const analyzeVehicleImages = async (req, res) => {
   try {
-    const files = req.files || (req.file ? [req.file] : []);
+    let files = [];
+    if (Array.isArray(req.files)) {
+      files = req.files;
+    } else if (req.files && typeof req.files === 'object') {
+      if (Array.isArray(req.files.images)) files.push(...req.files.images);
+      if (Array.isArray(req.files.image)) files.push(...req.files.image);
+    } else if (req.file) {
+      files = [req.file];
+    }
 
     if (!files || files.length === 0) {
       return res.status(400).json({

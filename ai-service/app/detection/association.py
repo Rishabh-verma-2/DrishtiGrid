@@ -39,10 +39,24 @@ class AssociationMatch:
         }
 
 
-def compute_box_intersection_over_plate(plate_box: List[float], vehicle_box: List[float]) -> float:
+def _normalize_box_coords(box: Any) -> Tuple[float, float, float, float]:
+    """Ensure box is [x1, y1, x2, y2] as floats regardless of dict or sequence."""
+    if isinstance(box, dict):
+        if "x" in box and "width" in box:
+            x = float(box["x"])
+            y = float(box["y"])
+            return (x, y, x + float(box["width"]), y + float(box["height"]))
+        elif "x1" in box:
+            return (float(box["x1"]), float(box["y1"]), float(box["x2"]), float(box["y2"]))
+    if isinstance(box, (list, tuple)) and len(box) >= 4:
+        return (float(box[0]), float(box[1]), float(box[2]), float(box[3]))
+    return (0.0, 0.0, 0.0, 0.0)
+
+
+def compute_box_intersection_over_plate(plate_box: Any, vehicle_box: Any) -> float:
     """Compute (area(plate ∩ vehicle)) / area(plate)."""
-    px1, py1, px2, py2 = plate_box
-    vx1, vy1, vx2, vy2 = vehicle_box
+    px1, py1, px2, py2 = _normalize_box_coords(plate_box)
+    vx1, vy1, vx2, vy2 = _normalize_box_coords(vehicle_box)
 
     ix1 = max(px1, vx1)
     iy1 = max(py1, vy1)
@@ -58,16 +72,17 @@ def compute_box_intersection_over_plate(plate_box: List[float], vehicle_box: Lis
 
 
 def score_plate_vehicle_pair(
-    plate_box: List[float],
-    vehicle_box: List[float],
+    plate_box: Any,
+    vehicle_box: Any,
     vehicle_type: str = "car",
 ) -> Tuple[float, Dict[str, Any]]:
     """
     Score how plausibly a plate bounding box belongs to a vehicle bounding box.
     Returns (plausibility_score in 0.0..1.0, diagnostic_details).
     """
-    px1, py1, px2, py2 = plate_box
-    vx1, vy1, vx2, vy2 = vehicle_box
+    px1, py1, px2, py2 = _normalize_box_coords(plate_box)
+    vx1, vy1, vx2, vy2 = _normalize_box_coords(vehicle_box)
+
 
     pw = max(1.0, px2 - px1)
     ph = max(1.0, py2 - py1)

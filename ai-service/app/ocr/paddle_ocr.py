@@ -1,11 +1,14 @@
 """
-PaddleOCR wrapper for license plate text extraction.
-The OCR engine is loaded ONCE at startup.
+Universal OCR engine for license plate text extraction.
+Provides high-accuracy OCR powered by EasyOCR (PyTorch / Metal / CPU),
+with a backward-compatible interface for PaddleOCR call patterns.
+Loaded ONCE at startup to ensure fast real-time inference without crashes.
 """
 
 import logging
+import re
 import time
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -17,32 +20,60 @@ logger = logging.getLogger(__name__)
 _ocr_engine = None
 
 
+class UniversalOCREngine:
+    """
+    Unified OCR Engine wrapping EasyOCR with full backward-compatibility
+    for PaddleOCR call signatures (.ocr(img, cls=True)).
+    """
+    def __init__(self, lang: str = "en", use_gpu: bool = False):
+        try:
+            import easyocr
+            self.reader = easyocr.Reader([lang], gpu=use_gpu)
+            logger.info("Universal EasyOCR engine initialized successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize EasyOCR engine: {e}")
+            self.reader = None
+
+    def ocr(self, img: np.ndarray, cls: bool = True, **kwargs) -> List[List]:
+        """
+        Mimics PaddleOCR .ocr() output:
+        Returns [[ [pts, (text, conf)], [pts, (text, conf)], ... ]]
+        where pts is [[x1,y1], [x2,y1], [x2,y2], [x1,y2]].
+        """
+        if self.reader is None or img is None or img.size == 0:
+            return [[]]
+
+        try:
+            # Ensure RGB image format
+            if len(img.shape) == 2:
+                rgb = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+            elif img.shape[2] == 4:
+                rgb = cv2.cvtColor(img, cv2.COLOR_BGRA2RGB)
+            else:
+                rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            results = self.reader.readtext(rgb)
+            lines = []
+            for item in results:
+                bbox_pts, text, conf = item[0], item[1], item[2]
+                pts = [[float(p[0]), float(p[1])] for p in bbox_pts]
+                lines.append([pts, (str(text).strip(), float(conf))])
+            return [lines]
+        except Exception as err:
+            logger.debug(f"OCR inference internal error: {err}")
+            return [[]]
+
+
 def load_ocr_engine():
-    """Initialize PaddleOCR engine once at startup."""
+    """Initialize OCR engine once at startup."""
     global _ocr_engine
 
-    try:
-        from paddleocr import PaddleOCR
-    except ImportError:
-        logger.error(
-            "PaddleOCR not installed. Run: pip install paddleocr paddlepaddle"
-        )
-        raise
-
     lang = MODEL_CONFIG.get("OCR_LANG", "en")
-    use_angle_cls = MODEL_CONFIG.get("OCR_USE_ANGLE_CLS", True)
     use_gpu = MODEL_CONFIG.get("OCR_USE_GPU", False)
 
-    logger.info(
-        f"Loading PaddleOCR (lang={lang}, angle_cls={use_angle_cls}, gpu={use_gpu})"
-    )
-    _ocr_engine = PaddleOCR(
-        use_angle_cls=use_angle_cls,
-        lang=lang,
-        use_gpu=use_gpu,
-        show_log=False,
-    )
-    logger.info("PaddleOCR engine loaded.")
+    logger.info(f"Loading Universal OCR Engine (lang={lang}, gpu={use_gpu})")
+    _ocr_engine = UniversalOCREngine(lang=lang, use_gpu=use_gpu)
+    logger.info("Universal OCR engine ready.")
     return _ocr_engine
 
 
@@ -55,7 +86,7 @@ def get_ocr_engine():
 
 def run_ocr_on_crop(crop: np.ndarray) -> Dict:
     """
-    Run PaddleOCR on a BGR plate crop.
+    Run OCR on a BGR plate crop.
 
     Returns:
     {
@@ -84,17 +115,12 @@ def run_ocr_on_crop(crop: np.ndarray) -> Dict:
 
     t0 = time.perf_counter()
     try:
-        if len(crop.shape) == 2:
-            rgb_crop = cv2.cvtColor(crop, cv2.COLOR_GRAY2RGB)
-        else:
-            rgb_crop = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
-
-        result = engine.ocr(rgb_crop, cls=True)
+        result = engine.ocr(crop, cls=True)
 
         elapsed = time.perf_counter() - t0
-        logger.debug(f"PaddleOCR completed in {elapsed:.3f}s")
+        logger.debug(f"OCR completed in {elapsed:.3f}s")
 
-        if not result or result == [None] or result[0] is None:
+        if not result or result == [None] or not result[0]:
             return {
                 "raw_ocr": "",
                 "ocr_confidence": 0.0,
@@ -139,10 +165,11 @@ def run_ocr_on_crop(crop: np.ndarray) -> Dict:
         }
 
     except Exception as e:
-        logger.error(f"PaddleOCR inference failed: {e}")
+        logger.error(f"OCR inference failed: {e}")
         return {
             "raw_ocr": "",
             "ocr_confidence": 0.0,
             "success": False,
             "error": str(e),
         }
+

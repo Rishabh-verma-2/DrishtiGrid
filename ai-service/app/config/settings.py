@@ -31,7 +31,7 @@ MODEL_CONFIG: Dict[str, Any] = {
     # Dedicated license-plate YOLO weights (preferred if downloaded)
     "YOLO_LP_MODEL_PATH": str(WEIGHTS_DIR / "license_plate_detector.pt"),
     # Which YOLO model to prefer: "lp" = dedicated LP model, "coco" = generic
-    "YOLO_MODEL_PREFERENCE": os.getenv("YOLO_MODEL_PREFERENCE", "coco"),
+    "YOLO_MODEL_PREFERENCE": os.getenv("YOLO_MODEL_PREFERENCE", "lp"),
 
     # ---- Zero-DCE ----
     "ZERO_DCE_WEIGHTS_PATH": str(WEIGHTS_DIR / "zero_dce.pth"),
