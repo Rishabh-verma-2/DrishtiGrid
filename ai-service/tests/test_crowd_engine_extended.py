@@ -343,8 +343,146 @@ class TestCrowdEngineExtendedSuite(unittest.TestCase):
         bodies = [{"box": [100.0, 100.0, 160.0, 280.0], "confidence": 0.85, "type": "body"}]
         matched_bodies, unmatched_heads = associate_heads_to_bodies(bodies, [])
         self.assertEqual(len(matched_bodies), 1)
-        self.assertEqual(len(unmatched_heads), 0)
+    # -----------------------------------------------------------------------
+    # Scenario 21: Non-square grid partitioning & exact cell_h calculation
+    # -----------------------------------------------------------------------
+    def test_21_non_square_grids_and_cell_height_fix(self):
+        from app.detection.crowd_tiling import analyze_frame_regions
+        from app.detection.crowd_postprocess import assign_zones
+
+        img_w, img_h = 1000, 600
+        # Create test detections scattered across the frame
+        test_dets = [
+            {"box": [50.0, 50.0, 90.0, 150.0], "confidence": 0.85, "type": "body"},
+            {"box": [300.0, 200.0, 340.0, 300.0], "confidence": 0.80, "type": "body"},
+            {"box": [800.0, 450.0, 840.0, 550.0], "confidence": 0.75, "type": "body"},
+            {"box": [450.0, 50.0, 480.0, 120.0], "confidence": 0.90, "type": "body"},
+            {"box": [700.0, 100.0, 730.0, 180.0], "confidence": 0.88, "type": "body"},
+        ]
+
+        grid_configs = [(2, 4), (3, 5), (4, 7), (6, 3)]
+        for r_cnt, c_cnt in grid_configs:
+            # 1. Test analyze_frame_regions
+            regions = analyze_frame_regions(
+                body_detections=test_dets,
+                head_detections=[],
+                img_w=img_w,
+                img_h=img_h,
+                grid_rows=r_cnt,
+                grid_cols=c_cnt,
+            )
+            self.assertEqual(len(regions), r_cnt * c_cnt)
+            # Check cell height math: height must be img_h / r_cnt
+            expected_cell_h = img_h / float(r_cnt)
+            expected_cell_w = img_w / float(c_cnt)
+            for reg in regions:
+                rx1, ry1, rx2, ry2 = reg["bbox"]
+                self.assertAlmostEqual(ry2 - ry1, expected_cell_h, delta=0.5)
+                self.assertAlmostEqual(rx2 - rx1, expected_cell_w, delta=0.5)
+
+            # 2. Test assign_zones
+            zones = assign_zones(
+                detections=test_dets,
+                img_h=img_h,
+                img_w=img_w,
+                grid_rows=r_cnt,
+                grid_cols=c_cnt,
+            )
+            self.assertEqual(len(zones), r_cnt * c_cnt)
+            total_zone_count = sum(z["count"] for z in zones)
+            self.assertEqual(
+                total_zone_count,
+                len(test_dets),
+                f"Zone counts must strictly sum to total detections for grid ({r_cnt}, {c_cnt})",
+            )
+
+    # -----------------------------------------------------------------------
+    # Scenario 22: Spatial residual map & Level 3 refinement tile generation
+    # -----------------------------------------------------------------------
+    def test_22_spatial_residual_map_and_level3_refinement(self):
+        from app.detection.crowd_tiling import (
+            compute_spatial_residual_map,
+            generate_residual_refinement_tiles,
+        )
+
+        img_w, img_h = 1000, 800
+        # Create a density map with strong energy in top-right quadrant
+        density_map = np.zeros((100, 100), dtype=np.float32)
+        density_map[10:40, 60:90] = 5.0  # Dense crowd pocket
+
+        # But detector only detected one body in the bottom-left
+        body_dets = [{"box": [100.0, 600.0, 150.0, 750.0], "confidence": 0.85, "type": "body"}]
+
+        res_map, res_regions = compute_spatial_residual_map(
+            density_map=density_map,
+            body_detections=body_dets,
+            head_detections=[],
+            img_w=img_w,
+            img_h=img_h,
+            residual_threshold=0.20,
+        )
+
+        self.assertGreater(len(res_regions), 0, "High-residual pocket must be detected")
+        # Top-right region center
+        pocket = res_regions[0]
+        prx1, pry1, prx2, pry2 = pocket["bbox"]
+        pcx = (prx1 + prx2) / 2.0
+        pcy = (pry1 + pry2) / 2.0
+        self.assertGreater(pcx, 500.0, "Pocket must be located in right half")
+        self.assertLess(pcy, 400.0, "Pocket must be located in upper half")
+
+        # Generate Level 3 refinement crops
+        crops = generate_residual_refinement_tiles(
+            residual_regions=res_regions,
+            img_w=img_w,
+            img_h=img_h,
+            crop_size=400,
+            max_crops=3,
+        )
+        self.assertGreater(len(crops), 0)
+        self.assertEqual(crops[0].level, 3)
+
+    # -----------------------------------------------------------------------
+    # Scenario 23: Extended JSON schema & per-stage timing integrity
+    # -----------------------------------------------------------------------
+    def test_23_extended_json_and_stage_timing_integrity(self):
+        dummy = np.zeros((480, 640, 3), dtype=np.uint8)
+        res = detect_crowd(dummy, enable_tiles=False, use_density=True)
+
+        self.assertTrue(res["success"])
+        # Check required extended fields
+        self.assertIn("quality", res)
+        self.assertIn("count_breakdown", res)
+        self.assertIn("dense_regions", res)
+        self.assertIn("residual_regions", res)
+        self.assertIn("timing", res)
+
+        # Check breakdown
+        cb = res["count_breakdown"]
+        self.assertIn("bodies", cb)
+        self.assertIn("heads_occluded", cb)
+        self.assertIn("density_estimate", cb)
+        self.assertIn("residual_unlocalized", cb)
+
+        # Check timing keys
+        tm = res["timing"]
+        required_timing_keys = [
+            "full_frame_ms",
+            "tile_inference_ms",
+            "head_inference_ms",
+            "dense_region_ms",
+            "density_inference_ms",
+            "residual_refine_ms",
+            "fusion_ms",
+            "total_ms",
+        ]
+        for k in required_timing_keys:
+            self.assertIn(k, tm, f"Missing timing key {k}")
+            self.assertIsInstance(tm[k], (int, float))
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+

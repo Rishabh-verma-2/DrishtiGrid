@@ -297,19 +297,21 @@ def deduplicate_detections(
     debug_tracker: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Source-Aware Cross-Tile Deduplication.
-    Prevents accidentally merging two distinct neighboring people in dense crowds.
-    Considers:
-    - Source pass identity (same tile vs adjacent tiles vs full-frame vs dense region)
-    - Local crowd density (tightens merge threshold in dense clusters)
-    - Vertical alignment and aspect ratio consistency
-    - Centroid distance normalized by box dimension
+    Source-Aware Cross-Tile & Multi-Scale Deduplication.
+    Distinguishes true duplicate detections across full-frame, sliding-window tiles,
+    dense crops, and residual passes while preserving distinct adjacent people in dense crowds.
     """
     if not candidates:
         return []
 
-    # Sort descending by confidence
-    sorted_cands = sorted(candidates, key=lambda c: float(c.get("confidence", 0.0)), reverse=True)
+    # Sort descending by priority (favoring high-res tile/crop detections when confidence is close)
+    def _cand_priority(c: Dict[str, Any]) -> float:
+        conf = float(c.get("confidence", 0.0))
+        src = str(c.get("source", ""))
+        bonus = 0.03 if ("tile" in src or "dense" in src or "residual" in src) else 0.0
+        return conf + bonus
+
+    sorted_cands = sorted(candidates, key=_cand_priority, reverse=True)
     kept_detections: List[Dict[str, Any]] = []
 
     for cand in sorted_cands:
@@ -320,6 +322,7 @@ def deduplicate_detections(
         b_h = max(1.0, b_box[3] - b_box[1])
         b_cx = (b_box[0] + b_box[2]) / 2.0
         b_cy = (b_box[1] + b_box[3]) / 2.0
+        b_area = b_w * b_h
 
         is_duplicate = False
 
@@ -331,6 +334,7 @@ def deduplicate_detections(
             k_h = max(1.0, k_box[3] - k_box[1])
             k_cx = (k_box[0] + k_box[2]) / 2.0
             k_cy = (k_box[1] + k_box[3]) / 2.0
+            k_area = k_w * k_h
 
             # Compute pairwise spatial metrics
             iou = compute_box_iou(b_box, k_box)
@@ -340,45 +344,50 @@ def deduplicate_detections(
             center_dist = math.hypot(b_cx - k_cx, b_cy - k_cy)
             avg_dim = (b_w + b_h + k_w + k_h) / 4.0
             norm_dist = center_dist / avg_dim
+            scale_ratio = b_area / max(1.0, k_area)
 
             # Source relation
             same_source = (b_src == k_src)
-            cross_tile = ("tile" in b_src and "tile" in k_src and b_src != k_src)
-            full_vs_tile = ("full" in b_src and "tile" in k_src) or ("tile" in b_src and "full" in k_src)
+            cross_source = (b_src != k_src)
 
-            # In dense crowds, two people standing side by side have low center overlap
-            # Even if IoU is ~0.35, if horizontal center difference > 0.45 * width, they are distinct people!
-            if horiz_center_diff > 0.45 and vert_center_diff < 0.35:
-                # Distinct adjacent people standing side by side: DO NOT MERGE unless IoU is very high (> 0.65)
-                if iou < 0.65:
-                    continue
+            # 1. Distinct people check:
+            # People sitting side-by-side or standing in rows have distinctly separated centers.
+            # If horizontal center offset is clear (> 0.50 * width) and IoU is modest (< 0.50):
+            # They are distinct individuals!
+            if horiz_center_diff > 0.50 and iou < 0.50:
+                continue
 
-            # Case A: Substantial IoU overlap
-            active_iou = 0.50 if local_density_awareness and same_source else iou_thresh
+            # If vertical center offset is clear (> 0.55 * height) and IoU is modest (< 0.45):
+            # One person is behind/in front of the other!
+            if vert_center_diff > 0.55 and iou < 0.45:
+                continue
+
+            # 2. Case A: Substantial IoU overlap
+            active_iou = 0.50 if (local_density_awareness and same_source) else iou_thresh
             if iou >= active_iou:
                 is_duplicate = True
                 kept["multi_pass"] = True
-                if "tile" in b_src and b_h < 90 and b_conf > 0.28:
+                if ("tile" in b_src or "dense" in b_src or "residual" in b_src) and b_h < 120 and b_conf > 0.25:
                     kept["box"] = b_box
                 kept["confidence"] = max(k_conf, b_conf)
                 break
 
-            # Case B: Heavy Containment (one box inside another)
+            # 3. Case B: Heavy Containment (one box inside another)
             if iomin >= iomin_thresh:
-                # Must have reasonable center alignment
                 if horiz_center_diff <= 0.45 and vert_center_diff <= 0.45:
                     is_duplicate = True
                     kept["multi_pass"] = True
+                    if ("tile" in b_src or "dense" in b_src) and b_conf >= k_conf - 0.10:
+                        kept["box"] = b_box
                     kept["confidence"] = max(k_conf, b_conf)
                     break
 
-            # Case C: Cross-Tile / Full-Frame vs Tile Proximity
-            if (cross_tile or full_vs_tile) and norm_dist <= centroid_norm_thresh:
-                scale_ratio = (b_w * b_h) / max(1.0, (k_w * k_h))
-                if 0.40 <= scale_ratio <= 2.50:
+            # 4. Case C: Cross-Source / Multi-pass Proximity
+            if cross_source and norm_dist <= centroid_norm_thresh:
+                if 0.30 <= scale_ratio <= 3.30:
                     is_duplicate = True
                     kept["multi_pass"] = True
-                    if "tile" in b_src and b_conf > k_conf:
+                    if ("tile" in b_src or "dense" in b_src or "residual" in b_src) and b_conf > k_conf:
                         kept["box"] = b_box
                     kept["confidence"] = max(k_conf, b_conf)
                     break
@@ -390,6 +399,7 @@ def deduplicate_detections(
             kept_detections.append(cand.copy())
 
     return kept_detections
+
 
 
 # ---------------------------------------------------------------------------
@@ -593,18 +603,18 @@ def apply_roi_filter(
 def fuse_crowd_estimates(
     detector_body_count: int,
     unmatched_head_count: int,
-    density_estimated_count: float,
-    density_confidence: float,
-    overlap_ratio: float,
-    suspicious_dense_regions_count: int,
+    density_estimated_count: float = 0.0,
+    density_confidence: float = 0.0,
+    overlap_ratio: float = 0.0,
+    suspicious_dense_regions_count: int = 0,
+    density_is_fallback: bool = False,
+    residual_unlocalized_count: float = 0.0,
 ) -> Dict[str, Any]:
     """
-    Confidence-aware multi-signal hybrid count fusion.
-    Combines:
-    - detector_count (verified body boxes)
-    - occluded_est (unmatched verified head boxes)
-    - density_estimated_count (density model / texture energy)
-    Produces: final_count, uncertainty, confidence, estimation_method, quality.
+    Evidence-Driven Spatial Crowd Count Fusion.
+    In fallback mode, counts strictly reflect verified visual localizations (bodies + heads).
+    When a high-confidence deep learned density model is active (density_is_fallback=False),
+    it enables hybrid crowd fusion in extreme occlusion scenes.
     """
     det_total = detector_body_count + unmatched_head_count
 
@@ -621,27 +631,33 @@ def fuse_crowd_estimates(
         uncertainty = max(1, int(round(0.08 * final_count)))
         fused_confidence = 0.91
         method = "detector_head_hybrid"
+    elif not density_is_fallback and density_estimated_count > det_total and density_confidence >= 0.60:
+        # High-confidence deep learned density model indicates severe detector occlusion
+        density_weight = min(0.45, 0.20 + 0.05 * suspicious_dense_regions_count)
+        det_weight = 1.0 - density_weight
+        blended = det_weight * det_total + density_weight * density_estimated_count
+        final_count = int(round(blended))
+        uncertainty = max(2, int(round(0.12 * final_count)))
+        fused_confidence = round(0.85 * (1.0 - min(0.25, overlap_ratio)), 2)
+        method = "hybrid_dense_crowd"
+    elif suspicious_dense_regions_count > 0 or det_total > 35 or overlap_ratio >= 0.25:
+        # Dense crowd scene: localized detections form the solid anchor
+        final_count = det_total
+        uncertainty = max(2, int(round(0.10 * final_count)))
+        fused_confidence = round(max(0.75, 0.88 * (1.0 - min(0.20, overlap_ratio))), 2)
+        method = "detector_dense_anchor"
     else:
-        # Dense / Occluded scene: incorporate density estimator signal
-        if density_estimated_count > det_total and density_confidence >= 0.60:
-            # Detector is likely undercounting due to severe occlusion
-            # Blend detector anchor with density estimate
-            density_weight = min(0.45, 0.20 + 0.05 * suspicious_dense_regions_count)
-            det_weight = 1.0 - density_weight
-            blended = det_weight * det_total + density_weight * density_estimated_count
-            final_count = int(round(blended))
-            uncertainty = max(2, int(round(0.12 * final_count)))
-            fused_confidence = round(0.85 * (1.0 - min(0.25, overlap_ratio)), 2)
-            method = "hybrid_dense_crowd"
-        else:
-            final_count = det_total
-            uncertainty = max(2, int(round(0.10 * final_count)))
-            fused_confidence = 0.88
-            method = "detector_dense_anchor"
+        final_count = det_total
+        uncertainty = max(1, int(round(0.06 * final_count))) if final_count > 0 else 0
+        fused_confidence = 0.90
+        method = "detector_standard"
 
     # Uncertainty range [min_bound, max_bound]
     min_bound = max(0, final_count - uncertainty)
-    max_bound = final_count + uncertainty
+    if not density_is_fallback and residual_unlocalized_count > 0:
+        max_bound = int(round(final_count + max(uncertainty, residual_unlocalized_count)))
+    else:
+        max_bound = final_count + uncertainty
 
     # Quality classification
     if fused_confidence >= 0.90 and uncertainty <= max(2, int(0.08 * max(1, final_count))):
@@ -655,17 +671,24 @@ def fuse_crowd_estimates(
     else:
         quality = "UNRELIABLE"
 
+    recall_warning = bool(
+        not density_is_fallback
+        and density_estimated_count > det_total * 1.35
+        and det_total >= 15
+    )
+
     return {
         "final_count": final_count,
         "detector_count": detector_body_count,
         "head_count": unmatched_head_count,
         "density_count": round(float(density_estimated_count), 1),
+        "residual_unlocalized": round(float(residual_unlocalized_count), 1),
         "fused_confidence": round(fused_confidence, 2),
         "uncertainty": uncertainty,
         "uncertainty_range": [min_bound, max_bound],
         "estimation_method": method,
         "quality": quality,
-        "detector_recall_warning": (density_estimated_count > det_total * 1.35 and det_total >= 15),
+        "detector_recall_warning": recall_warning,
     }
 
 

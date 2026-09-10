@@ -8,8 +8,9 @@ crowds where individual bounding-box detection becomes unreliable.
 Architecture:
 - `CrowdDensityEstimator` (Abstract Base Class)
 - `PretrainedCrowdDensityEstimator` (PyTorch / ONNX deep crowd density models)
-- `TextureHeadDensityEstimator` (Statistical / Gradient / Spatial-Frequency Fallback)
+- `TextureHeadDensityEstimator` (Calibrated Statistical / Gradient Fallback)
 - Thread-safe singleton model registry with GPU/CPU auto-detection.
+- Clearly flags fallback mode vs learned neural network mode without artificial count inflation.
 """
 
 from __future__ import annotations
@@ -61,11 +62,17 @@ class CrowdDensityEstimator(ABC):
         """Return True if model is loaded and ready."""
         pass
 
+    @property
+    @abstractmethod
+    def is_fallback(self) -> bool:
+        """Return True if estimator is a heuristic fallback rather than a trained neural network."""
+        pass
+
 
 class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
     """
     Deep-learning based crowd density estimator (CSRNet, DM-Count, BayCount, or ONNX).
-    Loads PyTorch or ONNX model if weights exist.
+    Loads PyTorch, TorchScript, or ONNX model if weights exist.
     """
 
     def __init__(self, weights_path: Union[str, Path] = DEFAULT_DENSITY_WEIGHTS):
@@ -73,6 +80,8 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
         self.model = None
         self.device = "cpu"
         self._is_loaded = False
+        self._is_onnx = False
+        self._session = None
         self._load_lock = threading.Lock()
         self._attempt_load()
 
@@ -88,11 +97,21 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
                 return
 
             try:
+                # 1. Try ONNX runtime if file ends with .onnx
+                if str(self.weights_path).endswith(".onnx"):
+                    import onnxruntime as ort
+                    providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+                    self._session = ort.InferenceSession(str(self.weights_path), providers=providers)
+                    self._is_onnx = True
+                    self._is_loaded = True
+                    logger.info("[DensityEstimator] ONNX crowd density model loaded successfully.")
+                    return
+
+                # 2. Try PyTorch / TorchScript
                 import torch
                 self.device = "cuda" if torch.cuda.is_available() else "cpu"
                 logger.info(f"[DensityEstimator] Loading density model from {self.weights_path} on {self.device}...")
 
-                # Support TorchScript or PyTorch state dict
                 if str(self.weights_path).endswith(".pt") or str(self.weights_path).endswith(".pth"):
                     try:
                         self.model = torch.jit.load(str(self.weights_path), map_location=self.device)
@@ -100,7 +119,6 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
                         self._is_loaded = True
                         logger.info("[DensityEstimator] TorchScript density model loaded successfully.")
                     except Exception:
-                        # Attempt standard torch.load
                         checkpoint = torch.load(str(self.weights_path), map_location=self.device)
                         if isinstance(checkpoint, torch.nn.Module):
                             self.model = checkpoint
@@ -113,7 +131,11 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
                 self._is_loaded = False
 
     def is_available(self) -> bool:
-        return self._is_loaded and self.model is not None
+        return self._is_loaded and (self.model is not None or self._session is not None)
+
+    @property
+    def is_fallback(self) -> bool:
+        return False
 
     def estimate(
         self,
@@ -124,20 +146,25 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
         if not self.is_available():
             raise RuntimeError("Pretrained density model is not available.")
 
-        import torch
         img_h, img_w = image.shape[:2]
-        # Standard normalization: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
         mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
         std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
         norm_img = (rgb - mean) / std
-        tensor = torch.from_numpy(norm_img.transpose(2, 0, 1)).unsqueeze(0).float().to(self.device)
+        input_tensor = norm_img.transpose(2, 0, 1)[np.newaxis, ...].astype(np.float32)
 
-        with torch.no_grad():
-            output = self.model(tensor)
-            if isinstance(output, tuple):
-                output = output[0]
-            density_raw = output.squeeze().cpu().numpy()
+        if self._is_onnx and self._session is not None:
+            input_name = self._session.get_inputs()[0].name
+            outputs = self._session.run(None, {input_name: input_tensor})
+            density_raw = outputs[0].squeeze()
+        else:
+            import torch
+            tensor = torch.from_numpy(input_tensor).float().to(self.device)
+            with torch.no_grad():
+                output = self.model(tensor)
+                if isinstance(output, tuple):
+                    output = output[0]
+                density_raw = output.squeeze().cpu().numpy()
 
         raw_count = float(np.sum(density_raw))
         count = max(0.0, raw_count)
@@ -155,16 +182,18 @@ class PretrainedCrowdDensityEstimator(CrowdDensityEstimator):
 class TextureHeadDensityEstimator(CrowdDensityEstimator):
     """
     Zero-dependency, calibrated statistical crowd density estimator.
-    Combines:
-    1. Multi-scale gradient magnitude & spatial texture frequency (Scharr/Sobel energy).
-    2. Adaptive Gaussian kernel splatting based on head detections and high-entropy crowd patches.
-    3. Foreground edge occupancy calibration.
+    Combines multi-scale gradient energy with detected head and body spatial evidence.
+    Calibrated to prevent false count inflation while maintaining an accurate spatial density map.
     """
 
     def __init__(self):
         self._available = True
 
     def is_available(self) -> bool:
+        return True
+
+    @property
+    def is_fallback(self) -> bool:
         return True
 
     def estimate(
@@ -177,10 +206,10 @@ class TextureHeadDensityEstimator(CrowdDensityEstimator):
             return np.zeros((10, 10), dtype=np.float32), 0.0, 0.0
 
         img_h, img_w = image.shape[:2]
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
 
-        # Downsample for fast, stable spatial density calculation (max dimension 320)
-        scale = min(1.0, 320.0 / max(img_h, img_w))
+        # Spatial resolution for density map (proportional to image aspect ratio)
+        scale = min(1.0, 360.0 / max(img_h, img_w))
         map_w = max(16, int(img_w * scale))
         map_h = max(16, int(img_h * scale))
         small_gray = cv2.resize(gray, (map_w, map_h), interpolation=cv2.INTER_AREA)
@@ -201,7 +230,7 @@ class TextureHeadDensityEstimator(CrowdDensityEstimator):
         texture_score = (texture_energy / (np.mean(texture_energy) + 1e-5)) * (
             local_std / (np.mean(local_std) + 1e-5)
         )
-        texture_score = np.clip(texture_score, 0.0, 8.0)
+        texture_score = np.clip(texture_score, 0.0, 6.0)
 
         # 2. Integrate detected head and body spatial evidence
         spatial_kernel_map = np.zeros((map_h, map_w), dtype=np.float32)
@@ -214,41 +243,43 @@ class TextureHeadDensityEstimator(CrowdDensityEstimator):
             cy = int(((hy1 + hy2) / 2.0) * scale)
             hw = max(2.0, (hx2 - hx1) * scale)
             hh = max(2.0, (hy2 - hy1) * scale)
-            radius = max(2, int(min(hw, hh) * 0.75))
+            radius = max(2, int(min(hw, hh) * 0.8))
             cv2.circle(spatial_kernel_map, (cx, cy), radius, 1.0, -1)
 
         for b in bodies:
-            bx1, by1, bx2, by1_head = b["box"][0], b["box"][1], b["box"][2], b["box"][1] + 0.3 * (b["box"][3] - b["box"][1])
+            bx1, by1, bx2, by2 = b["box"]
             cx = int(((bx1 + bx2) / 2.0) * scale)
-            cy = int(by1_head * scale)
+            cy = int((by1 + 0.35 * (by2 - by1)) * scale)
             bw = max(2.0, (bx2 - bx1) * scale)
-            radius = max(2, int(bw * 0.35))
-            cv2.circle(spatial_kernel_map, (cx, cy), radius, 0.8, -1)
+            radius = max(2, int(bw * 0.40))
+            cv2.circle(spatial_kernel_map, (cx, cy), radius, 0.85, -1)
 
         spatial_kernel_map = cv2.GaussianBlur(spatial_kernel_map, (blur_ksize, blur_ksize), 0)
 
         # 3. Composite density field
         if len(heads) + len(bodies) > 0:
-            density_field = 0.55 * spatial_kernel_map + 0.45 * (texture_score / (np.max(texture_score) + 1e-5))
+            norm_tex = texture_score / (np.max(texture_score) + 1e-5)
+            density_field = 0.65 * spatial_kernel_map + 0.35 * norm_tex
         else:
             density_field = texture_score / (np.max(texture_score) + 1e-5)
 
-        density_field = np.where(density_field > 0.15, density_field, 0.0)
+        density_field = np.where(density_field > 0.12, density_field, 0.0)
 
+        # 4. Calibrated Person Count Estimate (Anchored without runaway extrapolation)
         detector_count = len(bodies) + int(0.9 * max(0, len(heads) - len(bodies)))
-        active_pixels = np.count_nonzero(density_field > 0.25)
-        median_head_area_px = max(12.0, 180.0 * (scale ** 2))
-        texture_count_estimate = active_pixels / median_head_area_px
+        active_pixels = float(np.count_nonzero(density_field > 0.20))
+        total_pixels = float(map_h * map_w)
+        coverage_ratio = active_pixels / max(1.0, total_pixels)
 
         if detector_count > 0:
-            estimated_count = max(
-                float(detector_count),
-                0.70 * float(detector_count) + 0.30 * float(texture_count_estimate),
-            )
-            confidence = min(0.92, 0.65 + 0.02 * min(15, detector_count))
+            # Calibrated estimate anchored to detected evidence
+            # Avoids wild over-counting while accounting for occluded pockets
+            texture_residual = max(0.0, coverage_ratio * 150.0 - float(detector_count))
+            estimated_count = float(detector_count) + 0.15 * texture_residual
+            confidence = 0.62  # Modest, honest confidence for statistical fallback
         else:
-            estimated_count = float(texture_count_estimate) if texture_count_estimate >= 1.0 else 0.0
-            confidence = 0.55 if estimated_count > 0 else 0.85
+            estimated_count = round(coverage_ratio * 60.0, 1)
+            confidence = 0.50 if estimated_count > 0 else 0.90
 
         max_d = float(np.max(density_field))
         norm_map = (density_field / max_d).astype(np.float32) if max_d > 1e-6 else np.zeros((map_h, map_w), dtype=np.float32)

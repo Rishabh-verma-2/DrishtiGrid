@@ -39,6 +39,9 @@ from app.detection.crowd_tiling import (
     generate_sliding_window_tiles,
     analyze_frame_regions,
     generate_dense_region_tiles,
+    generate_residual_refinement_tiles,
+    compute_spatial_residual_map,
+    enhance_crop_for_micro_persons,
     CROWD_TILE_OVERLAP,
     CROWD_TILE_IMGSZ,
     CROWD_MAX_TILES,
@@ -54,6 +57,7 @@ from app.detection.crowd_postprocess import (
     assign_zones,
     compute_crowd_level,
     compute_density_score,
+    compute_box_iou,
     get_camera_tracker,
     reset_camera_tracker,
     CROWD_MIN_CONF,
@@ -263,6 +267,7 @@ def _draw_crowd_annotations(
     fused_confidence: float,
     estimation_method: str,
     dense_regions: Optional[List[Dict[str, Any]]] = None,
+    residual_regions: Optional[List[Dict[str, Any]]] = None,
     grid_rows: int = DEFAULT_GRID_ROWS,
     grid_cols: int = DEFAULT_GRID_COLS,
 ) -> np.ndarray:
@@ -281,17 +286,25 @@ def _draw_crowd_annotations(
             x = int(c * cell_w)
             cv2.line(out, (x, 0), (x, img_h), (30, 36, 45), 1, cv2.LINE_AA)
 
-    # 2. Dense region highlights (cyan dashed / translucent boundary)
+    # 2. Dense region highlights (amber boundary)
     if dense_regions:
         for dr in dense_regions:
             if dr.get("is_suspicious", False):
                 rx1, ry1, rx2, ry2 = [int(v) for v in dr["bbox"]]
                 cv2.rectangle(out, (rx1, ry1), (rx2, ry2), (235, 206, 0), 1, cv2.LINE_AA)
 
-    # 3. Person bounding boxes
-    BODY_BOX_COLOR = (0, 230, 115)      # Emerald green for full body
-    HEAD_BOX_COLOR = (0, 195, 255)      # Amber gold for occluded head
-    PILL_BG_COLOR  = (15, 20, 30)       # Tactical dark pill background
+    # 2b. High-residual refinement zones (violet boundary)
+    if residual_regions:
+        for rr in residual_regions:
+            rx1, ry1, rx2, ry2 = [int(v) for v in rr["bbox"]]
+            cv2.rectangle(out, (rx1, ry1), (rx2, ry2), (220, 100, 255), 1, cv2.LINE_AA)
+
+    # 3. Person bounding boxes with individual visual localization markers (#1, #2, ...)
+    BODY_BOX_COLOR    = (0, 230, 115)     # Emerald green
+    HEAD_BOX_COLOR    = (0, 195, 255)     # Amber gold for occluded head
+    SMALL_BOX_COLOR   = (225, 215, 0)     # Electric cyan-teal for distant small person
+    OCCLUDED_COLOR    = (0, 150, 255)     # Warm orange for occluded torso
+    PILL_BG_COLOR     = (15, 20, 30)      # Tactical dark pill background
 
     for det in detections:
         x = det["bbox"]["x"]
@@ -301,6 +314,7 @@ def _draw_crowd_annotations(
         pid = det["person_id"]
         score = det["confidence"]
         det_type = det.get("type", "body")
+        profile = det.get("profile", "NORMAL_PERSON")
 
         x1 = max(0, min(img_w - 1, x))
         y1 = max(0, min(img_h - 1, y))
@@ -309,25 +323,37 @@ def _draw_crowd_annotations(
 
         if det_type == "head_visible":
             color = HEAD_BOX_COLOR
-            label = f"#{pid} Head {score:.0%}"
+            label = f"#{pid} H {score:.0%}"
+        elif profile == "SMALL_PERSON":
+            color = SMALL_BOX_COLOR
+            label = f"#{pid} {score:.0%}" if (w >= 26 and h >= 36) else f"#{pid}"
+        elif profile == "OCCLUDED_PERSON":
+            color = OCCLUDED_COLOR
+            label = f"#{pid} {score:.0%}" if (w >= 26 and h >= 36) else f"#{pid}"
         else:
             color = BODY_BOX_COLOR
-            label = f"#{pid} {score:.0%}"
+            label = f"#{pid} {score:.0%}" if (w >= 26 and h >= 36) else f"#{pid}"
 
-        thickness = 2 if max(img_w, img_h) >= 1200 else 1
+        thickness = 2 if (max(img_w, img_h) >= 1200 and w >= 32 and h >= 50) else 1
         cv2.rectangle(out, (x1, y1), (x2, y2), color, thickness)
 
-        font_scale = 0.38 if max(img_w, img_h) < 1000 else 0.44
+        # Pinpoint marker dot for small distant person
+        if w < 28 or h < 38:
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            cv2.circle(out, (cx, cy), 2, color, -1)
+
+        font_scale = 0.30 if (w < 26 or h < 36) else (0.38 if max(img_w, img_h) < 1000 else 0.44)
         (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, font_scale, 1)
-        tag_y1 = max(0, y1 - th - 5)
+        tag_y1 = max(0, y1 - th - 4)
         tag_y2 = y1
         tag_x1 = x1
-        tag_x2 = min(img_w, x1 + tw + 6)
+        tag_x2 = min(img_w, x1 + tw + 4)
 
         cv2.rectangle(out, (tag_x1, tag_y1), (tag_x2, tag_y2), PILL_BG_COLOR, -1)
         cv2.rectangle(out, (tag_x1, tag_y1), (tag_x2, tag_y2), color, 1)
         cv2.putText(
-            out, label, (tag_x1 + 3, tag_y2 - 3),
+            out, label, (tag_x1 + 2, tag_y2 - 2),
             cv2.FONT_HERSHEY_SIMPLEX, font_scale, (255, 255, 255), 1, cv2.LINE_AA
         )
 
@@ -391,6 +417,7 @@ def detect_crowd(
         "head_inference_ms": 0.0,
         "dense_region_ms": 0.0,
         "density_inference_ms": 0.0,
+        "residual_refine_ms": 0.0,
         "fusion_ms": 0.0,
         "total_ms": 0.0,
     }
@@ -419,6 +446,7 @@ def detect_crowd(
         "timing": timing,
         "count_breakdown": {},
         "dense_regions": [],
+        "residual_regions": [],
     }
 
     if image is None or image.size == 0:
@@ -636,12 +664,13 @@ def detect_crowd(
     timing["dense_region_ms"] = round((time.perf_counter() - t_dense_start) * 1000, 1)
 
     # -----------------------------------------------------------------------
-    # Pass E: Crowd Density Estimation Fallback
+    # Pass E: Crowd Density Estimation
     # -----------------------------------------------------------------------
     t_density_start = time.perf_counter()
     density_map = np.zeros((10, 10), dtype=np.float32)
     density_count = 0.0
     density_conf = 0.0
+    is_fallback_density = True
     if density_estimator is not None:
         try:
             density_map, density_count, density_conf = density_estimator.estimate(
@@ -649,9 +678,69 @@ def detect_crowd(
                 head_candidates=raw_head_cands,
                 body_candidates=raw_body_cands,
             )
+            is_fallback_density = getattr(density_estimator, "is_fallback", True)
         except Exception as e:
             logger.warning(f"[CrowdDetector] Density estimation error: {e}")
     timing["density_inference_ms"] = round((time.perf_counter() - t_density_start) * 1000, 1)
+
+    # -----------------------------------------------------------------------
+    # Pass F: Level 3 High-Residual Crowd Pockets Refinement
+    # -----------------------------------------------------------------------
+    t_resid_start = time.perf_counter()
+    spatial_residual_map, residual_meta = compute_spatial_residual_map(
+        density_map=density_map,
+        body_detections=raw_body_cands,
+        head_detections=raw_head_cands,
+        img_w=img_w,
+        img_h=img_h,
+        residual_threshold=0.22,
+    )
+    residual_crops = generate_residual_refinement_tiles(
+        residual_regions=residual_meta,
+        img_w=img_w,
+        img_h=img_h,
+        crop_size=512,
+        max_crops=4,
+    )
+    result["residual_regions"] = residual_meta
+
+    residual_refine_count = 0
+    if residual_crops and m_person is not None:
+        resid_imgs = [rc.crop(image) for rc in residual_crops]
+        try:
+            res_resid = m_person(
+                resid_imgs,
+                conf=target_conf,
+                iou=0.45,
+                classes=classes_filter,
+                max_det=2000,
+                imgsz=640,
+                device=device,
+                verbose=False,
+            )
+            for rc_idx, rc_res in enumerate(res_resid):
+                if rc_res.boxes is None:
+                    continue
+                crop_obj = residual_crops[rc_idx]
+                for b in rc_res.boxes:
+                    local_xyxy = b.xyxy[0].cpu().numpy().astype(float)
+                    c_val = float(b.conf[0].item()) if b.conf is not None else target_conf
+                    cls_id = int(b.cls[0].item()) if b.cls is not None else 0
+                    if c_val >= CROWD_MIN_CONF:
+                        global_box = crop_obj.project_box_to_global(local_xyxy)
+                        raw_body_cands.append({
+                            "box": global_box,
+                            "confidence": c_val,
+                            "class_id": cls_id,
+                            "source": crop_obj.tile_id,
+                            "type": "body",
+                            "multi_pass": True,
+                        })
+                        residual_refine_count += 1
+        except Exception as e:
+            logger.warning(f"[CrowdDetector] Residual refinement error: {e}")
+    debug_tracker["residual_refinement_detections"] = residual_refine_count
+    timing["residual_refine_ms"] = round((time.perf_counter() - t_resid_start) * 1000, 1)
 
     # -----------------------------------------------------------------------
     # Post-Processing: Filtering, Profile Validation, Deduplication & Association
@@ -724,7 +813,9 @@ def detect_crowd(
         total_pairs = (len(final_candidates) * (len(final_candidates) - 1)) / 2.0
         overlap_ratio = pairs / max(1.0, total_pairs)
 
-    # 6. Hybrid Count Fusion
+    # 6. Hybrid Count Fusion (Mathematical Consistency Guaranteed)
+    residual_unlocalized = max(0.0, density_count - (detector_body_cnt + unmatched_head_cnt)) if not is_fallback_density else 0.0
+
     fusion_result = fuse_crowd_estimates(
         detector_body_count=detector_body_cnt,
         unmatched_head_count=unmatched_head_cnt,
@@ -732,6 +823,8 @@ def detect_crowd(
         density_confidence=density_conf,
         overlap_ratio=overlap_ratio,
         suspicious_dense_regions_count=suspicious_count,
+        density_is_fallback=is_fallback_density,
+        residual_unlocalized_count=residual_unlocalized,
     )
 
     # Assign IDs and format boxes
@@ -788,6 +881,7 @@ def detect_crowd(
         fused_confidence=fusion_result["fused_confidence"],
         estimation_method=fusion_result["estimation_method"],
         dense_regions=result["dense_regions"],
+        residual_regions=result["residual_regions"],
         grid_rows=grid_rows,
         grid_cols=grid_cols,
     )
@@ -818,12 +912,15 @@ def detect_crowd(
             "estimation_method": fusion_result["estimation_method"],
             "detector_recall_warning": fusion_result["detector_recall_warning"],
             "dense_region_count": len(result["dense_regions"]),
+            "residual_region_count": len(result["residual_regions"]),
         },
         "count_breakdown": {
             "bodies": detector_body_cnt,
             "heads_occluded": unmatched_head_cnt,
             "density_estimate": fusion_result["density_count"],
+            "residual_unlocalized": fusion_result.get("residual_unlocalized", 0.0),
         },
+        "residual_regions": result["residual_regions"],
         "error": None,
     })
 
