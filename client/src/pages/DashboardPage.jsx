@@ -16,19 +16,18 @@ import { format } from 'date-fns';
 // ─── Stat Card Component ──────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, color = 'blue', isLight = false }) {
   const colorMap = {
-    blue:   { bg: 'bg-blue-500/10',    border: 'border-blue-500/20',   icon: 'text-blue-500',   val: isLight ? 'text-blue-700' : 'text-blue-400' },
-    green:  { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20',icon: 'text-emerald-500',val: isLight ? 'text-emerald-700' : 'text-emerald-400' },
-    red:    { bg: 'bg-red-500/10',     border: 'border-red-500/20',    icon: 'text-red-500',    val: isLight ? 'text-red-700' : 'text-red-400' },
-    amber:  { bg: 'bg-amber-500/10',   border: 'border-amber-500/20',  icon: 'text-amber-500',  val: isLight ? 'text-amber-700' : 'text-amber-400' },
-    purple: { bg: 'bg-purple-500/10',  border: 'border-purple-500/20', icon: 'text-purple-500', val: isLight ? 'text-purple-700' : 'text-purple-400' },
-    cyan:   { bg: 'bg-cyan-500/10',    border: 'border-cyan-500/20',   icon: 'text-cyan-500',   val: isLight ? 'text-cyan-700' : 'text-cyan-400' },
+    blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: 'text-blue-500', val: isLight ? 'text-blue-700' : 'text-blue-400' },
+    green: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: 'text-emerald-500', val: isLight ? 'text-emerald-700' : 'text-emerald-400' },
+    red: { bg: 'bg-red-500/10', border: 'border-red-500/20', icon: 'text-red-500', val: isLight ? 'text-red-700' : 'text-red-400' },
+    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: 'text-amber-500', val: isLight ? 'text-amber-700' : 'text-amber-400' },
+    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: 'text-purple-500', val: isLight ? 'text-purple-700' : 'text-purple-400' },
+    cyan: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: 'text-cyan-500', val: isLight ? 'text-cyan-700' : 'text-cyan-400' },
   };
   const c = colorMap[color] || colorMap.blue;
 
   return (
-    <div className={`relative border ${c.border} rounded-2xl p-5 transition-all duration-200 group overflow-hidden ${
-      isLight ? 'bg-white shadow-xs hover:shadow-md' : 'bg-[#141929] hover:bg-[#1a2035]'
-    }`}>
+    <div className={`relative border ${c.border} rounded-2xl p-5 transition-all duration-200 group overflow-hidden ${isLight ? 'bg-white shadow-xs hover:shadow-md' : 'bg-[#141929] hover:bg-[#1a2035]'
+      }`}>
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 ${c.bg} border ${c.border} rounded-xl flex items-center justify-center`}>
           <Icon className={`w-5 h-5 ${c.icon}`} />
@@ -51,8 +50,8 @@ export default function DashboardPage() {
   const userRole = String(user?.role || '').toUpperCase();
   const normalizedRole =
     ['SUPERADMIN', 'ADMIN'].includes(userRole) ? 'ADMIN' :
-    ['OPERATOR', 'VIEWER', 'POLICE'].includes(userRole) ? 'POLICE' :
-    ['TRAFFIC', 'TRAFFIC_POLICE'].includes(userRole) ? 'TRAFFIC_POLICE' : 'POLICE';
+      ['OPERATOR', 'VIEWER', 'POLICE'].includes(userRole) ? 'POLICE' :
+        ['TRAFFIC', 'TRAFFIC_POLICE'].includes(userRole) ? 'TRAFFIC_POLICE' : 'POLICE';
 
   // Common Queries
   const { data: camStats, isLoading: loadingCam } = useQuery({
@@ -90,8 +89,8 @@ export default function DashboardPage() {
   const pieData = useMemo(() => {
     if (!camStats) return [];
     return [
-      { name: 'Online',      value: camStats.online || 0,      color: '#10b981' },
-      { name: 'Offline',     value: camStats.offline || 0,     color: '#ef4444' },
+      { name: 'Online', value: camStats.online || 0, color: '#10b981' },
+      { name: 'Offline', value: camStats.offline || 0, color: '#ef4444' },
       { name: 'Maintenance', value: camStats.maintenance || 0, color: '#f59e0b' },
     ].filter((d) => d.value > 0);
   }, [camStats]);
@@ -107,21 +106,19 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6">
 
       {/* ─── Role Context Operational Banner ──────────────────────── */}
-      <div className={`p-5 rounded-3xl border flex flex-wrap items-center justify-between gap-4 transition-colors ${
-        normalizedRole === 'ADMIN'
+      <div className={`p-5 rounded-3xl border flex flex-wrap items-center justify-between gap-4 transition-colors ${normalizedRole === 'ADMIN'
           ? isLight ? 'bg-gradient-to-r from-purple-50 via-white to-blue-50 border-purple-200' : 'bg-gradient-to-r from-purple-950/30 via-[#141929] to-blue-950/20 border-purple-500/20'
           : normalizedRole === 'TRAFFIC_POLICE'
-          ? isLight ? 'bg-gradient-to-r from-amber-50 via-white to-blue-50 border-amber-200' : 'bg-gradient-to-r from-amber-950/30 via-[#141929] to-cyan-950/20 border-amber-500/20'
-          : isLight ? 'bg-gradient-to-r from-blue-50 via-white to-cyan-50 border-blue-200' : 'bg-gradient-to-r from-blue-950/30 via-[#141929] to-cyan-950/20 border-blue-500/20'
-      }`}>
+            ? isLight ? 'bg-gradient-to-r from-amber-50 via-white to-blue-50 border-amber-200' : 'bg-gradient-to-r from-amber-950/30 via-[#141929] to-cyan-950/20 border-amber-500/20'
+            : isLight ? 'bg-gradient-to-r from-blue-50 via-white to-cyan-50 border-blue-200' : 'bg-gradient-to-r from-blue-950/30 via-[#141929] to-cyan-950/20 border-blue-500/20'
+        }`}>
         <div className="flex items-center gap-3.5">
-          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-md ${
-            normalizedRole === 'ADMIN'
+          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold shadow-md ${normalizedRole === 'ADMIN'
               ? 'bg-purple-600 text-white'
               : normalizedRole === 'TRAFFIC_POLICE'
-              ? 'bg-amber-600 text-white'
-              : 'bg-blue-600 text-white'
-          }`}>
+                ? 'bg-amber-600 text-white'
+                : 'bg-blue-600 text-white'
+            }`}>
             {normalizedRole === 'ADMIN' ? <Shield className="w-6 h-6" /> : normalizedRole === 'TRAFFIC_POLICE' ? <Car className="w-6 h-6" /> : <Camera className="w-6 h-6" />}
           </div>
           <div>
@@ -130,16 +127,15 @@ export default function DashboardPage() {
                 {normalizedRole === 'ADMIN'
                   ? 'State Surveillance Command Center · Administrator Dashboard'
                   : normalizedRole === 'TRAFFIC_POLICE'
-                  ? 'Traffic Enforcement & Junction Command Center'
-                  : 'Gujarat Police Operational Surveillance Dashboard'}
+                    ? 'Traffic Enforcement & Junction Command Center'
+                    : 'Gujarat Police Operational Surveillance Dashboard'}
               </h1>
-              <span className={`text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full border ${
-                normalizedRole === 'ADMIN'
+              <span className={`text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full border ${normalizedRole === 'ADMIN'
                   ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30'
                   : normalizedRole === 'TRAFFIC_POLICE'
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                  : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
-              }`}>
+                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                }`}>
                 {normalizedRole}
               </span>
             </div>
@@ -153,11 +149,10 @@ export default function DashboardPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => navigate('/gis-map')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-              isLight
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${isLight
                 ? 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-xs'
                 : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
-            }`}
+              }`}
           >
             <Compass className="w-3.5 h-3.5 text-blue-500" />
             <span>GIS Map</span>
@@ -165,11 +160,10 @@ export default function DashboardPage() {
 
           <button
             onClick={() => navigate('/camera-monitoring')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
-              isLight
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${isLight
                 ? 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-xs'
                 : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
-            }`}
+              }`}
           >
             <Radio className="w-3.5 h-3.5 text-emerald-500" />
             <span>Live Streams</span>
@@ -180,7 +174,7 @@ export default function DashboardPage() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md transition-all cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Footage Requisitions</span>
+            <span>{normalizedRole === 'ADMIN' ? 'Footage Request Management' : 'Footage Requisitions'}</span>
           </button>
         </div>
       </div>
@@ -222,9 +216,8 @@ export default function DashboardPage() {
         <div className="lg:col-span-2 space-y-6">
 
           {/* Camera Grid Health / Status Distribution */}
-          <div className={`p-5 rounded-3xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
-          }`}>
+          <div className={`p-5 rounded-3xl border transition-colors ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+            }`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
@@ -288,15 +281,18 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Footage Requisitions Table */}
-          <div className={`p-5 rounded-3xl border transition-colors ${
-            isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
-          }`}>
+          <div className={`p-5 rounded-3xl border transition-colors ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+            }`}>
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-                  {normalizedRole === 'ADMIN' ? 'Recent Inter-Department Footage Requisitions' : 'Departmental Footage Requisitions'}
+                  {normalizedRole === 'ADMIN' ? 'Upcoming Footage Requests for Review' : 'Departmental Footage Requisitions'}
                 </h3>
-                <p className="text-xs text-slate-500">Official evidence requests lodged across Gujarat</p>
+                <p className="text-xs text-slate-500">
+                  {normalizedRole === 'ADMIN'
+                    ? 'State Nodal Queue for vetting and routing CCTV footage requests'
+                    : 'Official evidence requests lodged across Gujarat'}
+                </p>
               </div>
               <Link
                 to="/footage-requests"
@@ -313,9 +309,8 @@ export default function DashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className={`border-b text-[10px] uppercase font-bold text-slate-400 ${
-                      isLight ? 'border-slate-200' : 'border-white/6'
-                    }`}>
+                    <tr className={`border-b text-[10px] uppercase font-bold text-slate-400 ${isLight ? 'border-slate-200' : 'border-white/6'
+                      }`}>
                       <th className="pb-2">Ticket ID</th>
                       <th className="pb-2">Target Camera</th>
                       <th className="pb-2">Requesting Dept</th>
@@ -335,12 +330,11 @@ export default function DashboardPage() {
                           {t.requestingDepartment}
                         </td>
                         <td className="py-2.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            t.status === 'dispatched' ? 'bg-emerald-500/10 text-emerald-500' :
-                            t.status === 'under_review' ? 'bg-blue-500/10 text-blue-400' :
-                            t.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                            t.status === 'rejected' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-500'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${t.status === 'dispatched' ? 'bg-emerald-500/10 text-emerald-500' :
+                              t.status === 'under_review' ? 'bg-blue-500/10 text-blue-400' :
+                                t.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                  t.status === 'rejected' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-500'
+                            }`}>
                             {t.status}
                           </span>
                         </td>
@@ -359,9 +353,8 @@ export default function DashboardPage() {
 
           {/* Admin Management Shortcuts */}
           {normalizedRole === 'ADMIN' && (
-            <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${
-              isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
-            }`}>
+            <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+              }`}>
               <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                 Administrative Controls
               </h3>
@@ -369,9 +362,8 @@ export default function DashboardPage() {
               <div className="space-y-2.5">
                 <Link
                   to="/users"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                    isLight ? 'bg-purple-50 hover:bg-purple-100/70 border-purple-200 text-purple-950' : 'bg-purple-500/10 hover:bg-purple-500/15 border-purple-500/25 text-purple-200'
-                  }`}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isLight ? 'bg-purple-50 hover:bg-purple-100/70 border-purple-200 text-purple-950' : 'bg-purple-500/10 hover:bg-purple-500/15 border-purple-500/25 text-purple-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5 text-purple-500" />
@@ -385,9 +377,8 @@ export default function DashboardPage() {
 
                 <Link
                   to="/camera-management"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                    isLight ? 'bg-blue-50 hover:bg-blue-100/70 border-blue-200 text-blue-950' : 'bg-blue-500/10 hover:bg-blue-500/15 border-blue-500/25 text-blue-200'
-                  }`}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isLight ? 'bg-blue-50 hover:bg-blue-100/70 border-blue-200 text-blue-950' : 'bg-blue-500/10 hover:bg-blue-500/15 border-blue-500/25 text-blue-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Camera className="w-5 h-5 text-blue-500" />
@@ -401,9 +392,8 @@ export default function DashboardPage() {
 
                 <Link
                   to="/system-health"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                    isLight ? 'bg-emerald-50 hover:bg-emerald-100/70 border-emerald-200 text-emerald-950' : 'bg-emerald-500/10 hover:bg-emerald-500/15 border-emerald-500/25 text-emerald-200'
-                  }`}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isLight ? 'bg-emerald-50 hover:bg-emerald-100/70 border-emerald-200 text-emerald-950' : 'bg-emerald-500/10 hover:bg-emerald-500/15 border-emerald-500/25 text-emerald-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Activity className="w-5 h-5 text-emerald-500" />
@@ -417,9 +407,8 @@ export default function DashboardPage() {
 
                 <Link
                   to="/crowd-detection"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                    isLight ? 'bg-indigo-50 hover:bg-indigo-100/70 border-indigo-200 text-indigo-950' : 'bg-indigo-500/10 hover:bg-indigo-500/15 border-indigo-500/25 text-indigo-200'
-                  }`}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isLight ? 'bg-indigo-50 hover:bg-indigo-100/70 border-indigo-200 text-indigo-950' : 'bg-indigo-500/10 hover:bg-indigo-500/15 border-indigo-500/25 text-indigo-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Flame className="w-5 h-5 text-indigo-500" />
@@ -433,9 +422,8 @@ export default function DashboardPage() {
 
                 <Link
                   to="/audit-logs"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${
-                    isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
-                  }`}
+                  className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all ${isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Shield className="w-5 h-5 text-slate-400" />
@@ -452,9 +440,8 @@ export default function DashboardPage() {
 
           {/* Police / Traffic Police Shortcuts */}
           {normalizedRole !== 'ADMIN' && (
-            <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${
-              isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
-            }`}>
+            <div className={`p-5 rounded-3xl border space-y-4 transition-colors ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+              }`}>
               <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                 Surveillance Operations Shortcuts
               </h3>
@@ -476,9 +463,8 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => navigate('/camera-monitoring')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${
-                    isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
-                  }`}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Radio className="w-5 h-5 text-emerald-500" />
@@ -492,9 +478,8 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => navigate('/crowd-detection')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${
-                    isLight ? 'bg-amber-50 hover:bg-amber-100/70 border-amber-200 text-amber-950' : 'bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/25 text-amber-200'
-                  }`}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${isLight ? 'bg-amber-50 hover:bg-amber-100/70 border-amber-200 text-amber-950' : 'bg-amber-500/10 hover:bg-amber-500/15 border-amber-500/25 text-amber-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <Flame className="w-5 h-5 text-amber-500" />
@@ -508,9 +493,8 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => navigate('/reports')}
-                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${
-                    isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
-                  }`}
+                  className={`w-full flex items-center justify-between p-3.5 rounded-2xl border transition-all cursor-pointer text-left ${isLight ? 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-800' : 'bg-white/4 hover:bg-white/8 border-white/8 text-slate-200'
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <BarChart3 className="w-5 h-5 text-purple-500" />
@@ -527,9 +511,8 @@ export default function DashboardPage() {
 
           {/* Recent Audit Log Snapshot (Admin Only) */}
           {normalizedRole === 'ADMIN' && (
-            <div className={`p-5 rounded-3xl border transition-colors ${
-              isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
-            }`}>
+            <div className={`p-5 rounded-3xl border transition-colors ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#141929] border-white/8'
+              }`}>
               <div className="flex items-center justify-between mb-3">
                 <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                   Recent System Activity

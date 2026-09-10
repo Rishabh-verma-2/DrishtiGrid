@@ -7,6 +7,16 @@ const {
   getTicketStats,
   getTicketById,
   updateTicketStatus,
+  approveTicket,
+  rejectTicket,
+  acknowledgeTicket,
+  assignOperator,
+  getDepartmentOperators,
+  requestClarification,
+  respondClarification,
+  generateEvidenceToken,
+  completeTicket,
+  generateEvidencePackage,
   uploadEvidence,
   streamEvidence,
   downloadEvidence,
@@ -49,6 +59,9 @@ router.route('/')
 
 router.get('/stats', getTicketStats);
 
+// Department operators directory for assignment
+router.get('/department-operators', getDepartmentOperators);
+
 // Admin-level cross-ticket forensic audit query (defined before /:id)
 router.get('/audit-logs/all', authorize('ADMIN'), getAllAuditLogs);
 
@@ -56,11 +69,24 @@ router.get('/audit-logs/all', authorize('ADMIN'), getAllAuditLogs);
 router.route('/:id')
   .get(getTicketById);
 
-// Status lifecycle update (Accept, Reject, Processing, Closed, etc.)
+// State machine lifecycle transitions
+router.post('/:id/approve', authorize('ADMIN'), approveTicket);
+router.post('/:id/reject', rejectTicket);
+router.post('/:id/acknowledge', acknowledgeTicket);
+router.post('/:id/assign', assignOperator);
+router.post('/:id/clarify', authorize('ADMIN'), requestClarification);
+router.post('/:id/clarify-response', respondClarification);
+router.post('/:id/complete', completeTicket);
+
+// Court-admissible evidence package & manifest (Section 65B)
+router.get('/:id/evidence-package', generateEvidencePackage);
+
+// Status lifecycle update (Legacy & generic fallback)
 router.patch('/:id/status', updateTicketStatus);
 
 // Evidence handling
 router.post('/:id/evidence', upload.single('footage'), uploadEvidence);
+router.post('/:id/evidence/:evidenceId/token', generateEvidenceToken);
 router.get('/:id/evidence/:evidenceId/stream', streamEvidence);
 router.get('/:id/evidence/:evidenceId/download', downloadEvidence);
 router.get('/:id/evidence/:evidenceId/verify', verifyEvidenceIntegrity);

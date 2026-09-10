@@ -4,6 +4,9 @@ import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { isCameraInUserDepartment } from '../../utils/permissions';
+import useAuthStore from '../../store/authStore';
+import toast from 'react-hot-toast';
 
 const STATUS_CONFIG = {
   online: {
@@ -76,7 +79,7 @@ function createCameraIcon(cam, isSelected = false) {
 /**
  * Builds rich metadata popup content conforming to Government Command specifications
  */
-function createPopupContent(cam, userRole, isLight = false) {
+function createPopupContent(cam, user, isLight = false) {
   const statusKey = (cam.status || 'offline').toLowerCase();
   const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.offline;
   const lat = cam.latitude || cam.location?.coordinates?.[1] || 0;
@@ -87,7 +90,12 @@ function createPopupContent(cam, userRole, isLight = false) {
   const healthScore = Math.round(cam.healthMetrics?.uptime24h || (statusKey === 'online' ? 94 : 42));
   const crowdLevel = cam.alertsEnabled?.crowdDetection ? 'HIGH' : 'NORMAL';
   const anprStatus = cam.alertsEnabled?.anprEnabled ? 'ACTIVE' : 'STANDBY';
-  const isAuthorizedFootage = ['ADMIN', 'POLICE'].includes((userRole || '').toUpperCase());
+  
+  const currentUser = user || useAuthStore.getState()?.user;
+  const userRole = String(currentUser?.role || '').toUpperCase();
+  const isAdmin = userRole === 'ADMIN' || userRole === 'SUPERADMIN';
+  const canViewLive = isAdmin || isCameraInUserDepartment(currentUser, cam);
+  const isAuthorizedFootage = !isAdmin && ['POLICE', 'TRAFFIC_POLICE'].includes(userRole);
 
   // Real-time dynamic light mode detection (checks DOM classList as fallback)
   const activeLight =
@@ -168,18 +176,35 @@ function createPopupContent(cam, userRole, isLight = false) {
         </div>
       </div>
 
-      <!-- Action Buttons Grid (RBAC Protected) -->
+      <!-- Action Buttons Grid (Department Access Enforced) -->
       <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid ${borderCol};">
-        <div style="display: flex; gap: 6px;">
-          <button type="button" class="btn-popup-stream cctv-btn-live" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: #059669; color: #ffffff; border: none; box-shadow: 0 1px 3px rgba(5,150,105,0.3);">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            LIVE VIEW
+        ${
+          canViewLive
+            ? `
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="btn-popup-stream cctv-btn-live" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: #059669; color: #ffffff; border: none; box-shadow: 0 1px 3px rgba(5,150,105,0.3);">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              LIVE VIEW
+            </button>
+            <button type="button" class="cctv-btn-analyze" onclick="window.dispatchEvent(new CustomEvent('cctv:analyze', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnAnalyzeBg}; color: ${btnAnalyzeText}; border: 1px solid ${btnAnalyzeBorder};">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m10 15 5-3-5-3v6Z"></path></svg>
+              ANALYZE
+            </button>
+          </div>
+        `
+            : `
+          <div style="background: ${activeLight ? '#fffbeb' : 'rgba(245, 158, 11, 0.12)'}; border: 1px solid ${activeLight ? '#fde68a' : 'rgba(245, 158, 11, 0.3)'}; border-radius: 6px; padding: 6px 8px; font-size: 10px; color: ${activeLight ? '#b45309' : '#fbbf24'}; line-height: 1.35;">
+            <div style="display: flex; align-items: center; gap: 4px; font-weight: 800; margin-bottom: 2px;">
+              <span>🔒 Inter-Department Camera</span>
+            </div>
+            <span>Live feed belongs to <strong>${deptName}</strong>. As per state rules, submit a Footage Request to Admin to access this feed.</span>
+          </div>
+          <button type="button" class="cctv-btn-footage" onclick="window.dispatchEvent(new CustomEvent('cctv:request-footage', { detail: '${cam.cameraId}' }))" style="width: 100%; padding: 7px 8px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; border-radius: 6px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 2px 6px rgba(37,99,235,0.35);">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            REQUEST FOOTAGE FROM ADMIN
           </button>
-          <button type="button" class="cctv-btn-analyze" onclick="window.dispatchEvent(new CustomEvent('cctv:analyze', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnAnalyzeBg}; color: ${btnAnalyzeText}; border: 1px solid ${btnAnalyzeBorder};">
-            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m10 15 5-3-5-3v6Z"></path></svg>
-            ANALYZE
-          </button>
-        </div>
+        `
+        }
 
         <div style="display: flex; gap: 6px;">
           <button type="button" class="cctv-btn-intel" onclick="window.dispatchEvent(new CustomEvent('cctv:area-intel', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnIntelBg}; color: ${btnIntelText}; border: 1px solid ${btnIntelBorder};">
@@ -190,19 +215,10 @@ function createPopupContent(cam, userRole, isLight = false) {
           </button>
         </div>
 
-        ${
-          isAuthorizedFootage
-            ? `
-          <button type="button" class="cctv-btn-footage" onclick="window.dispatchEvent(new CustomEvent('cctv:request-footage', { detail: '${cam.cameraId}' }))" style="width: 100%; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
-            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-            REQUEST FOOTAGE
-          </button>
-        `
-            : ''
-        }
+
 
         ${
-          ['offline', 'maintenance', 'fault'].includes(statusKey)
+          isAdmin && ['offline', 'maintenance', 'fault'].includes(statusKey)
             ? `
           <button type="button" class="cctv-btn-report-dept" onclick="window.dispatchEvent(new CustomEvent('cctv:report-dept', { detail: '${cam.cameraId}' }))" style="width: 100%; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 6px rgba(220,38,38,0.35);">
             <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
@@ -218,6 +234,7 @@ function createPopupContent(cam, userRole, isLight = false) {
 
 export default function CameraClusterLayer({
   cameras = [],
+  user = null,
   onOpenStream,
   onRequestFootage,
   onOpenAnalyze,
@@ -236,7 +253,16 @@ export default function CameraClusterLayer({
     const handleStreamEvent = (e) => {
       const cameraId = e.detail;
       const cam = cameras.find((c) => c.cameraId === cameraId);
-      if (cam && onOpenStream) onOpenStream(cam);
+      if (!cam) return;
+      if (!isCameraInUserDepartment(user, cam)) {
+        toast.error(
+          `Access Restricted: Camera belongs to ${cam.departmentName || 'another department'}. Under Gujarat State rules, submit a Footage Request to Admin.`,
+          { duration: 5000 }
+        );
+        if (onRequestFootage) onRequestFootage(cam);
+        return;
+      }
+      if (onOpenStream) onOpenStream(cam);
     };
 
     const handleRequisitionEvent = (e) => {
@@ -354,7 +380,7 @@ export default function CameraClusterLayer({
       });
 
       // Bind rich popup with real-time theme evaluation
-      marker.bindPopup(() => createPopupContent(cam, userRole, isLight), {
+      marker.bindPopup(() => createPopupContent(cam, user, isLight), {
         maxWidth: 380,
         minWidth: 320,
         className: 'cctv-cyber-popup',
@@ -377,7 +403,7 @@ export default function CameraClusterLayer({
         map.removeLayer(clusterGroupRef.current);
       }
     };
-  }, [map, cameras, userRole, isLight]);
+  }, [map, cameras, user, isLight]);
 
   return null;
 }

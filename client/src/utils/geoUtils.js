@@ -37,6 +37,14 @@ export const OFFICIAL_DISTRICTS = gujaratDistrictsData.features
   .map((f) => f.properties.district)
   .sort();
 
+// Official Gujarat Geographic Center and Statewide Bounds
+export const GUJARAT_CENTER = [22.4164, 71.2855]; // Geographic center of Gujarat state
+export const GUJARAT_DEFAULT_ZOOM = 7; // Optimal zoom level for full Gujarat view
+export const GUJARAT_BOUNDS = [
+  [20.1204, 68.0949],
+  [24.7125, 74.4762],
+];
+
 /**
  * Normalizes an area search query by stripping common suffixes
  */

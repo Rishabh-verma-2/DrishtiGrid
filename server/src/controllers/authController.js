@@ -112,10 +112,15 @@ const login = async (req, res) => {
     user.password = undefined;
     user.refreshToken = undefined;
 
+    const userPayload = user.toObject();
+    delete userPayload.password;
+    delete userPayload.refreshToken;
+    userPayload.effectivePermissions = user.getEffectivePermissions();
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
-      data: { user, accessToken, refreshToken },
+      data: { user: userPayload, accessToken, refreshToken },
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
@@ -180,7 +185,12 @@ const logout = async (req, res) => {
  * @route   GET /api/auth/me
  */
 const getMe = async (req, res) => {
-  res.status(200).json({ success: true, data: req.user });
+  const userPayload = req.user ? req.user.toObject() : {};
+  if (req.user && typeof req.user.getEffectivePermissions === 'function') {
+    userPayload.effectivePermissions = req.user.getEffectivePermissions();
+  }
+  res.status(200).json({ success: true, data: userPayload });
 };
 
 module.exports = { register, login, refreshToken, logout, getMe };
+

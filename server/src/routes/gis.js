@@ -38,5 +38,7 @@ router.get('/incident/:id/context', gisController.getIncidentContext);
 // 9. Incidents
 router.get('/incidents', gisController.getGisIncidents);
 router.post('/incidents', authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'), gisController.createGisIncident);
+router.patch('/incidents/:id/status', authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'), gisController.updateGisIncidentStatus);
+router.delete('/incidents/:id', authorize('ADMIN'), gisController.deleteGisIncident);
 
 module.exports = router;

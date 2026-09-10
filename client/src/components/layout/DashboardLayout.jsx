@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Outlet, useLocation, useNavigate, NavLink } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   LayoutDashboard, Map, Camera, Video, Bell, Settings,
   LogOut, Shield, ChevronLeft, ChevronRight, Activity,
@@ -10,20 +11,23 @@ import useAuthStore from '../../store/authStore';
 import useSocketStore from '../../store/socketStore';
 import { useThemeStore } from '../../store/themeStore';
 import NotificationCenter from '../notifications/NotificationCenter';
+import { notificationAPI, footageTicketAPI } from '../../api';
+import { hasPermission } from '../../utils/permissions';
 import toast from 'react-hot-toast';
 
 const ALL_NAV_ITEMS = [
   { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard',             labelGu: 'ડેશબોર્ડ',           roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)',         roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ',          roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/anpr',                icon: Car,             label: 'ANPR Surveillance',      labelGu: 'નંબર પ્લેટ (ANPR)',  roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/crowd-detection',     icon: Flame,           label: 'Crowd & Density AI',     labelGu: 'ભીડ વિશ્લેષણ (Crowd)', roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/footage-requests',    icon: FileText,        label: 'Footage Requests',       labelGu: 'ફૂટેજ વિનંતી',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/users',               icon: Users,           label: 'Users & Roles',          labelGu: 'વપરાશકર્તાઓ',        roles: ['ADMIN'] },
+  { to: '/notifications',       icon: Bell,            label: 'Notification Hub',      labelGu: 'સૂચના કેન્દ્ર',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], isNotificationTab: true },
+  { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)',         roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'gis_map' },
+  { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ',          roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'camera_monitoring' },
+  { to: '/anpr',                icon: Car,             label: 'ANPR Surveillance',      labelGu: 'નંબર પ્લેટ (ANPR)',  roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'anpr' },
+  { to: '/crowd-detection',     icon: Flame,           label: 'Crowd & Density AI',     labelGu: 'ભીડ વિશ્લેષણ (Crowd)', roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'crowd' },
+  { to: '/footage-requests',    icon: FileText,        label: 'Footage Requests',       labelGu: 'ફૂટેજ વિનંતી',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'footage_requests' },
+  { to: '/reports',             icon: BarChart3,       label: 'Reports',                labelGu: 'અહેવાલો',             roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'reports' },
   { to: '/camera-management',   icon: Camera,          label: 'Camera Management',      labelGu: 'કેમેરા યાદી',         roles: ['ADMIN'] },
-  { to: '/reports',             icon: BarChart3,       label: 'Reports',                labelGu: 'અહેવાલો',             roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
-  { to: '/system-health',       icon: Activity,        label: 'System Health',          labelGu: 'સિસ્ટમ સ્થિતિ',       roles: ['ADMIN'] },
-  { to: '/audit-logs',          icon: Shield,          label: 'Audit Logs',             labelGu: 'ઓડિટ લોગ',            roles: ['ADMIN'] },
+  { to: '/users',               icon: Users,           label: 'Users & Roles',          labelGu: 'વપરાશકર્તાઓ',        roles: ['ADMIN'] },
+  { to: '/system-health',       icon: Activity,        label: 'System Health',          labelGu: 'સિસ્ટમ સ્થિતિ',       roles: ['ADMIN'], permission: 'system_health' },
+  { to: '/audit-logs',          icon: Shield,          label: 'Audit Logs',             labelGu: 'ઓડિટ લોગ',            roles: ['ADMIN'], permission: 'audit_logs' },
   { to: '/settings',            icon: Settings,        label: 'Settings',               labelGu: 'સેટિંગ્સ',            roles: ['ADMIN'] },
 ];
 
@@ -35,11 +39,14 @@ export default function DashboardLayout() {
   const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await logout();
-    toast.success('Logged out successfully');
-    navigate('/login');
-  };
+  // Query unread count for notifications tab badge
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications-badge'],
+    queryFn: () => notificationAPI.getAll({ limit: 1 }).then((r) => r.data),
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
+  const unreadCount = notifData?.unreadCount || 0;
 
   const isLight = theme === 'light';
 
@@ -49,12 +56,56 @@ export default function DashboardLayout() {
     ['OPERATOR', 'VIEWER', 'POLICE'].includes(userRole) ? 'POLICE' :
     ['TRAFFIC', 'TRAFFIC_POLICE'].includes(userRole) ? 'TRAFFIC_POLICE' : 'POLICE';
 
+  const userDepartment = user?.department || (
+    normalizedRole === 'ADMIN'
+      ? 'Gujarat Home Department'
+      : normalizedRole === 'TRAFFIC_POLICE'
+      ? 'Gujarat Traffic Police'
+      : normalizedRole === 'POLICE'
+      ? 'Gujarat Police Department'
+      : 'Government of Gujarat'
+  );
+
+  // Query pending admin review count for badge if admin
+  const { data: ticketStats } = useQuery({
+    queryKey: ['footage-tickets-stats-badge'],
+    queryFn: () => footageTicketAPI.getStats().then((r) => r.data.data),
+    staleTime: 20000,
+    refetchInterval: 30000,
+    enabled: normalizedRole === 'ADMIN',
+  });
+  const pendingAdminCount = ticketStats?.pendingAdmin || 0;
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success('Logged out successfully');
+    navigate('/login');
+  };
+
   const visibleNavItems = useMemo(() => {
     return ALL_NAV_ITEMS.filter((item) => {
-      if (!item.roles) return true;
-      return item.roles.includes(normalizedRole);
+      // 1. Role constraint check
+      if (item.roles && !item.roles.includes(normalizedRole)) {
+        return false;
+      }
+      // 2. Granular permission check
+      if (item.permission && !hasPermission(user, item.permission)) {
+        return false;
+      }
+      return true;
+    }).map((item) => {
+      // For Admin: Customize Footage Requests tab to "Footage Request Management"
+      if (item.to === '/footage-requests' && normalizedRole === 'ADMIN') {
+        return {
+          ...item,
+          label: 'Footage Request Management',
+          labelGu: 'ફૂટેજ વિનંતી સંચાલન',
+          isFootageAdminTab: true,
+        };
+      }
+      return item;
     });
-  }, [normalizedRole]);
+  }, [normalizedRole, user]);
 
   const sidebarContent = (
     <div className={`flex flex-col h-full ${isLight ? 'bg-white text-slate-800' : 'bg-[#080c16] text-slate-200'}`}>
@@ -99,7 +150,7 @@ export default function DashboardLayout() {
           </div>
         )}
         <ul className="space-y-1">
-          {visibleNavItems.map(({ to, icon: Icon, label, labelGu }) => (
+          {visibleNavItems.map(({ to, icon: Icon, label, labelGu, isNotificationTab, isFootageAdminTab }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -121,20 +172,40 @@ export default function DashboardLayout() {
               >
                 {({ isActive }) => (
                   <>
-                    <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
-                      isActive
-                        ? 'text-white'
-                        : isLight ? 'text-slate-500 group-hover:text-blue-600' : 'text-slate-500 group-hover:text-blue-400'
-                    }`} />
+                    <div className="relative shrink-0">
+                      <Icon className={`w-4.5 h-4.5 transition-colors ${
+                        isActive
+                          ? 'text-white'
+                          : isLight ? 'text-slate-500 group-hover:text-blue-600' : 'text-slate-500 group-hover:text-blue-400'
+                      }`} />
+                      {isNotificationTab && unreadCount > 0 && collapsed && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-[#080c16] animate-pulse" />
+                      )}
+                      {isFootageAdminTab && pendingAdminCount > 0 && collapsed && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-[#080c16] animate-pulse" />
+                      )}
+                    </div>
                     {!collapsed && (
-                      <div className="flex flex-col min-w-0">
-                        <span className={`truncate leading-tight sidebar-label-main ${
-                          isActive
-                            ? isLight ? 'text-white font-bold' : 'text-blue-300 font-bold'
-                            : isLight ? 'text-slate-800 group-hover:text-slate-900 font-semibold' : 'text-slate-300 group-hover:text-slate-100 font-semibold'
-                        }`}>
-                          {label}
-                        </span>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className={`truncate leading-tight sidebar-label-main ${
+                            isActive
+                              ? isLight ? 'text-white font-bold' : 'text-blue-300 font-bold'
+                              : isLight ? 'text-slate-800 group-hover:text-slate-900 font-semibold' : 'text-slate-300 group-hover:text-slate-100 font-semibold'
+                          }`}>
+                            {label}
+                          </span>
+                          {isNotificationTab && unreadCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-red-500 text-white shadow-sm shadow-red-500/30 shrink-0">
+                              {unreadCount}
+                            </span>
+                          )}
+                          {isFootageAdminTab && pendingAdminCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 shrink-0 animate-pulse">
+                              {pendingAdminCount}
+                            </span>
+                          )}
+                        </div>
                         <span className={`text-[10px] truncate sidebar-label-gu transition-colors ${
                           isActive
                             ? isLight ? 'text-blue-100 font-semibold' : 'text-blue-400 font-semibold'
@@ -180,18 +251,27 @@ export default function DashboardLayout() {
 
         {/* User profile */}
         <div className={`flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 shadow-sm ${
-            isLight ? 'bg-blue-600 text-white' : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
-          }`}>
-            {user?.name?.charAt(0) || 'A'}
+          <div
+            className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-black shrink-0 shadow-sm ${
+              normalizedRole === 'ADMIN'
+                ? 'bg-gradient-to-br from-purple-600 to-indigo-600 text-white'
+                : normalizedRole === 'TRAFFIC_POLICE'
+                ? 'bg-gradient-to-br from-amber-600 to-orange-500 text-white'
+                : isLight
+                ? 'bg-blue-600 text-white'
+                : 'bg-gradient-to-br from-blue-700 to-blue-500 text-white'
+            }`}
+            title={`${user?.name || 'User'} (${userDepartment})`}
+          >
+            {user?.name?.charAt(0) || 'U'}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
-                {user?.name || 'Admin'}
+              <p className={`text-xs font-bold truncate ${isLight ? 'text-slate-900' : 'text-slate-200'}`} title={user?.name}>
+                {user?.name || 'User'}
               </p>
-              <p className={`text-[10px] truncate font-medium ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Gujarat Home Dept
+              <p className={`text-[10px] truncate font-semibold ${isLight ? 'text-blue-700' : 'text-blue-400/90'}`} title={userDepartment}>
+                {userDepartment}
               </p>
             </div>
           )}
@@ -401,8 +481,8 @@ export default function DashboardLayout() {
                       {normalizedRole === 'ADMIN' ? 'ADMIN' : normalizedRole === 'TRAFFIC_POLICE' ? 'TRAFFIC' : 'POLICE'}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate max-w-[140px]">
-                    {user?.department || 'Government of Gujarat'}
+                  <p className={`text-[10px] truncate max-w-[140px] font-medium ${isLight ? 'text-slate-600' : 'text-slate-400'}`} title={userDepartment}>
+                    {userDepartment}
                   </p>
                 </div>
               </div>

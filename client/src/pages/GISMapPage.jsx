@@ -36,9 +36,13 @@ import InfrastructureLayer from '../components/gis/InfrastructureLayer';
 import IncidentRadiusLayer from '../components/gis/IncidentRadiusLayer';
 import CoverageGridLayer from '../components/gis/CoverageGridLayer';
 import AdminHierarchyFilter from '../components/gis/AdminHierarchyFilter';
+import { hasPermission, isCameraInUserDepartment } from '../utils/permissions';
 
 import {
   OFFICIAL_DISTRICTS,
+  GUJARAT_CENTER,
+  GUJARAT_DEFAULT_ZOOM,
+  GUJARAT_BOUNDS,
   getOfficialAreaFeature,
   getOfficialBorderPositions,
   getOfficialInvertedMask,
@@ -171,8 +175,8 @@ export default function GISMapPage() {
   // Drawers & Modals State
   const [isAreaIntelOpen, setIsAreaIntelOpen] = useState(false);
   const [isNearbyIntelOpen, setIsNearbyIntelOpen] = useState(false);
-  const [nearbyCoords, setNearbyCoords] = useState([23.0225, 72.5714]);
-  const [nearbyLabel, setNearbyLabel] = useState('Ahmedabad Center');
+  const [nearbyCoords, setNearbyCoords] = useState(GUJARAT_CENTER);
+  const [nearbyLabel, setNearbyLabel] = useState('Gujarat State Center');
 
   const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
   const [activeRoute, setActiveRoute] = useState(null);
@@ -190,6 +194,20 @@ export default function GISMapPage() {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isGeneratingAudit, setIsGeneratingAudit] = useState(false);
+
+  // Safe live stream opener with department access enforcement
+  const handleOpenStreamWithAccessCheck = (cam) => {
+    if (!cam) return;
+    if (!isCameraInUserDepartment(user, cam)) {
+      toast.error(
+        `Access Restricted: Camera belongs to ${cam.departmentName || 'another department'}. Under Gujarat State rules, submit a Footage Request to Admin to access this feed.`,
+        { duration: 6000 }
+      );
+      navigate(`/footage-requests?requestCam=${cam.cameraId}`);
+      return;
+    }
+    setStreamCamera(cam);
+  };
 
   // Real-time listener for bulk camera ingestion
   useEffect(() => {
@@ -546,7 +564,7 @@ export default function GISMapPage() {
   const handleClearArea = () => {
     setSelectedArea(null);
     setHierarchy((prev) => ({ ...prev, district: 'all' }));
-    setMapTargetBounds(null);
+    setMapTargetBounds(GUJARAT_BOUNDS);
     setIsAreaIntelOpen(false);
   };
 
@@ -562,7 +580,7 @@ export default function GISMapPage() {
     setSelectedAsset(null);
     setActiveRoute(null);
     setMapFlyTarget(null);
-    setMapTargetBounds(null);
+    setMapTargetBounds(GUJARAT_BOUNDS);
     setIsAreaIntelOpen(false);
     setIsNearbyIntelOpen(false);
   };
@@ -689,6 +707,7 @@ export default function GISMapPage() {
                 }
               } else {
                 setSelectedArea(null);
+                setMapTargetBounds(GUJARAT_BOUNDS);
               }
             }}
             className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer shrink-0 whitespace-nowrap transition-colors ${
@@ -758,8 +777,8 @@ export default function GISMapPage() {
             </button>
           )}
 
-          {/* Bulk Camera Onboarding (Admin) */}
-          {['ADMIN', 'SUPERADMIN', 'SUPER_ADMIN'].includes(userRole) && (
+          {/* Bulk Camera Onboarding (Permission-controlled) */}
+          {hasPermission(user, 'bulk_import') && (
             <button
               type="button"
               id="gis-bulk-import-btn"
@@ -839,6 +858,24 @@ export default function GISMapPage() {
             <span className="font-mono text-[10px]">{language === 'en' ? 'ગુજ' : 'ENG'}</span>
           </button>
 
+          {/* Reset to Full Gujarat State View */}
+          <button
+            onClick={() => {
+              setSelectedArea(null);
+              setHierarchy((prev) => ({ ...prev, district: 'all' }));
+              setMapTargetBounds(GUJARAT_BOUNDS);
+            }}
+            title="Reset map to full Gujarat State view"
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isLight
+                ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700'
+                : 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-400'
+            }`}
+          >
+            <Compass className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">Gujarat State</span>
+          </button>
+
           {/* Reset Filters */}
           {isFiltered && (
             <button
@@ -875,11 +912,14 @@ export default function GISMapPage() {
               }
             } else {
               setSelectedArea(null);
+              setMapTargetBounds(GUJARAT_BOUNDS);
             }
           }}
-          onReset={() =>
-            setHierarchy({ district: 'all', city: 'all', zone: 'all', policeStation: 'all' })
-          }
+          onReset={() => {
+            setHierarchy({ district: 'all', city: 'all', zone: 'all', policeStation: 'all' });
+            setSelectedArea(null);
+            setMapTargetBounds(GUJARAT_BOUNDS);
+          }}
           isLight={isLight}
         />
       )}
@@ -956,9 +996,28 @@ export default function GISMapPage() {
           </div>
         )}
 
+        {/* Floating Gujarat State View Quick-Reset on Map Canvas */}
+        <div className="absolute top-[80px] right-[10px] z-[1000]">
+          <button
+            onClick={() => {
+              setSelectedArea(null);
+              setHierarchy((prev) => ({ ...prev, district: 'all' }));
+              setMapTargetBounds(GUJARAT_BOUNDS);
+            }}
+            title="Fit Full Gujarat State View"
+            className={`w-[30px] h-[30px] rounded-sm shadow-md border flex items-center justify-center transition-all cursor-pointer ${
+              isLight
+                ? 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
+                : 'bg-[#1e263d] hover:bg-[#28324e] border-white/10 text-cyan-400'
+            }`}
+          >
+            <Compass className="w-4 h-4" />
+          </button>
+        </div>
+
         <MapContainer
-          center={[23.0225, 72.5714]} // Ahmedabad Central Coords
-          zoom={11}
+          center={GUJARAT_CENTER}
+          zoom={GUJARAT_DEFAULT_ZOOM}
           maxZoom={19}
           minZoom={6}
           style={{ height: '100%', width: '100%' }}
@@ -1083,7 +1142,8 @@ export default function GISMapPage() {
           {/* 8. CCTV Cameras Cluster Layer */}
           <CameraClusterLayer
             cameras={displayedCameras}
-            onOpenStream={(cam) => setStreamCamera(cam)}
+            user={user}
+            onOpenStream={handleOpenStreamWithAccessCheck}
             onRequestFootage={(cam) =>
               navigate(`/footage-requests?requestCam=${cam.cameraId}`)
             }
@@ -1104,6 +1164,10 @@ export default function GISMapPage() {
               }
             }}
             onReportToDept={(cam) => {
+              if (userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
+                toast.error('Access Restricted: Only State Administrators can dispatch department outage reports.');
+                return;
+              }
               setDeptReportCamera(cam);
               setIsDeptReportOpen(true);
             }}
@@ -1147,45 +1211,21 @@ export default function GISMapPage() {
 
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                Maintenance Units
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-amber-700' : 'text-amber-400'}`}>
+                {displayedCameras.filter((c) => ['maintenance', 'fault'].includes((c.status || '').toLowerCase())).length}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
                 Offline Units
               </span>
               <span className={`font-mono font-bold ${isLight ? 'text-red-700' : 'text-red-400'}`}>
                 {displayedCameras.filter((c) => (c.status || '').toLowerCase() === 'offline').length}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-                Civil Hospitals
-              </span>
-              <span className={`font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
-                {infraSummary.HOSPITAL !== undefined
-                  ? infraSummary.HOSPITAL
-                  : infrastructure.filter((a) => a.type === 'HOSPITAL').length}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                Police Stations
-              </span>
-              <span className={`font-mono font-bold ${isLight ? 'text-blue-700' : 'text-blue-400'}`}>
-                {infraSummary.POLICE_STATION !== undefined
-                  ? infraSummary.POLICE_STATION
-                  : infrastructure.filter((a) => a.type === 'POLICE_STATION').length}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                Geofence Zones
-              </span>
-              <span className={`font-mono font-bold ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`}>
-                {zones.length}
               </span>
             </div>
           </div>
@@ -1220,12 +1260,13 @@ export default function GISMapPage() {
           onClose={() => setIsNearbyIntelOpen(false)}
           coordinates={nearbyCoords}
           locationName={nearbyLabel}
-          onOpenStream={(cam) => setStreamCamera(cam)}
+          onOpenStream={handleOpenStreamWithAccessCheck}
           onRequestFootage={(cam) =>
             navigate(`/footage-requests?requestCam=${cam.cameraId}`)
           }
           onFitNearbyBounds={(bounds) => setMapTargetBounds(bounds)}
           isLight={isLight}
+          user={user}
           userRole={userRole}
         />
 
@@ -1234,11 +1275,12 @@ export default function GISMapPage() {
           isOpen={isRouteModalOpen}
           onClose={() => setIsRouteModalOpen(false)}
           onApplyRoute={handleApplyRoute}
-          onOpenStream={(cam) => setStreamCamera(cam)}
+          onOpenStream={handleOpenStreamWithAccessCheck}
           onRequestFootage={(cam) =>
             navigate(`/footage-requests?requestCam=${cam.cameraId}`)
           }
           isLight={isLight}
+          user={user}
           userRole={userRole}
         />
 

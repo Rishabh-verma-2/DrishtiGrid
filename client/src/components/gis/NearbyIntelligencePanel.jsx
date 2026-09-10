@@ -17,7 +17,9 @@ import {
   ChevronUp,
   Maximize2,
   Navigation,
+  Lock,
 } from 'lucide-react';
+import { isCameraInUserDepartment } from '../../utils/permissions';
 
 export default function NearbyIntelligencePanel({
   isOpen,
@@ -28,6 +30,7 @@ export default function NearbyIntelligencePanel({
   onRequestFootage,
   onFitNearbyBounds,
   isLight = false,
+  user = null,
   userRole = 'POLICE',
 }) {
   const [radius, setRadius] = useState(1000); // meters
@@ -75,7 +78,8 @@ export default function NearbyIntelligencePanel({
     }
   };
 
-  const canRequestFootage = ['ADMIN', 'POLICE'].includes((userRole || '').toUpperCase());
+  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes((userRole || '').toUpperCase());
+  const canRequestFootage = !isAdmin && ['POLICE', 'TRAFFIC_POLICE'].includes((userRole || '').toUpperCase());
 
   return (
     <div className="absolute bottom-6 right-6 z-[1150] w-96 max-w-[92vw] rounded-2xl border shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-3 duration-300 overflow-hidden">
@@ -289,23 +293,24 @@ export default function NearbyIntelligencePanel({
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {isOnline && onOpenStream && (
+                      {isOnline && onOpenStream && isCameraInUserDepartment(user, cam) ? (
                         <button
                           onClick={() => onOpenStream(cam)}
-                          title="Open Live CCTV Stream"
+                          title="Open Live CCTV Stream (Own Department)"
                           className="p-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 cursor-pointer"
                         >
                           <Video className="w-3 h-3" />
                         </button>
-                      )}
-                      {canRequestFootage && onRequestFootage && (
-                        <button
-                          onClick={() => onRequestFootage(cam)}
-                          title="Request CCTV Footage"
-                          className="p-1 rounded-md bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 cursor-pointer"
-                        >
-                          <FileText className="w-3 h-3" />
-                        </button>
+                      ) : (
+                        !isAdmin && onRequestFootage && (
+                          <button
+                            onClick={() => onRequestFootage(cam)}
+                            title={`Inter-Department Camera (${cam.departmentName || 'Other Dept'}) - Click to Request Footage from Admin`}
+                            className="p-1 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 cursor-pointer flex items-center gap-0.5"
+                          >
+                            <Lock className="w-3 h-3" />
+                          </button>
+                        )
                       )}
                     </div>
                   </div>

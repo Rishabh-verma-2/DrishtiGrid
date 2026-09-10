@@ -47,16 +47,24 @@ const getUsers = async (req, res) => {
       User.countDocuments(filter),
     ]);
 
+    const formattedUsers = users.map((u) => {
+      const obj = u.toObject();
+      obj.effectivePermissions = u.getEffectivePermissions();
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      count: users.length,
+      count: formattedUsers.length,
       pagination: {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
         pages: Math.ceil(total / parseInt(limit)),
       },
-      data: users,
+      data: formattedUsers,
+      allPermissions: User.ALL_PERMISSIONS,
+      roleDefaultPermissions: User.ROLE_DEFAULT_PERMISSIONS,
     });
   } catch (error) {
     logger.error(`Error fetching users: ${error.message}`);
@@ -70,7 +78,7 @@ const getUsers = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { name, email, password, role, department, designation, phone, district } = req.body;
+    const { name, email, password, role, department, designation, phone, district, permissions } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({
@@ -98,6 +106,14 @@ const createUser = async (req, res) => {
       });
     }
 
+    // Sanitize permissions if provided
+    let assignedPermissions;
+    if (Array.isArray(permissions)) {
+      assignedPermissions = permissions.filter((p) => User.ALL_PERMISSIONS.includes(p));
+    } else {
+      assignedPermissions = User.ROLE_DEFAULT_PERMISSIONS[assignedRole] || [];
+    }
+
     // Create user (pre-save hook will hash password)
     const user = await User.create({
       name: name.trim(),
@@ -108,6 +124,7 @@ const createUser = async (req, res) => {
       designation: designation || 'Surveillance Officer',
       phone: phone || '',
       district: district || 'Gujarat',
+      permissions: assignedPermissions,
       isActive: true,
     });
 
@@ -117,13 +134,14 @@ const createUser = async (req, res) => {
       action: 'USER_CREATED',
       resource: 'User',
       resourceId: user._id,
-      description: `User '${user.name}' (${user.email}) created with role '${user.role}' in department '${user.department}'.`,
+      description: `User '${user.name}' (${user.email}) created with role '${user.role}' in department '${user.department}' with ${assignedPermissions.length} features.`,
     });
 
     logger.info(`Admin created user ${user.email} (${user.role})`);
 
     const userObj = user.toObject();
     delete userObj.password;
+    userObj.effectivePermissions = user.getEffectivePermissions();
 
     res.status(201).json({
       success: true,
@@ -137,13 +155,13 @@ const createUser = async (req, res) => {
 };
 
 /**
- * @desc    Update user details / role (Admin Only)
+ * @desc    Update user details / role / permissions (Admin Only)
  * @route   PUT /api/users/:id
  */
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, department, designation, phone, district, role, password } = req.body;
+    const { name, department, designation, phone, district, role, password, permissions } = req.body;
 
     const user = await User.findById(id);
     if (!user) {
@@ -151,6 +169,7 @@ const updateUser = async (req, res) => {
     }
 
     const prevRole = user.role;
+    const prevPermissions = [...(user.permissions || [])];
 
     if (name) user.name = name.trim();
     if (department) user.department = department.trim();
@@ -164,6 +183,10 @@ const updateUser = async (req, res) => {
       if (validRoles.includes(newRole)) {
         user.role = newRole;
       }
+    }
+
+    if (Array.isArray(permissions)) {
+      user.permissions = permissions.filter((p) => User.ALL_PERMISSIONS.includes(p));
     }
 
     if (password && password.trim().length >= 8) {
@@ -181,6 +204,14 @@ const updateUser = async (req, res) => {
         resourceId: user._id,
         description: `Role for '${user.name}' changed from '${prevRole}' to '${user.role}' by Admin.`,
       });
+    } else if (Array.isArray(permissions) && JSON.stringify(prevPermissions) !== JSON.stringify(user.permissions)) {
+      await SystemAuditLog.record({
+        req,
+        action: 'PERMISSIONS_CHANGED',
+        resource: 'User',
+        resourceId: user._id,
+        description: `Feature permissions updated for '${user.name}' (${user.email}) to [${user.permissions.join(', ')}].`,
+      });
     } else {
       await SystemAuditLog.record({
         req,
@@ -192,11 +223,13 @@ const updateUser = async (req, res) => {
     }
 
     const updatedUser = await User.findById(id).select('-password -refreshToken');
+    const userObj = updatedUser.toObject();
+    userObj.effectivePermissions = updatedUser.getEffectivePermissions();
 
     res.status(200).json({
       success: true,
       message: 'User updated successfully',
-      data: updatedUser,
+      data: userObj,
     });
   } catch (error) {
     logger.error(`Error updating user: ${error.message}`);

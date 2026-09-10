@@ -55,6 +55,10 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    permissions: {
+      type: [String],
+      default: undefined,
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -145,4 +149,41 @@ userSchema.methods.incLoginAttempts = async function () {
   return this.updateOne(updates);
 };
 
-module.exports = mongoose.model('User', userSchema);
+const ALL_PERMISSIONS = [
+  'camera_add',
+  'bulk_import',
+  'anpr',
+  'crowd',
+  'camera_monitoring',
+  'gis_map',
+  'footage_requests',
+  'reports',
+  'system_health',
+  'audit_logs',
+  'camera_management',
+];
+
+const ROLE_DEFAULT_PERMISSIONS = {
+  ADMIN: ALL_PERMISSIONS,
+  POLICE: ['gis_map', 'camera_monitoring', 'footage_requests', 'reports'],
+  TRAFFIC_POLICE: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports'],
+};
+
+// Method: get effective permissions (explicit array or role defaults)
+userSchema.methods.getEffectivePermissions = function () {
+  const role = String(this.role || 'POLICE').toUpperCase();
+  if (role === 'ADMIN' || role === 'SUPERADMIN') {
+    return ALL_PERMISSIONS;
+  }
+  if (Array.isArray(this.permissions) && this.permissions.length > 0) {
+    return this.permissions;
+  }
+  return ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.POLICE;
+};
+
+const User = mongoose.model('User', userSchema);
+User.ALL_PERMISSIONS = ALL_PERMISSIONS;
+User.ROLE_DEFAULT_PERMISSIONS = ROLE_DEFAULT_PERMISSIONS;
+
+module.exports = User;
+

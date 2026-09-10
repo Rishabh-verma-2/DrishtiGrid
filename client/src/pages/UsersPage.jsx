@@ -5,9 +5,10 @@ import { useThemeStore } from '../store/themeStore';
 import {
   Users, UserPlus, Search, Shield, Filter, CheckCircle2,
   XCircle, Edit2, ShieldAlert, KeyRound, Phone, MapPin, Building,
-  X, RefreshCw
+  X, RefreshCw, Lock, Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PERMISSION_DEFINITIONS, ROLE_DEFAULT_PERMISSIONS } from '../utils/permissions';
 
 export default function UsersPage() {
   const { theme } = useThemeStore();
@@ -30,6 +31,7 @@ export default function UsersPage() {
     designation: 'Sub-Inspector',
     phone: '',
     district: 'Ahmedabad',
+    permissions: [...ROLE_DEFAULT_PERMISSIONS.POLICE],
   });
 
   // Query users
@@ -92,6 +94,7 @@ export default function UsersPage() {
       designation: 'Sub-Inspector',
       phone: '',
       district: 'Ahmedabad',
+      permissions: [...ROLE_DEFAULT_PERMISSIONS.POLICE],
     });
   };
 
@@ -103,6 +106,10 @@ export default function UsersPage() {
 
   const openEditModal = (u) => {
     setEditingUser(u);
+    const existingPermissions = Array.isArray(u.permissions) && u.permissions.length > 0
+      ? u.permissions
+      : (u.effectivePermissions || ROLE_DEFAULT_PERMISSIONS[u.role] || []);
+
     setFormData({
       name: u.name,
       email: u.email,
@@ -112,8 +119,19 @@ export default function UsersPage() {
       designation: u.designation || '',
       phone: u.phone || '',
       district: u.district || '',
+      permissions: [...existingPermissions],
     });
     setModalOpen(true);
+  };
+
+  const togglePermission = (permKey) => {
+    setFormData((prev) => {
+      const current = prev.permissions || [];
+      const updated = current.includes(permKey)
+        ? current.filter((k) => k !== permKey)
+        : [...current, permKey];
+      return { ...prev, permissions: updated };
+    });
   };
 
   const handleSubmit = (e) => {
@@ -214,6 +232,7 @@ export default function UsersPage() {
                 <th className="py-3.5 px-5">User</th>
                 <th className="py-3.5 px-5">Department &amp; Designation</th>
                 <th className="py-3.5 px-5">Assigned Role</th>
+                <th className="py-3.5 px-5">Feature Clearances</th>
                 <th className="py-3.5 px-5">Contact</th>
                 <th className="py-3.5 px-5">Status</th>
                 <th className="py-3.5 px-5 text-right">Actions</th>
@@ -222,14 +241,16 @@ export default function UsersPage() {
             <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-white/4'}`}>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-400">Loading users...</td>
+                  <td colSpan={7} className="text-center py-10 text-slate-400">Loading users...</td>
                 </tr>
               ) : usersList.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-slate-400">No users found matching query.</td>
+                  <td colSpan={7} className="text-center py-10 text-slate-400">No users found matching query.</td>
                 </tr>
               ) : (
-                usersList.map((u) => (
+                usersList.map((u) => {
+                  const effectivePerms = u.effectivePermissions || u.permissions || ROLE_DEFAULT_PERMISSIONS[u.role] || [];
+                  return (
                   <tr key={u._id} className="hover:bg-slate-50/50 dark:hover:bg-white/2 transition-colors">
                     {/* User Identity */}
                     <td className="py-3.5 px-5">
@@ -274,6 +295,41 @@ export default function UsersPage() {
                       </span>
                     </td>
 
+                    {/* Feature Clearances */}
+                    <td className="py-3.5 px-5">
+                      {u.role === 'ADMIN' ? (
+                        <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          ALL MODULES (FULL COMMAND)
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1 max-w-[280px]">
+                          {effectivePerms.slice(0, 4).map((permKey) => {
+                            const def = PERMISSION_DEFINITIONS.find((p) => p.key === permKey);
+                            return (
+                              <span
+                                key={permKey}
+                                title={def?.description}
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                                  ['camera_add', 'bulk_import'].includes(permKey)
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : ['anpr', 'crowd'].includes(permKey)
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                }`}
+                              >
+                                {def?.label || permKey}
+                              </span>
+                            );
+                          })}
+                          {effectivePerms.length > 4 && (
+                            <span className="text-[9px] font-mono font-bold px-1 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                              +{effectivePerms.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+
                     {/* Contact */}
                     <td className="py-3.5 px-5 font-mono text-[11px] text-slate-400">
                       {u.phone || '—'}
@@ -310,7 +366,8 @@ export default function UsersPage() {
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -394,6 +451,10 @@ export default function UsersPage() {
                     value={formData.role}
                     onChange={(e) => {
                       const newRole = e.target.value;
+                      const defaultPerms = newRole === 'ADMIN'
+                        ? PERMISSION_DEFINITIONS.map((p) => p.key)
+                        : (ROLE_DEFAULT_PERMISSIONS[newRole] || ROLE_DEFAULT_PERMISSIONS.POLICE);
+
                       setFormData({
                         ...formData,
                         role: newRole,
@@ -403,13 +464,14 @@ export default function UsersPage() {
                             : newRole === 'POLICE'
                             ? 'Gujarat Police Department'
                             : 'Gujarat Home Department',
+                        permissions: [...defaultPerms],
                       });
                     }}
                     className={`w-full px-3 py-2 rounded-xl border outline-none ${
                       isLight ? 'bg-slate-50 border-slate-300' : 'bg-[#080c16] border-white/10 text-white'
                     }`}
                   >
-                    <option value="ADMIN">Admin (Full System &amp; Audit Access)</option>
+                    <option value="ADMIN">Admin (Full System &amp; Statewide Command)</option>
                     <option value="POLICE">Police (Law &amp; Order Operations)</option>
                     <option value="TRAFFIC_POLICE">Traffic Police (Junction &amp; Traffic Command)</option>
                   </select>
@@ -468,6 +530,91 @@ export default function UsersPage() {
                     }`}
                     placeholder="Ahmedabad"
                   />
+                </div>
+              </div>
+
+              {/* Module Permissions & Clearances Matrix */}
+              <div className="pt-3 border-t border-slate-200 dark:border-white/8 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className={`block font-bold text-xs ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
+                      Feature &amp; Module Access Authorities
+                    </label>
+                    <p className="text-[10px] text-slate-400">
+                      Grant or revoke access to tools. Only enabled modules will appear on this user's panel.
+                    </p>
+                  </div>
+                  {formData.role !== 'ADMIN' && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            permissions: PERMISSION_DEFINITIONS.map((p) => p.key),
+                          });
+                        }}
+                        className="text-[10px] font-bold text-blue-500 hover:text-blue-400 underline"
+                      >
+                        Grant All
+                      </button>
+                      <span className="text-slate-500 text-[10px]">·</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({
+                            ...formData,
+                            permissions: [...(ROLE_DEFAULT_PERMISSIONS[formData.role] || [])],
+                          });
+                        }}
+                        className="text-[10px] font-bold text-slate-400 hover:text-slate-300 underline"
+                      >
+                        Reset to Role
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 custom-sidebar-scrollbar">
+                  {PERMISSION_DEFINITIONS.map((perm) => {
+                    const isChecked = (formData.permissions || []).includes(perm.key) || formData.role === 'ADMIN';
+                    const isDisabled = formData.role === 'ADMIN';
+                    return (
+                      <label
+                        key={perm.key}
+                        className={`flex items-start gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                          isChecked
+                            ? isLight
+                              ? 'bg-blue-50/80 border-blue-300 text-blue-900'
+                              : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                            : isLight
+                            ? 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                            : 'bg-white/3 border-white/6 text-slate-400 hover:bg-white/6'
+                        } ${isDisabled ? 'opacity-80 cursor-default' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isDisabled}
+                          onChange={() => togglePermission(perm.key)}
+                          className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-[11px] leading-tight flex items-center gap-1.5">
+                            <span>{perm.label}</span>
+                            {['camera_add', 'bulk_import', 'anpr', 'crowd'].includes(perm.key) && (
+                              <span className="text-[8px] font-mono px-1 rounded bg-amber-500/20 text-amber-400">
+                                KEY
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-slate-400 line-clamp-1 mt-0.5">
+                            {perm.description}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 

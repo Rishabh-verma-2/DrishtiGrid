@@ -266,11 +266,11 @@ export default function NotificationCenter() {
             <button
               onClick={() => {
                 setIsOpen(false);
-                navigate('/footage-requests');
+                navigate('/notifications');
               }}
               className="text-[11px] font-bold text-blue-500 hover:text-blue-400 flex items-center justify-center gap-1.5 w-full py-1"
             >
-              <span>Go to Footage Requests</span>
+              <span>Open Notification Command Center</span>
               <ExternalLink className="w-3 h-3" />
             </button>
           </div>

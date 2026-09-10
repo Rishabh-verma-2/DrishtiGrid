@@ -18,6 +18,7 @@ import SettingsPage from './pages/SettingsPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import ANPRPage from './pages/ANPRPage';
 import CrowdDetectionPage from './pages/CrowdDetectionPage';
+import NotificationsPage from './pages/NotificationsPage';
 import RoleRoute from './components/auth/RoleRoute';
 
 // Protected route wrapper
@@ -53,18 +54,63 @@ function App() {
       <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         
-        {/* Available to all authenticated roles: Admin, Police, Traffic Police */}
+        {/* Available to all authenticated users */}
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="gis-map" element={<GISMapPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        
+        {/* Permission-gated routes */}
+        <Route
+          path="gis-map"
+          element={
+            <RoleRoute permission="gis_map">
+              <GISMapPage />
+            </RoleRoute>
+          }
+        />
         <Route path="map" element={<Navigate to="/gis-map" replace />} />
         <Route path="gis" element={<Navigate to="/gis-map" replace />} />
-        <Route path="camera-monitoring" element={<CameraMonitoringPage />} />
-        <Route path="footage-requests" element={<FootageRequestsPage />} />
+        <Route
+          path="camera-monitoring"
+          element={
+            <RoleRoute permission="camera_monitoring">
+              <CameraMonitoringPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="footage-requests"
+          element={
+            <RoleRoute permission="footage_requests">
+              <FootageRequestsPage />
+            </RoleRoute>
+          }
+        />
         <Route path="tickets" element={<Navigate to="/footage-requests" replace />} />
-        <Route path="reports" element={<ReportsPage />} />
+        <Route
+          path="reports"
+          element={
+            <RoleRoute permission="reports">
+              <ReportsPage />
+            </RoleRoute>
+          }
+        />
         <Route path="alerts" element={<AlertsPage />} />
-        <Route path="anpr" element={<ANPRPage />} />
-        <Route path="crowd-detection" element={<CrowdDetectionPage />} />
+        <Route
+          path="anpr"
+          element={
+            <RoleRoute permission="anpr">
+              <ANPRPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="crowd-detection"
+          element={
+            <RoleRoute permission="crowd">
+              <CrowdDetectionPage />
+            </RoleRoute>
+          }
+        />
         <Route path="crowd" element={<Navigate to="/crowd-detection" replace />} />
 
         {/* Restricted strictly to ADMIN role only */}

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { normalizeStatus } = require('../utils/ticketStateMachine');
 
 const footageTicketSchema = new mongoose.Schema(
   {
@@ -133,11 +134,27 @@ const footageTicketSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
-
     // ─── Status Lifecycle ──────────────────────────────────────────
     status: {
       type: String,
       enum: [
+        'PENDING_ADMIN_REVIEW',
+        'ADMIN_APPROVED',
+        'ROUTED_TO_DEPARTMENT',
+        'DEPARTMENT_ACKNOWLEDGED',
+        'ASSIGNED',
+        'PROCESSING',
+        'FOOTAGE_READY',
+        'SUBMITTED',
+        'AVAILABLE_TO_REQUESTER',
+        'ACCESSED',
+        'COMPLETED',
+        'ADMIN_REJECTED',
+        'DEPARTMENT_REJECTED',
+        'CLARIFICATION_REQUIRED',
+        'CANCELLED',
+        'PROCESSING_FAILED',
+        // Legacy compatibility
         'Pending',
         'Accepted',
         'Processing',
@@ -147,7 +164,6 @@ const footageTicketSchema = new mongoose.Schema(
         'Responded',
         'Closed',
         'Rejected',
-        // Legacy compatibility
         'submitted',
         'under_review',
         'approved',
@@ -155,30 +171,101 @@ const footageTicketSchema = new mongoose.Schema(
         'rejected',
         'closed',
       ],
-      default: 'Pending',
+      default: 'PENDING_ADMIN_REVIEW',
       set: (val) => {
-        if (!val) return 'Pending';
-        const map = {
-          submitted: 'Pending',
-          pending: 'Pending',
-          under_review: 'Accepted',
-          accepted: 'Accepted',
-          approved: 'Processing',
-          processing: 'Processing',
-          'evidence uploaded': 'Evidence Uploaded',
-          evidence_uploaded: 'Evidence Uploaded',
-          dispatched: 'Available',
-          available: 'Available',
-          viewed: 'Viewed',
-          responded: 'Responded',
-          closed: 'Closed',
-          rejected: 'Rejected',
-        };
-        const key = String(val).toLowerCase().trim();
-        return map[key] || val;
+        if (!val) return 'PENDING_ADMIN_REVIEW';
+        return normalizeStatus(val);
       },
       index: true,
     },
+
+    // ─── Government Workflow Routing & Review ──────────────────────
+    isEmergency: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    emergencyReason: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    approval: {
+      approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      approvedByName: { type: String, default: '' },
+      approvedAt: Date,
+      remarks: { type: String, default: '' },
+    },
+    rejection: {
+      rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      rejectedByName: { type: String, default: '' },
+      rejectedAt: Date,
+      stage: { type: String, enum: ['ADMIN', 'DEPARTMENT'], default: 'ADMIN' },
+      reason: { type: String, default: '' },
+      explanation: { type: String, default: '' },
+    },
+    clarification: {
+      requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      requestedByName: { type: String, default: '' },
+      requestedAt: Date,
+      question: { type: String, default: '' },
+      response: { type: String, default: '' },
+      respondedAt: Date,
+      respondedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    },
+
+    // ─── Department Operator Assignment ────────────────────────────
+    assignedOperator: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      index: true,
+    },
+    assignedOperatorName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    assignedAt: {
+      type: Date,
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+
+    // ─── Service Level Agreement (SLA) ────────────────────────────
+    slaMinutes: {
+      type: Number,
+      default: 240, // default 4 hours
+    },
+    dueAt: {
+      type: Date,
+      index: true,
+    },
+    slaBreached: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    slaBreachedAt: {
+      type: Date,
+    },
+
+    // ─── Immutable Chronological Timeline ──────────────────────────
+    timeline: [
+      {
+        action: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now },
+        actorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        actorName: { type: String, default: 'System' },
+        actorDept: { type: String, default: '' },
+        actorRole: { type: String, default: '' },
+        previousStatus: { type: String, default: '' },
+        newStatus: { type: String, default: '' },
+        remarks: { type: String, default: '' },
+        metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+      },
+    ],
 
     // ─── Evidence Attachment & Resolution ─────────────────────────
     evidence: {
@@ -247,6 +334,8 @@ const footageTicketSchema = new mongoose.Schema(
 // Indexes for fast searching and department filtering
 footageTicketSchema.index({ requestingDepartment: 1, status: 1 });
 footageTicketSchema.index({ targetDepartment: 1, status: 1 });
+footageTicketSchema.index({ assignedOperator: 1, status: 1 });
+footageTicketSchema.index({ dueAt: 1, status: 1 });
 footageTicketSchema.index({ cameraId: 1 });
 footageTicketSchema.index({ createdAt: -1 });
 

@@ -21,7 +21,9 @@ import {
   Calendar,
   Zap,
   Flag,
+  Lock,
 } from 'lucide-react';
+import { isCameraInUserDepartment } from '../../utils/permissions';
 
 export default function GISStatsDrawer({
   isOpen,
@@ -43,6 +45,7 @@ export default function GISStatsDrawer({
   const { user } = useAuthStore();
   const userRole = String(user?.role || '').toUpperCase();
   const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(userRole);
+  const canViewLive = isAdmin || (selectedCamera ? isCameraInUserDepartment(user, selectedCamera) : true);
 
   // Sync tab if user selected camera or area externally
   React.useEffect(() => {
@@ -441,23 +444,23 @@ export default function GISStatsDrawer({
 
                 {/* Action Buttons */}
                 <div className="space-y-2 pt-1">
-                  <div className="grid grid-cols-2 gap-2">
+                  {canViewLive ? (
                     <button
                       onClick={() => onOpenStream(selectedCamera)}
-                      className="py-2.5 px-3 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
                     >
                       <Video className="w-3.5 h-3.5" />
                       <span>Live Stream</span>
                     </button>
-
+                  ) : (
                     <button
                       onClick={() => onRequestFootage(selectedCamera)}
-                      className="py-2.5 px-3 rounded-xl text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center justify-center gap-1.5 shadow-md transition-all cursor-pointer"
                     >
-                      <Shield className="w-3.5 h-3.5" />
-                      <span>Request Footage</span>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Request Footage from Admin</span>
                     </button>
-                  </div>
+                  )}
 
                   {/* Report to Department — ADMIN only, Offline/Maintenance cameras only */}
                   {isAdmin && ['offline', 'maintenance', 'fault'].includes((selectedCamera.status || '').toLowerCase()) && (

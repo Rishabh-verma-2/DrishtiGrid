@@ -9,7 +9,7 @@ const {
   updateHeartbeat,
   getCameraStats,
 } = require('../controllers/cameraController');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requirePermission } = require('../middleware/auth');
 
 const {
   getTemplate,
@@ -24,17 +24,17 @@ const {
 router.get('/stats', authenticate, getCameraStats);
 
 // ── Bulk Camera Onboarding & Registry Import ────────────────────────────────
-router.get('/bulk/template', authenticate, authorize('ADMIN', 'SUPERADMIN'), getTemplate);
-router.post('/bulk/validate', authenticate, authorize('ADMIN', 'SUPERADMIN'), validateBulk);
-router.post('/bulk/import', authenticate, authorize('ADMIN', 'SUPERADMIN'), commitImport);
-router.get('/bulk/import/:importId', authenticate, authorize('ADMIN', 'SUPERADMIN'), getImportSession);
-router.get('/bulk/import/:importId/report', authenticate, authorize('ADMIN', 'SUPERADMIN'), downloadReport);
-router.post('/bulk/import/:importId/cancel', authenticate, authorize('ADMIN', 'SUPERADMIN'), cancelImport);
+router.get('/bulk/template', authenticate, requirePermission('bulk_import'), getTemplate);
+router.post('/bulk/validate', authenticate, requirePermission('bulk_import'), validateBulk);
+router.post('/bulk/import', authenticate, requirePermission('bulk_import'), commitImport);
+router.get('/bulk/import/:importId', authenticate, requirePermission('bulk_import'), getImportSession);
+router.get('/bulk/import/:importId/report', authenticate, requirePermission('bulk_import'), downloadReport);
+router.post('/bulk/import/:importId/cancel', authenticate, requirePermission('bulk_import'), cancelImport);
 
 // CRUD
 router.get('/', authenticate, getCameras);
 router.get('/:id', authenticate, getCamera);
-router.post('/', authenticate, authorize('ADMIN'), createCamera);
+router.post('/', authenticate, requirePermission('camera_add'), createCamera);
 router.put('/:id', authenticate, authorize('ADMIN'), updateCamera);
 router.delete('/:id', authenticate, authorize('ADMIN'), deleteCamera);
 router.patch('/:id/heartbeat', authenticate, authorize('ADMIN'), updateHeartbeat);

@@ -8,6 +8,7 @@ import { useThemeStore } from '../store/themeStore';
 import toast from 'react-hot-toast';
 import CCTVVideoPlayer from '../components/evidence/CCTVVideoPlayer';
 import FootageTimeWindowPicker from '../components/common/FootageTimeWindowPicker';
+import SearchableCameraSelect from '../components/common/SearchableCameraSelect';
 import {
   FileText, Plus, Shield, Search, Filter, RotateCcw,
   CheckCircle2, Clock, XCircle, Send, Download, ExternalLink,
@@ -19,57 +20,76 @@ import {
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
-  Pending: {
-    label: 'Pending',
+  PENDING_ADMIN_REVIEW: {
+    label: 'Pending Nodal Review',
     badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
     dot: 'bg-amber-500',
   },
-  Accepted: {
-    label: 'Accepted',
+  PENDING_CLARIFICATION: {
+    label: 'Clarification Requested',
+    badgeClass: 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
+    dot: 'bg-orange-500',
+  },
+  ROUTED_TO_DEPARTMENT: {
+    label: 'Routed to Department',
     badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
     dot: 'bg-blue-500',
   },
-  Processing: {
-    label: 'Processing',
+  ACKNOWLEDGED: {
+    label: 'Dept Acknowledged',
+    badgeClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30',
+    dot: 'bg-teal-500',
+  },
+  ASSIGNED: {
+    label: 'Operator Assigned',
+    badgeClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+    dot: 'bg-purple-500',
+  },
+  IN_PROGRESS: {
+    label: 'Preparation In Progress',
     badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
     dot: 'bg-indigo-500',
   },
-  'Evidence Uploaded': {
+  EVIDENCE_UPLOADED: {
     label: 'Evidence Uploaded',
     badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
     dot: 'bg-emerald-500',
   },
-  Available: {
-    label: 'Available',
+  AVAILABLE: {
+    label: 'Evidence Available',
     badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
     dot: 'bg-cyan-400',
   },
-  Viewed: {
-    label: 'Viewed',
-    badgeClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
-    dot: 'bg-purple-400',
+  VIEWED: {
+    label: 'Evidence Viewed',
+    badgeClass: 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30',
+    dot: 'bg-violet-400',
   },
-  Responded: {
-    label: 'Responded',
-    badgeClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30',
-    dot: 'bg-teal-400',
+  COMPLETED: {
+    label: 'Completed & Certified',
+    badgeClass: 'bg-emerald-600/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40',
+    dot: 'bg-emerald-500',
   },
-  Closed: {
-    label: 'Closed',
-    badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30',
-    dot: 'bg-slate-400',
-  },
-  Rejected: {
+  REJECTED: {
     label: 'Rejected',
     badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
     dot: 'bg-rose-500',
   },
   // Legacy mappings
-  submitted: { label: 'Pending', badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30', dot: 'bg-amber-500' },
-  under_review: { label: 'Accepted', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-500' },
-  approved: { label: 'Processing', badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-500' },
-  dispatched: { label: 'Available', badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
-  closed: { label: 'Closed', badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30', dot: 'bg-slate-400' },
+  Pending: { label: 'Pending Nodal Review', badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30', dot: 'bg-amber-500' },
+  Accepted: { label: 'Dept Acknowledged', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-500' },
+  Processing: { label: 'Preparation In Progress', badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-500' },
+  'Evidence Uploaded': { label: 'Evidence Uploaded', badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500' },
+  Available: { label: 'Evidence Available', badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
+  Viewed: { label: 'Evidence Viewed', badgeClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30', dot: 'bg-purple-400' },
+  Responded: { label: 'Responded', badgeClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30', dot: 'bg-teal-400' },
+  Closed: { label: 'Completed & Certified', badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30', dot: 'bg-slate-400' },
+  Rejected: { label: 'Rejected', badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30', dot: 'bg-rose-500' },
+  submitted: { label: 'Pending Nodal Review', badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30', dot: 'bg-amber-500' },
+  under_review: { label: 'Dept Acknowledged', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-500' },
+  approved: { label: 'Preparation In Progress', badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-500' },
+  dispatched: { label: 'Evidence Available', badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
+  closed: { label: 'Completed & Certified', badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30', dot: 'bg-slate-400' },
   rejected: { label: 'Rejected', badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30', dot: 'bg-rose-500' },
 };
 
@@ -103,7 +123,8 @@ export default function FootageRequestsPage() {
   const userDept = user?.department || 'Gujarat Police Department';
 
   // Filters & State
-  const [direction, setDirection] = useState('incoming'); // 'incoming' | 'outgoing' | 'all'
+  const [direction, setDirection] = useState(isAdmin ? 'all' : 'incoming'); // 'incoming' | 'outgoing' | 'all'
+  const [activeQueue, setActiveQueue] = useState(isAdmin ? 'central_review' : 'all'); // 'all' | 'central_review' | 'supervisor' | 'operator' | 'requester'
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -120,9 +141,30 @@ export default function FootageRequestsPage() {
   const [responseText, setResponseText] = useState('');
   const [copiedKey, setCopiedKey] = useState(null);
 
+  // Government Workflow Modals State
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [approveRemarks, setApproveRemarks] = useState('');
+  const [targetDeptOverride, setTargetDeptOverride] = useState('');
+
+  const [isClarifyModalOpen, setIsClarifyModalOpen] = useState(false);
+  const [clarifyQuestion, setClarifyQuestion] = useState('');
+
+  const [isRespondClarifyModalOpen, setIsRespondClarifyModalOpen] = useState(false);
+  const [clarifyResponseText, setClarifyResponseText] = useState('');
+
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedOperatorId, setSelectedOperatorId] = useState('');
+  const [assignmentRemarks, setAssignmentRemarks] = useState('');
+
+  const [isEvidencePackageOpen, setIsEvidencePackageOpen] = useState(false);
+  const [evidencePackageData, setEvidencePackageData] = useState(null);
+  const [isPackageLoading, setIsPackageLoading] = useState(false);
+
   // Evidence upload state
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadRemarks, setUploadRemarks] = useState('');
+  const [uploadedCameraId, setUploadedCameraId] = useState('');
+  const [cameraOverrideReason, setCameraOverrideReason] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -144,18 +186,21 @@ export default function FootageRequestsPage() {
     const incTitle = searchParams.get('incidentTitle');
     if (reqCam || incId) {
       setIsCreateModalOpen(true);
+      const camListParsed = reqCam ? reqCam.split(',').map((c) => c.trim()).filter(Boolean) : [];
+      const primaryCam = camListParsed[0] || '';
       setCreateForm((prev) => ({
         ...prev,
+        cameraId: primaryCam || prev.cameraId,
         title: incTitle
           ? `Footage Evidence for Incident #${incId}: ${incTitle}`
-          : reqCam
-          ? `Footage Request for CCTV Camera ${reqCam}`
+          : primaryCam
+          ? `Footage Request for CCTV Camera ${primaryCam}`
           : prev.title,
         description: incId
           ? `Surveillance evidence requisition automatically populated from GIS Incident #${incId}. Candidate cameras: ${reqCam || 'surrounding cluster'}.`
           : prev.description,
         firNumber: incId ? `INC-${incId}` : prev.firNumber,
-        selectedCameras: reqCam ? reqCam.split(',').map((c) => c.trim()).filter(Boolean) : prev.selectedCameras,
+        selectedCameras: camListParsed.length > 0 ? camListParsed : prev.selectedCameras,
       }));
     }
   }, [searchParams]);
@@ -200,11 +245,12 @@ export default function FootageRequestsPage() {
 
   // Queries
   const { data: ticketsData, isLoading: isTicketsLoading } = useQuery({
-    queryKey: ['footage-tickets', direction, statusFilter, priorityFilter, search],
+    queryKey: ['footage-tickets', direction, activeQueue, statusFilter, priorityFilter, search],
     queryFn: () =>
       footageTicketAPI
         .getAll({
           direction,
+          queue: activeQueue !== 'all' ? activeQueue : undefined,
           status: statusFilter !== 'all' ? statusFilter : undefined,
           priority: priorityFilter !== 'all' ? priorityFilter : undefined,
           search: search.trim() || undefined,
@@ -237,10 +283,17 @@ export default function FootageRequestsPage() {
     enabled: Boolean(selectedTicketId) && isDetailModalOpen,
   });
 
+  const { data: departmentOperators = [] } = useQuery({
+    queryKey: ['department-operators'],
+    queryFn: () => footageTicketAPI.getDepartmentOperators().then((r) => r.data.data || []),
+    enabled: isAssignModalOpen,
+  });
+
   const { data: camerasList = [] } = useQuery({
     queryKey: ['cameras-short-list'],
     queryFn: () => cameraAPI.getAll({ limit: 0 }).then((r) => r.data.data || []),
-    staleTime: 120000,
+    enabled: isCreateModalOpen || Boolean(searchParams.get('requestCam')),
+    staleTime: 300000,
   });
 
   const tickets = ticketsData?.data || [];
@@ -248,50 +301,184 @@ export default function FootageRequestsPage() {
   // Double-layer mutual exclusivity partitioning for workflow direction tabs
   const displayedTickets = useMemo(() => {
     return tickets.filter((t) => {
-      if (direction === 'all') return true;
+      if (direction === 'all' || activeQueue === 'central_review') return true;
 
       const cleanUserDept = (userDept || '').toLowerCase().trim();
       const cleanReqDept = (t.requestingDepartment || '').toLowerCase().trim();
       const cleanTargetDept = (t.targetDepartment || '').toLowerCase().trim();
 
       const isUserTraffic = cleanUserDept.includes('traffic') || userRole === 'TRAFFIC_POLICE';
+      const isUserHome = cleanUserDept.includes('home') || isAdmin;
+      const isUserGeneralPolice = !isUserTraffic && !isUserHome && cleanUserDept.includes('police');
+
       const isReqTraffic = cleanReqDept.includes('traffic');
       const isTargetTraffic = cleanTargetDept.includes('traffic');
 
+      const isReqGeneralPolice = !isReqTraffic && cleanReqDept.includes('police');
+      const isTargetGeneralPolice = !isTargetTraffic && cleanTargetDept.includes('police');
+
       if (direction === 'incoming') {
-        // Incoming MUST be targeted to user's department, and NOT requested by user's department
         if (isUserTraffic) {
           return isTargetTraffic && !isReqTraffic;
         }
         if (isAdmin) {
           return !cleanReqDept.includes('home');
         }
-        // General Police (non-traffic)
-        return !isTargetTraffic && !cleanReqDept.includes(cleanUserDept);
+        if (isUserGeneralPolice) {
+          return isTargetGeneralPolice && !isReqGeneralPolice;
+        }
+        return cleanTargetDept.includes(cleanUserDept) && !cleanReqDept.includes(cleanUserDept);
       }
 
       if (direction === 'outgoing') {
-        // Outgoing (My Requisitions) MUST be requested by user's department or user, and NOT targeted to self
         if (isUserTraffic) {
           return isReqTraffic && !isTargetTraffic;
         }
         if (isAdmin) {
           return cleanReqDept.includes('home') || t.requestedBy?._id === user?._id;
         }
-        // General Police (non-traffic)
-        const isMyDept = cleanReqDept.includes(cleanUserDept) || (!isReqTraffic && cleanReqDept.includes('police'));
-        return isMyDept && !cleanTargetDept.includes(cleanUserDept);
+        if (isUserGeneralPolice) {
+          return isReqGeneralPolice && !isTargetGeneralPolice;
+        }
+        return cleanReqDept.includes(cleanUserDept) && !cleanTargetDept.includes(cleanUserDept);
       }
 
       return true;
     });
   }, [tickets, direction, userDept, userRole, user?._id, isAdmin]);
 
-  const stats = statsData || { total: 0, pendingAction: 0, available: 0, incomingPending: 0, closed: 0 };
+  const stats = statsData || {
+    total: 0,
+    pendingAction: 0,
+    pendingAdmin: 0,
+    routed: 0,
+    acknowledged: 0,
+    assigned: 0,
+    inProgress: 0,
+    evidenceUploaded: 0,
+    available: 0,
+    completed: 0,
+    rejected: 0,
+    slaBreachedCount: 0,
+  };
   const responses = responsesData || [];
   const auditLogs = auditLogsData || [];
 
-  // Status Mutation
+  // Government Workflow Mutations:
+  const approveMutation = useMutation({
+    mutationFn: ({ id, remarks, targetDepartmentOverride }) =>
+      footageTicketAPI.approve(id, { remarks, targetDepartmentOverride }),
+    onSuccess: () => {
+      toast.success('Requisition approved and routed to Target Department');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+      setIsApproveModalOpen(false);
+      setApproveRemarks('');
+      setTargetDeptOverride('');
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Approval failed'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ id, reason }) => footageTicketAPI.reject(id, { reason }),
+    onSuccess: () => {
+      toast.success('Requisition rejected and logged in official audit');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+      setIsRejectModalOpen(false);
+      setRejectionReason('');
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Rejection failed'),
+  });
+
+  const acknowledgeMutation = useMutation({
+    mutationFn: (id) => footageTicketAPI.acknowledge(id),
+    onSuccess: () => {
+      toast.success('Requisition receipt acknowledged by Supervisor');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Acknowledgment failed'),
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: ({ id, operatorId, remarks }) =>
+      footageTicketAPI.assign(id, { operatorId, remarks }),
+    onSuccess: () => {
+      toast.success('Operator assigned successfully to extract footage');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+      setIsAssignModalOpen(false);
+      setSelectedOperatorId('');
+      setAssignmentRemarks('');
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Assignment failed'),
+  });
+
+  const clarifyMutation = useMutation({
+    mutationFn: ({ id, question }) => footageTicketAPI.requestClarification(id, { question }),
+    onSuccess: () => {
+      toast.success('Clarification inquiry sent to requesting officer');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+      setIsClarifyModalOpen(false);
+      setClarifyQuestion('');
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Clarification request failed'),
+  });
+
+  const respondClarifyMutation = useMutation({
+    mutationFn: ({ id, response }) => footageTicketAPI.respondClarification(id, { response }),
+    onSuccess: () => {
+      toast.success('Clarification response submitted. Requisition returned to Central Review.');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+      setIsRespondClarifyModalOpen(false);
+      setClarifyResponseText('');
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Response submission failed'),
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: ({ id, remarks }) => footageTicketAPI.complete(id, { remarks }),
+    onSuccess: () => {
+      toast.success('Requisition completed, certified, and officially archived');
+      queryClient.invalidateQueries(['footage-tickets']);
+      queryClient.invalidateQueries(['footage-tickets-stats']);
+      queryClient.invalidateQueries(['footage-ticket-detail', selectedTicketId]);
+      queryClient.invalidateQueries(['footage-ticket-audit-logs', selectedTicketId]);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || 'Completion failed'),
+  });
+
+  const handleOpenEvidencePackage = async () => {
+    if (!selectedTicket?.ticketId) return;
+    setIsPackageLoading(true);
+    setIsEvidencePackageOpen(true);
+    try {
+      const res = await footageTicketAPI.getEvidencePackage(selectedTicket.ticketId);
+      setEvidencePackageData(res.data.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to generate court evidence certificate');
+      setIsEvidencePackageOpen(false);
+    } finally {
+      setIsPackageLoading(false);
+    }
+  };
+
+  // Status Mutation (fallback)
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status, remarks, rejectionReason }) =>
       footageTicketAPI.updateStatus(id, { status, remarks, rejectionReason }),
@@ -328,9 +515,19 @@ export default function FootageRequestsPage() {
       return;
     }
 
+    // Camera mismatch check on frontend
+    if (uploadedCameraId && uploadedCameraId.trim() && uploadedCameraId.trim() !== selectedTicket?.cameraId) {
+      if (!cameraOverrideReason || cameraOverrideReason.trim().length < 5) {
+        toast.error('Camera ID differs from requisition. Mandatory override reason required.');
+        return;
+      }
+    }
+
     const formData = new FormData();
     formData.append('footage', selectedFile);
     if (uploadRemarks) formData.append('remarks', uploadRemarks);
+    if (uploadedCameraId) formData.append('cameraId', uploadedCameraId);
+    if (cameraOverrideReason) formData.append('cameraOverrideReason', cameraOverrideReason);
 
     setIsUploading(true);
     const toastId = toast.loading('Hashing SHA-256 & Encrypting AES-256-GCM before Cloudinary upload...');
@@ -340,6 +537,8 @@ export default function FootageRequestsPage() {
       toast.success('Footage encrypted & stored in Cloudinary evidence vault!', { id: toastId });
       setSelectedFile(null);
       setUploadRemarks('');
+      setUploadedCameraId('');
+      setCameraOverrideReason('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       queryClient.invalidateQueries(['footage-tickets']);
       queryClient.invalidateQueries(['footage-tickets-stats']);
@@ -401,15 +600,37 @@ export default function FootageRequestsPage() {
     endTime: initialWindow.end,
     purpose: '',
     description: '',
+    isEmergency: false,
+    emergencyReason: '',
     contactPhone: user?.phone || '+91-79-23250000',
     officialDesignation: user?.designation || 'Investigating Officer',
     acknowledgedCompliance: false,
   });
 
+  // Auto-sync target department if camera matches a known department in camerasList
+  useEffect(() => {
+    if (!createForm.cameraId || !camerasList.length) return;
+    const matched = camerasList.find(
+      (c) => c.cameraId === createForm.cameraId || c._id === createForm.cameraId
+    );
+    if (matched && matched.departmentName) {
+      setCreateForm((prev) => {
+        if (prev.targetDepartment !== matched.departmentName) {
+          return { ...prev, targetDepartment: matched.departmentName };
+        }
+        return prev;
+      });
+    }
+  }, [createForm.cameraId, camerasList]);
+
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!createForm.title || !createForm.targetDepartment || !createForm.cameraId || !createForm.startTime || !createForm.endTime || !createForm.purpose) {
       toast.error('Please fill all mandatory fields including target department and camera');
+      return;
+    }
+    if (createForm.isEmergency && (!createForm.emergencyReason || createForm.emergencyReason.trim().length < 5)) {
+      toast.error('Emergency requisitions require a detailed life-safety justification (minimum 5 characters)');
       return;
     }
     if (!createForm.acknowledgedCompliance) {
@@ -419,7 +640,11 @@ export default function FootageRequestsPage() {
 
     try {
       const res = await footageTicketAPI.create(createForm);
-      toast.success(`Requisition ticket ${res.data.data.ticketId} created successfully`);
+      toast.success(
+        createForm.isEmergency
+          ? `🚨 EMERGENCY Requisition ${res.data.data.ticketId} routed directly to ${createForm.targetDepartment}`
+          : `Requisition ticket ${res.data.data.ticketId} submitted to Central Control Room`
+      );
       queryClient.invalidateQueries(['footage-tickets']);
       queryClient.invalidateQueries(['footage-tickets-stats']);
       setIsCreateModalOpen(false);
@@ -440,34 +665,66 @@ export default function FootageRequestsPage() {
 
   // Determine user permission context on the selected ticket
   const ticketPerms = useMemo(() => {
-    if (!selectedTicket) return { isRequester: false, isTarget: false, canUpload: false, canAccept: false };
+    if (!selectedTicket) return {};
     const cleanUserDept = (userDept || '').toLowerCase().trim();
     const cleanTargetDept = (selectedTicket.targetDepartment || '').toLowerCase().trim();
     const cleanReqDept = (selectedTicket.requestingDepartment || '').toLowerCase().trim();
 
-    const isTarget =
-      cleanTargetDept.includes(cleanUserDept) ||
-      cleanUserDept.includes(cleanTargetDept) ||
-      (cleanUserDept.includes('traffic') && cleanTargetDept.includes('traffic')) ||
-      (cleanUserDept.includes('police') && cleanTargetDept.includes('police')) ||
-      (!cleanTargetDept.includes('police') && (cleanUserDept.includes('police') || cleanUserDept.includes('traffic')));
+    const isUserTraffic = cleanUserDept.includes('traffic') || userRole === 'TRAFFIC_POLICE';
+    const isUserHome = cleanUserDept.includes('home') || isAdmin;
+    const isUserGeneralPolice = !isUserTraffic && !isUserHome && cleanUserDept.includes('police');
 
+    const isReqTraffic = cleanReqDept.includes('traffic');
+    const isTargetTraffic = cleanTargetDept.includes('traffic');
+
+    const isReqGeneralPolice = !isReqTraffic && cleanReqDept.includes('police');
+    const isTargetGeneralPolice = !isTargetTraffic && cleanTargetDept.includes('police');
+
+    // Is current user in the Target (Custodian) Department?
+    const isTarget =
+      !isUserHome &&
+      ((isUserTraffic && isTargetTraffic) ||
+       (isUserGeneralPolice && isTargetGeneralPolice) ||
+       (!isUserTraffic && !isUserGeneralPolice && cleanTargetDept.includes(cleanUserDept)));
+
+    // Is current user in the Requesting Department (or author of ticket)?
     const isRequester =
-      cleanReqDept.includes(cleanUserDept) ||
-      cleanUserDept.includes(cleanReqDept) ||
-      selectedTicket.requestedBy?._id === user?._id;
+      selectedTicket.requestedBy?._id === user?._id ||
+      selectedTicket.requestedBy === user?._id ||
+      (!isUserHome &&
+        ((isUserTraffic && isReqTraffic) ||
+         (isUserGeneralPolice && isReqGeneralPolice) ||
+         (!isUserTraffic && !isUserGeneralPolice && cleanReqDept.includes(cleanUserDept))));
+
+    const st = selectedTicket.status;
 
     return {
       isRequester,
       isTarget,
-      canUpload: isTarget || isAdmin,
-      canAccept: (isTarget || isAdmin) && ['Pending', 'submitted'].includes(selectedTicket.status),
-      canProcess: (isTarget || isAdmin) && ['Accepted', 'under_review'].includes(selectedTicket.status),
-      canReject: (isTarget || isAdmin) && ['Pending', 'submitted', 'Accepted', 'under_review'].includes(selectedTicket.status),
-      canClose: (isRequester || isAdmin) && selectedTicket.status !== 'Closed',
+      isAdmin,
+      // Nodal Review Actions (Central Control Room Only)
+      canApprove: isAdmin && ['PENDING_ADMIN_REVIEW', 'PENDING_CLARIFICATION', 'Pending', 'submitted'].includes(st),
+      canClarify: isAdmin && ['PENDING_ADMIN_REVIEW', 'Pending', 'submitted'].includes(st),
+      canRespondClarify: isRequester && st === 'PENDING_CLARIFICATION',
+
+      // Custodian Department Actions
+      canAcknowledge: isTarget && ['ROUTED_TO_DEPARTMENT', 'routed_to_department'].includes(st),
+      canAssign: (isTarget || isAdmin) && ['ROUTED_TO_DEPARTMENT', 'DEPARTMENT_ACKNOWLEDGED', 'ACKNOWLEDGED', 'Accepted'].includes(st),
+      canUpload: (isTarget || isAdmin) && ['ROUTED_TO_DEPARTMENT', 'DEPARTMENT_ACKNOWLEDGED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS', 'PROCESSING', 'Accepted', 'Processing'].includes(st),
+
+      // Requester Actions
+      canComplete: (isRequester || isAdmin) && ['EVIDENCE_UPLOADED', 'AVAILABLE', 'AVAILABLE_TO_REQUESTER', 'VIEWED', 'ACCESSED', 'Evidence Uploaded', 'Available', 'Viewed'].includes(st),
+
+      // Rejection: Strictly restricted to Admin (during Central Review) OR Target Department (during routing/fulfillment).
+      // Requesting department CANNOT reject their own ticket!
+      canReject: !isRequester && (
+        (isAdmin && ['PENDING_ADMIN_REVIEW', 'PENDING_CLARIFICATION'].includes(st)) ||
+        (isTarget && ['ROUTED_TO_DEPARTMENT', 'DEPARTMENT_ACKNOWLEDGED', 'ACKNOWLEDGED', 'ASSIGNED', 'IN_PROGRESS', 'PROCESSING'].includes(st))
+      ),
+      canExportCertificate: Boolean(selectedTicket.evidence || selectedTicket.evidenceId),
       canViewEvidence: true,
     };
-  }, [selectedTicket, userDept, isAdmin, user?._id]);
+  }, [selectedTicket, userDept, isAdmin, user?._id, userRole]);
 
   const streamUrl = useMemo(() => {
     if (!selectedTicket) return '';
@@ -511,31 +768,41 @@ export default function FootageRequestsPage() {
       }`}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/25 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold shadow-xs">
-            <FileText className="w-5 h-5" />
+            {isAdmin ? <Shield className="w-5 h-5 text-amber-500" /> : <FileText className="w-5 h-5" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className={`text-lg font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-                CCTV Footage Requisitions &amp; Secure Evidence Vault
+                {isAdmin
+                  ? 'Manage Upcoming Footage Requests'
+                  : 'CCTV Footage Requisitions & Secure Evidence Vault'}
               </h1>
-              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                AES-256-GCM + CLOUDINARY
+              <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                isAdmin
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+              }`}>
+                {isAdmin ? 'CENTRAL NODAL REVIEW CELL' : 'AES-256-GCM + CLOUDINARY'}
               </span>
             </div>
             <p className={`text-xs ${isLight ? 'text-slate-600 font-medium' : 'text-slate-400'}`}>
-              Official inter-department requisitioning system between Police, Traffic Police &amp; Home Dept
+              {isAdmin
+                ? 'Central Control Room statutory queue for vetting, authorizing, routing, and certifying inter-department CCTV footage requests'
+                : 'Official inter-department requisitioning system between Police, Traffic Police & Home Dept'}
             </p>
           </div>
         </div>
 
-        {/* Action Button: Create Requisition Ticket */}
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition-all cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Footage Requisition</span>
-        </button>
+        {/* Action Button: Create Requisition Ticket (Field Officers Only) */}
+        {!isAdmin && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition-all cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>New Footage Requisition</span>
+          </button>
+        )}
       </div>
 
       {/* ─── Metric Stat Cards ─────────────────────────────────────── */}
@@ -550,18 +817,20 @@ export default function FootageRequestsPage() {
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Action Required</span>
-            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Nodal Review Pending</span>
+            <Shield className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-black mt-1 text-amber-600 dark:text-amber-400">{stats.pendingAction || 0}</p>
+          <p className="text-2xl font-black mt-1 text-amber-600 dark:text-amber-400">{stats.pendingAdmin || 0}</p>
         </div>
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Incoming to My Dept</span>
-            <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs font-bold text-purple-600 dark:text-purple-400">In Preparation</span>
+            <Clock className="w-4 h-4 text-purple-500" />
           </div>
-          <p className="text-2xl font-black mt-1 text-emerald-600 dark:text-emerald-400">{stats.incomingPending || 0}</p>
+          <p className="text-2xl font-black mt-1 text-purple-600 dark:text-purple-400">
+            {(stats.routed || 0) + (stats.acknowledged || 0) + (stats.assigned || 0) + (stats.inProgress || 0)}
+          </p>
         </div>
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
@@ -569,59 +838,141 @@ export default function FootageRequestsPage() {
             <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">Evidence Available</span>
             <Video className="w-4 h-4 text-cyan-500" />
           </div>
-          <p className="text-2xl font-black mt-1 text-cyan-600 dark:text-cyan-400">{stats.available || 0}</p>
+          <p className="text-2xl font-black mt-1 text-cyan-600 dark:text-cyan-400">{stats.available || stats.evidenceUploaded || 0}</p>
         </div>
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
           <div className="flex items-center justify-between">
-            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Closed &amp; Sealed</span>
-            <CheckCircle2 className="w-4 h-4 text-slate-500" />
+            <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Completed &amp; Certified</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
-          <p className={`text-2xl font-black mt-1 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{stats.closed || 0}</p>
+          <p className={`text-2xl font-black mt-1 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{stats.completed || 0}</p>
         </div>
       </div>
 
-      {/* ─── Workflow Direction Tabs & Search ───────────────────────── */}
+      {/* SLA Breach Alert Banner if any overdue tickets exist */}
+      {stats.slaBreachedCount > 0 && (
+        <div className="mx-6 mb-4 px-4 py-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-3 text-rose-500 text-xs font-bold shrink-0 animate-pulse">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            <span>CRITICAL SLA ALERT: {stats.slaBreachedCount} requisition(s) have breached statutory processing limits! Immediate supervisor intervention required.</span>
+          </div>
+          <button
+            onClick={() => { setStatusFilter('all'); setPriorityFilter('urgent'); }}
+            className="px-2.5 py-1 rounded bg-rose-600 text-white text-[11px] font-bold cursor-pointer hover:bg-rose-700"
+          >
+            Filter Overdue
+          </button>
+        </div>
+      )}
+
+      {/* ─── Workflow Direction & Queue Tabs & Search ───────────────── */}
       <div className="px-6 pb-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className={`flex items-center gap-1.5 p-1 rounded-xl border ${
+        <div className={`flex items-center gap-1.5 p-1 rounded-xl border flex-wrap ${
           isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-black/20 border-white/5'
         }`}>
-          <button
-            onClick={() => setDirection('incoming')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              direction === 'incoming'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ArrowDownLeft className="w-3.5 h-3.5" />
-            <span>Incoming Requests ({stats.incomingPending || 0})</span>
-          </button>
+          {isAdmin ? (
+            /* Dedicated Admin Queue Management Tabs */
+            <>
+              <button
+                onClick={() => { setActiveQueue('central_review'); setDirection('all'); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeQueue === 'central_review'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>📥 Manage Upcoming Requests ({stats.pendingAdmin || 0})</span>
+              </button>
 
-          <button
-            onClick={() => setDirection('outgoing')}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              direction === 'outgoing'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <ArrowUpRight className="w-3.5 h-3.5" />
-            <span>My Requisitions</span>
-          </button>
+              <button
+                onClick={() => { setActiveQueue('all'); setDirection('all'); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  direction === 'all' && activeQueue === 'all'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Master Oversight (All Statewide)</span>
+              </button>
 
-          {isAdmin && (
-            <button
-              onClick={() => setDirection('all')}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                direction === 'all'
-                  ? 'bg-purple-600 text-white shadow-sm'
-                  : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Admin Master Oversight</span>
-            </button>
+              <button
+                onClick={() => { setActiveQueue('supervisor'); setDirection('incoming'); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeQueue === 'supervisor'
+                    ? 'bg-teal-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Supervisor Fulfillment</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveQueue('all'); setDirection('outgoing'); }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  direction === 'outgoing' && activeQueue === 'all'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>Home Dept Requisitions</span>
+              </button>
+            </>
+          ) : (
+            /* Standard Field Officer Queue Tabs (Police / Traffic Police) */
+            <>
+              <button
+                onClick={() => { setActiveQueue('all'); setDirection('incoming'); }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  direction === 'incoming' && activeQueue === 'all'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ArrowDownLeft className="w-3.5 h-3.5" />
+                <span>Incoming to My Dept</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveQueue('all'); setDirection('outgoing'); }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  direction === 'outgoing' && activeQueue === 'all'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>My Requisitions</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveQueue('supervisor'); setDirection('incoming'); }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeQueue === 'supervisor'
+                    ? 'bg-teal-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Supervisor Queue</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveQueue('operator'); setDirection('incoming'); }}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeQueue === 'operator'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : isLight ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Operator Tasks</span>
+              </button>
+            </>
           )}
         </div>
 
@@ -644,15 +995,17 @@ export default function FootageRequestsPage() {
             className={`text-xs px-3 py-2 rounded-xl border outline-none font-medium cursor-pointer ${inputThemeClass}`}
           >
             <option value="all">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="Accepted">Accepted</option>
-            <option value="Processing">Processing</option>
-            <option value="Evidence Uploaded">Evidence Uploaded</option>
-            <option value="Available">Available</option>
-            <option value="Viewed">Viewed</option>
-            <option value="Responded">Responded</option>
-            <option value="Closed">Closed</option>
-            <option value="Rejected">Rejected</option>
+            <option value="PENDING_ADMIN_REVIEW">Pending Nodal Review</option>
+            <option value="PENDING_CLARIFICATION">Clarification Requested</option>
+            <option value="ROUTED_TO_DEPARTMENT">Routed to Dept</option>
+            <option value="ACKNOWLEDGED">Dept Acknowledged</option>
+            <option value="ASSIGNED">Operator Assigned</option>
+            <option value="IN_PROGRESS">Preparation In Progress</option>
+            <option value="EVIDENCE_UPLOADED">Evidence Uploaded</option>
+            <option value="AVAILABLE">Evidence Available</option>
+            <option value="VIEWED">Evidence Viewed</option>
+            <option value="COMPLETED">Completed &amp; Certified</option>
+            <option value="REJECTED">Rejected</option>
           </select>
         </div>
       </div>
@@ -667,13 +1020,13 @@ export default function FootageRequestsPage() {
             isLight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-black/20 border-white/5 text-slate-400'
           }`}>
             <div className="flex items-center gap-2">
-              <span>Requisitions Log</span>
+              <span>{isAdmin && activeQueue === 'central_review' ? 'Upcoming Requisitions Queue' : 'Requisitions Log'}</span>
               <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
                 {displayedTickets.length} records
               </span>
             </div>
             <span className="text-[11px] font-semibold text-slate-500">
-              Active Context: <span className="font-bold text-blue-600 dark:text-blue-400">{userDept}</span>
+              Active Context: <span className="font-bold text-blue-600 dark:text-blue-400">{isAdmin ? 'Central Control Room (Nodal Authority)' : userDept}</span>
             </span>
           </div>
 
@@ -684,11 +1037,17 @@ export default function FootageRequestsPage() {
               <div className="p-16 text-center">
                 <FileText className="w-12 h-12 text-slate-400 dark:text-slate-600 mx-auto mb-3" />
                 <h3 className={`text-sm font-bold ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                  No Requisitions in this category
+                  {isAdmin && activeQueue === 'central_review'
+                    ? 'No Upcoming Requisitions Pending Review'
+                    : 'No Requisitions in this category'}
                 </h3>
                 <p className={`text-xs mt-1 max-w-sm mx-auto ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  {direction === 'incoming'
+                  {isAdmin && activeQueue === 'central_review'
+                    ? 'All incoming inter-department CCTV footage requests have been processed.'
+                    : direction === 'incoming'
                     ? 'No pending footage requisitions assigned to your department right now.'
+                    : isAdmin
+                    ? 'No requisitions currently in this queue.'
                     : 'You have not submitted any footage requisitions yet. Click "New Footage Requisition" above.'}
                 </p>
               </div>
@@ -715,6 +1074,36 @@ export default function FootageRequestsPage() {
                         <span className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase ${priorityInfo.tw}`}>
                           {priorityInfo.label}
                         </span>
+                        {t.isEmergency && (
+                          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-red-600 text-white animate-pulse flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                            <AlertTriangle className="w-3 h-3" />
+                            <span>EMERGENCY BYPASS</span>
+                          </span>
+                        )}
+                        {t.dueAt && !['COMPLETED', 'REJECTED', 'Closed', 'Rejected'].includes(t.status) && (
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                            t.isOverdue || t.slaStatus === 'BREACHED'
+                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/30 animate-pulse'
+                              : (t.slaRemainingMinutes !== undefined && t.slaRemainingMinutes < 120)
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25'
+                          }`}>
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>
+                              {t.isOverdue || t.slaStatus === 'BREACHED'
+                                ? 'SLA BREACHED'
+                                : t.slaRemainingMinutes !== undefined
+                                ? `SLA: ${Math.floor(t.slaRemainingMinutes / 60)}h ${t.slaRemainingMinutes % 60}m`
+                                : 'SLA ACTIVE'}
+                            </span>
+                          </span>
+                        )}
+                        {t.assignedOperatorName && (
+                          <span className="text-[11px] font-medium text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 flex items-center gap-1">
+                            <User className="w-2.5 h-2.5" />
+                            <span>Operator: {t.assignedOperatorName}</span>
+                          </span>
+                        )}
                         {t.firNumber && (
                           <span className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
                             isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-white/5 border-white/10 text-slate-300'
@@ -829,40 +1218,99 @@ export default function FootageRequestsPage() {
               </div>
 
               {/* Action Buttons & Close */}
-              <div className="flex items-center gap-2">
-                {ticketPerms.canAccept && (
+              <div className="flex flex-wrap items-center gap-2">
+                {ticketPerms.canApprove && (
                   <button
-                    onClick={() => updateStatusMutation.mutate({ id: selectedTicket.ticketId, status: 'Accepted' })}
-                    className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    onClick={() => {
+                      setTargetDeptOverride(selectedTicket.targetDepartment || '');
+                      setIsApproveModalOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
                   >
-                    Accept Requisition
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Approve &amp; Route</span>
                   </button>
                 )}
 
-                {ticketPerms.canProcess && (
+                {ticketPerms.canClarify && (
                   <button
-                    onClick={() => updateStatusMutation.mutate({ id: selectedTicket.ticketId, status: 'Processing' })}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                    onClick={() => setIsClarifyModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-500/20 text-orange-400 hover:bg-orange-600 hover:text-white border border-orange-500/30 text-xs font-bold transition-all cursor-pointer"
                   >
-                    Mark Processing
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Request Clarification</span>
+                  </button>
+                )}
+
+                {ticketPerms.canRespondClarify && (
+                  <button
+                    onClick={() => setIsRespondClarifyModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Submit Clarification</span>
+                  </button>
+                )}
+
+                {ticketPerms.canAcknowledge && (
+                  <button
+                    onClick={() => acknowledgeMutation.mutate(selectedTicket.ticketId)}
+                    disabled={acknowledgeMutation.isLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Acknowledge Receipt</span>
+                  </button>
+                )}
+
+                {ticketPerms.canAssign && (
+                  <button
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Assign Operator</span>
+                  </button>
+                )}
+
+                {ticketPerms.canUpload && !selectedTicket.evidence && (
+                  <button
+                    onClick={() => setDetailTab('evidence')}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Footage</span>
+                  </button>
+                )}
+
+                {ticketPerms.canComplete && (
+                  <button
+                    onClick={() => completeMutation.mutate({ id: selectedTicket.ticketId })}
+                    disabled={completeMutation.isLoading}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Mark Completed &amp; Certified</span>
+                  </button>
+                )}
+
+                {ticketPerms.canExportCertificate && (
+                  <button
+                    onClick={handleOpenEvidencePackage}
+                    disabled={isPackageLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600 hover:text-white border border-cyan-500/30 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <FileCheck className="w-3.5 h-3.5" />
+                    <span>Sec 65B Certificate</span>
                   </button>
                 )}
 
                 {ticketPerms.canReject && (
                   <button
                     onClick={() => setIsRejectModalOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-600 hover:text-white dark:bg-rose-600/20 dark:text-rose-400 dark:border-rose-500/30 text-xs font-bold transition-all cursor-pointer"
+                    className="px-3 py-2 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-600 hover:text-white dark:bg-rose-600/20 dark:text-rose-400 dark:border-rose-500/30 text-xs font-bold transition-all cursor-pointer"
                   >
                     Reject
-                  </button>
-                )}
-
-                {ticketPerms.canClose && (
-                  <button
-                    onClick={() => updateStatusMutation.mutate({ id: selectedTicket.ticketId, status: 'Closed' })}
-                    className="px-3.5 py-2 rounded-xl bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer"
-                  >
-                    Close &amp; Seal
                   </button>
                 )}
 
@@ -952,8 +1400,66 @@ export default function FootageRequestsPage() {
                   {/* TAB 1: OVERVIEW */}
                   {detailTab === 'overview' && (
                     <div className="space-y-5">
+                      {/* Emergency Banner if Applicable */}
+                      {selectedTicket.isEmergency && (
+                        <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/40 text-xs text-red-400 space-y-1">
+                          <div className="flex items-center gap-2 font-black text-red-500">
+                            <AlertTriangle className="w-4 h-4 animate-bounce" />
+                            <span>🚨 EMERGENCY REQUISITION BYPASS ACTIVATED</span>
+                          </div>
+                          <p className="text-slate-300">
+                            This ticket bypassed standard Central Control Room review under emergency life-safety protocols.
+                          </p>
+                          <p className="font-mono text-red-300">
+                            <strong>Official Justification:</strong> {selectedTicket.emergencyReason}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* SLA Progress & Countdown Card */}
+                      {selectedTicket.dueAt && (
+                        <div className={`p-4 rounded-2xl border flex flex-wrap items-center justify-between gap-4 ${
+                          selectedTicket.isOverdue || selectedTicket.slaStatus === 'BREACHED'
+                            ? 'bg-rose-500/10 border-rose-500/30'
+                            : (selectedTicket.slaRemainingMinutes !== undefined && selectedTicket.slaRemainingMinutes < 120)
+                            ? 'bg-amber-500/10 border-amber-500/30'
+                            : isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/3 border-white/5'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <Clock className={`w-5 h-5 ${
+                              selectedTicket.isOverdue ? 'text-rose-500 animate-spin' : 'text-blue-500'
+                            }`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs">Statutory SLA Window</span>
+                                <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded ${
+                                  selectedTicket.isOverdue
+                                    ? 'bg-rose-500 text-white'
+                                    : 'bg-emerald-500/20 text-emerald-400'
+                                }`}>
+                                  {selectedTicket.isOverdue ? 'OVERDUE / BREACHED' : 'ON TRACK'}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                Due At: <strong>{new Date(selectedTicket.dueAt).toLocaleString()}</strong>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="font-mono text-right text-xs">
+                            <span className="text-slate-500 block text-[10px]">REMAINING</span>
+                            <span className="text-sm font-black">
+                              {selectedTicket.isOverdue
+                                ? 'EXPIRED'
+                                : selectedTicket.slaRemainingMinutes !== undefined
+                                ? `${Math.floor(selectedTicket.slaRemainingMinutes / 60)}h ${selectedTicket.slaRemainingMinutes % 60}m`
+                                : `${selectedTicket.slaMinutes || 1440}m SLA`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Department Context Cards */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        
                         {/* Requesting Context */}
                         <div className={`p-4 rounded-2xl border ${
                           isLight ? 'bg-blue-50/40 border-blue-200' : 'bg-white/3 border-white/5'
@@ -979,9 +1485,69 @@ export default function FootageRequestsPage() {
                             <p><span className="text-slate-500 font-medium">Department:</span> <strong className="font-bold">{selectedTicket.targetDepartment}</strong></p>
                             <p><span className="text-slate-500 font-medium">Camera:</span> {selectedTicket.cameraName} ({selectedTicket.cameraId})</p>
                             <p><span className="text-slate-500 font-medium">Location:</span> {selectedTicket.locationName}, {selectedTicket.district}</p>
+                            {selectedTicket.assignedOperatorName && (
+                              <p><span className="text-purple-400 font-bold">Assigned Operator:</span> <strong>{selectedTicket.assignedOperatorName}</strong></p>
+                            )}
                           </div>
                         </div>
                       </div>
+
+                      {/* Nodal Control Room Approval / Review Details */}
+                      {selectedTicket.approval?.approvedByName && (
+                        <div className={`p-4 rounded-2xl border ${
+                          isLight ? 'bg-emerald-50/30 border-emerald-200' : 'bg-emerald-500/5 border-emerald-500/20'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                              Central Control Room Nodal Authorization
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div>
+                              <span className="text-slate-500 text-[11px]">Authorized By:</span>
+                              <p className="font-bold mt-0.5">{selectedTicket.approval.approvedByName}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 text-[11px]">Approval Date:</span>
+                              <p className="font-bold mt-0.5">{new Date(selectedTicket.approval.approvedAt).toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <span className="text-slate-500 text-[11px]">Routing Instructions:</span>
+                              <p className="font-bold mt-0.5">{selectedTicket.approval.remarks || 'Standard Routing'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Clarification Box if Active */}
+                      {selectedTicket.clarification?.question && (
+                        <div className={`p-4 rounded-2xl border ${
+                          selectedTicket.clarification.status === 'answered'
+                            ? 'bg-blue-500/10 border-blue-500/20'
+                            : 'bg-orange-500/10 border-orange-500/30 animate-pulse'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare className="w-4 h-4 text-orange-400" />
+                            <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">
+                              Clarification Inquiry from Nodal Officer
+                            </span>
+                          </div>
+                          <p className="text-xs font-medium text-slate-200 mb-2">
+                            "{selectedTicket.clarification.question}"
+                          </p>
+                          {selectedTicket.clarification.response ? (
+                            <div className="pt-2 border-t border-white/10 text-xs">
+                              <span className="text-slate-400 text-[11px]">Response Provided:</span>
+                              <p className="text-emerald-300 font-bold mt-0.5">"{selectedTicket.clarification.response}"</p>
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-orange-400 italic">
+                              Awaiting response from requesting officer.
+                            </p>
+                          )}
+                        </div>
+                      )}
 
                       {/* Time Duration Window */}
                       <div className={`p-4 rounded-2xl border ${
@@ -1165,15 +1731,65 @@ export default function FootageRequestsPage() {
                                 )}
                               </div>
 
+                              {/* Camera Confirmation & Mismatch Verification */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                                <div>
+                                  <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                                    Requisition Camera ID
+                                  </label>
+                                  <input
+                                    type="text"
+                                    readOnly
+                                    value={selectedTicket.cameraId}
+                                    className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-mono opacity-80 cursor-not-allowed ${
+                                      isLight ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white/5 border-white/10 text-slate-300'
+                                    }`}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                                    Uploaded Footage Camera ID
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder={`Defaults to ${selectedTicket.cameraId}`}
+                                    value={uploadedCameraId}
+                                    onChange={(e) => setUploadedCameraId(e.target.value)}
+                                    className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-mono ${inputThemeClass}`}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Mismatch Alert & Justification */}
+                              {uploadedCameraId && uploadedCameraId.trim() && uploadedCameraId.trim() !== selectedTicket.cameraId && (
+                                <div className="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-left space-y-2">
+                                  <div className="flex items-center gap-2 text-amber-500 text-xs font-bold">
+                                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                                    <span>Camera ID Mismatch Warning</span>
+                                  </div>
+                                  <p className="text-[11px] text-amber-400/90 leading-relaxed">
+                                    The uploaded footage camera (<span className="font-mono font-bold">{uploadedCameraId}</span>) differs from the requested camera (<span className="font-mono font-bold">{selectedTicket.cameraId}</span>). An authorized statutory override justification is required.
+                                  </p>
+                                  <textarea
+                                    required
+                                    rows={2}
+                                    placeholder="Mandatory Override Justification (e.g. Primary camera offline; adjacent PTZ junction camera captured the incident angle)..."
+                                    value={cameraOverrideReason}
+                                    onChange={(e) => setCameraOverrideReason(e.target.value)}
+                                    className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium border-amber-500/40 bg-black/20 text-slate-100`}
+                                  />
+                                </div>
+                              )}
+
                               <div>
-                                <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
-                                  Officer Remarks / Channel Info (Optional)
+                                <label className={`text-xs font-bold block mb-1 text-left ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                                  Operator Notes / NVR Channel Info (Optional)
                                 </label>
                                 <input
                                   type="text"
                                   value={uploadRemarks}
                                   onChange={(e) => setUploadRemarks(e.target.value)}
-                                  placeholder="e.g. Channel 4 NVR Export, Traffic Command Junction"
+                                  placeholder="e.g. Channel 4 NVR Export, 1080p 25fps raw feed"
                                   className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${inputThemeClass}`}
                                 />
                               </div>
@@ -1388,25 +2004,20 @@ export default function FootageRequestsPage() {
                   <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                     CCTV Camera *
                   </label>
-                  <select
-                    required
+                  <SearchableCameraSelect
+                    cameras={camerasList}
                     value={createForm.cameraId}
-                    onChange={(e) => {
-                      const cid = e.target.value;
+                    required
+                    isLight={isLight}
+                    placeholder="Search by Camera ID, Area, Location, or Circle..."
+                    onChange={(camId, camDoc) => {
                       setCreateForm((p) => ({
                         ...p,
-                        cameraId: cid,
+                        cameraId: camId,
+                        targetDepartment: camDoc?.departmentName || p.targetDepartment,
                       }));
                     }}
-                    className={`w-full px-3.5 py-2.5 text-xs rounded-xl border outline-none font-medium cursor-pointer ${inputThemeClass}`}
-                  >
-                    <option value="">Select CCTV Camera...</option>
-                    {camerasList.map((c) => (
-                      <option key={c._id} value={c.cameraId}>
-                        {c.name || c.cameraId} — {c.locationName || c.district}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -1486,6 +2097,58 @@ export default function FootageRequestsPage() {
                 />
               </div>
 
+              {/* Emergency Requisition Toggle */}
+              <div className={`p-4 rounded-2xl border transition-all ${
+                createForm.isEmergency
+                  ? 'bg-rose-500/10 border-rose-500/40 text-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.15)]'
+                  : isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/3 border-white/5'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <AlertTriangle className={`w-4 h-4 ${createForm.isEmergency ? 'text-rose-500 animate-pulse' : 'text-slate-400'}`} />
+                    <div>
+                      <label htmlFor="emergency-toggle" className={`text-xs font-bold cursor-pointer block ${
+                        createForm.isEmergency ? 'text-rose-600 dark:text-rose-400' : isLight ? 'text-slate-700' : 'text-slate-300'
+                      }`}>
+                        Declare Life-Safety / Hot Pursuit Emergency
+                      </label>
+                      <span className="text-[10px] text-slate-500">
+                        Bypasses Central Nodal vetting and routes directly to target department with strict 2-hour SLA.
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="emergency-toggle"
+                    checked={createForm.isEmergency}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setCreateForm((p) => ({
+                        ...p,
+                        isEmergency: checked,
+                        priority: checked ? 'urgent' : p.priority,
+                      }));
+                    }}
+                    className="w-4 h-4 rounded text-rose-600 cursor-pointer"
+                  />
+                </div>
+                {createForm.isEmergency && (
+                  <div className="mt-3 pt-3 border-t border-rose-500/20 space-y-2">
+                    <p className="text-[11px] text-rose-400 font-bold">
+                      Mandatory Emergency Justification:
+                    </p>
+                    <textarea
+                      required={createForm.isEmergency}
+                      rows={2}
+                      placeholder="Describe active pursuit, hostage situation, life endangerment, or urgent statutory court deadline..."
+                      value={createForm.emergencyReason}
+                      onChange={(e) => setCreateForm((p) => ({ ...p, emergencyReason: e.target.value }))}
+                      className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium border-rose-500/40 bg-black/20 text-slate-100 placeholder-slate-400`}
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Compliance Box */}
               <div className={`p-4 rounded-2xl border flex items-start gap-3 ${
                 isLight ? 'bg-amber-50/70 border-amber-200' : 'bg-amber-500/10 border-amber-500/20'
@@ -1528,7 +2191,7 @@ export default function FootageRequestsPage() {
       )}
 
       {/* ─── MODAL: REJECT REQUISITION ───────────────────────────────── */}
-      {isRejectModalOpen && (
+      {isRejectModalOpen && selectedTicket && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
           <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl ${
             isLight ? 'bg-white border-rose-300 text-slate-900' : 'bg-[#121727] border-rose-500/30 text-slate-100'
@@ -1555,12 +2218,12 @@ export default function FootageRequestsPage() {
                 Cancel
               </button>
               <button
+                disabled={rejectMutation.isPending}
                 onClick={() => {
                   if (rejectionReason.trim()) {
-                    updateStatusMutation.mutate({
+                    rejectMutation.mutate({
                       id: selectedTicket.ticketId,
-                      status: 'Rejected',
-                      rejectionReason,
+                      reason: rejectionReason,
                     });
                   } else {
                     toast.error('Please enter a rejection reason');
@@ -1568,9 +2231,489 @@ export default function FootageRequestsPage() {
                 }}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-xs text-white font-bold cursor-pointer"
               >
-                Confirm Rejection
+                {rejectMutation.isPending ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: APPROVE & ROUTE (CENTRAL REVIEW) ─────────────────── */}
+      {isApproveModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className={`w-full max-w-lg rounded-2xl border p-6 space-y-4 shadow-2xl ${
+            isLight ? 'bg-white border-blue-300 text-slate-900' : 'bg-[#121727] border-blue-500/30 text-slate-100'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-blue-600 dark:text-blue-400">
+                  Nodal Approval &amp; Statutory Routing
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Authorizing Requisition #{selectedTicket.ticketId}
+                </p>
+              </div>
+            </div>
+
+            <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+              As Central Control Room Nodal Authority, approve this footage requisition for lawful extraction by the target department.
+            </p>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Target Department Routing Confirmation
+              </label>
+              <select
+                value={targetDeptOverride || selectedTicket.targetDepartment}
+                onChange={(e) => setTargetDeptOverride(e.target.value)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-bold cursor-pointer ${inputThemeClass}`}
+              >
+                {STANDARD_DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept} {dept === selectedTicket.targetDepartment ? '(Requested Target)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Routing Instructions &amp; Administrative Remarks
+              </label>
+              <textarea
+                rows={3}
+                placeholder="e.g. Approved per Section 91 CrPC requisition; route to Traffic Command NVR cell for urgent retrieval..."
+                value={approveRemarks}
+                onChange={(e) => setApproveRemarks(e.target.value)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium ${inputThemeClass}`}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsApproveModalOpen(false)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={approveMutation.isPending}
+                onClick={() => {
+                  approveMutation.mutate({
+                    id: selectedTicket.ticketId,
+                    remarks: approveRemarks,
+                    targetDepartmentOverride: targetDeptOverride || undefined,
+                  });
+                }}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{approveMutation.isPending ? 'Routing...' : 'Approve & Route'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: REQUEST CLARIFICATION ────────────────────────────── */}
+      {isClarifyModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl ${
+            isLight ? 'bg-white border-orange-300 text-slate-900' : 'bg-[#121727] border-orange-500/30 text-slate-100'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-500">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-orange-600 dark:text-orange-400">
+                  Request Inquiry / Clarification
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Requisition #{selectedTicket.ticketId}
+                </p>
+              </div>
+            </div>
+
+            <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+              Send an inquiry back to the requesting department ({selectedTicket.requestingDepartment}) for missing case details, narrower time frames, or statutory warrants.
+            </p>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Clarification Inquiry *
+              </label>
+              <textarea
+                rows={3}
+                required
+                placeholder="e.g. Please clarify exact camera angle required and specify the relevant GD/FIR case reference..."
+                value={clarifyQuestion}
+                onChange={(e) => setClarifyQuestion(e.target.value)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium ${inputThemeClass}`}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsClarifyModalOpen(false)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!clarifyQuestion.trim() || clarifyMutation.isPending}
+                onClick={() => {
+                  clarifyMutation.mutate({
+                    id: selectedTicket.ticketId,
+                    question: clarifyQuestion,
+                  });
+                }}
+                className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{clarifyMutation.isPending ? 'Sending...' : 'Send Inquiry'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: RESPOND TO CLARIFICATION ─────────────────────────── */}
+      {isRespondClarifyModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl ${
+            isLight ? 'bg-white border-blue-300 text-slate-900' : 'bg-[#121727] border-blue-500/30 text-slate-100'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-500">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-blue-600 dark:text-blue-400">
+                  Submit Clarification Response
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Requisition #{selectedTicket.ticketId}
+                </p>
+              </div>
+            </div>
+
+            {/* Existing Question */}
+            <div className="p-3.5 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs">
+              <span className="text-[11px] font-bold text-orange-400 block mb-1">Nodal Officer Inquiry:</span>
+              <p className="font-medium text-slate-200">
+                "{selectedTicket.clarification?.question}"
+              </p>
+            </div>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Official Response *
+              </label>
+              <textarea
+                rows={3}
+                required
+                placeholder="Provide the requested clarification, FIR details, or refined parameters..."
+                value={clarifyResponseText}
+                onChange={(e) => setClarifyResponseText(e.target.value)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border outline-none font-medium ${inputThemeClass}`}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsRespondClarifyModalOpen(false)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!clarifyResponseText.trim() || respondClarifyMutation.isPending}
+                onClick={() => {
+                  respondClarifyMutation.mutate({
+                    id: selectedTicket.ticketId,
+                    response: clarifyResponseText,
+                  });
+                }}
+                className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{respondClarifyMutation.isPending ? 'Submitting...' : 'Submit Response'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: ASSIGN OPERATOR (SUPERVISOR QUEUE) ───────────────── */}
+      {isAssignModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className={`w-full max-w-md rounded-2xl border p-6 space-y-4 shadow-2xl ${
+            isLight ? 'bg-white border-purple-300 text-slate-900' : 'bg-[#121727] border-purple-500/30 text-slate-100'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-500">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-purple-600 dark:text-purple-400">
+                  Assign CCTV Operator
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Requisition #{selectedTicket.ticketId}
+                </p>
+              </div>
+            </div>
+
+            <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
+              Assign an operational technician or sub-inspector within your department to extract and verify the CCTV footage.
+            </p>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Select Department Operator *
+              </label>
+              <select
+                required
+                value={selectedOperatorId}
+                onChange={(e) => setSelectedOperatorId(e.target.value)}
+                className={`w-full px-3 py-2.5 text-xs rounded-xl border outline-none font-bold cursor-pointer ${inputThemeClass}`}
+              >
+                <option value="">Choose an Operator...</option>
+                {departmentOperators.map((op) => (
+                  <option key={op._id} value={op._id}>
+                    {op.name} ({op.role} — {op.designation || op.department})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className={`text-xs font-bold block mb-1.5 ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                Supervisor Instructions (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Export 10 minutes prior and post incident timestamp"
+                value={assignmentRemarks}
+                onChange={(e) => setAssignmentRemarks(e.target.value)}
+                className={`w-full px-3 py-2 text-xs rounded-xl border outline-none ${inputThemeClass}`}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAssignModalOpen(false)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold ${
+                  isLight ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!selectedOperatorId || assignMutation.isPending}
+                onClick={() => {
+                  assignMutation.mutate({
+                    id: selectedTicket.ticketId,
+                    operatorId: selectedOperatorId,
+                    remarks: assignmentRemarks,
+                  });
+                }}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold shadow-md cursor-pointer flex items-center gap-2"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{assignMutation.isPending ? 'Assigning...' : 'Confirm Assignment'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: SECTION 65B COURT EVIDENCE PACKAGE ──────────────── */}
+      {isEvidencePackageOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className={`w-full max-w-4xl rounded-3xl border shadow-2xl overflow-hidden flex flex-col max-h-[92vh] ${
+            isLight ? 'bg-white border-slate-300 text-slate-900' : 'bg-[#0e1322] border-white/10 text-slate-100'
+          }`}>
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#141b30] border-white/10'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <FileCheck className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <h3 className="font-black text-sm text-emerald-600 dark:text-emerald-400">
+                    Section 65B Digital Evidence Certificate
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Bharatiya Sakshya Adhiniyam / Indian Evidence Act Electronic Record Manifest
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Print Certificate</span>
+                </button>
+                <button
+                  onClick={() => setIsEvidencePackageOpen(false)}
+                  className={`p-1 rounded-lg ${isLight ? 'text-slate-400 hover:text-slate-900' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Printable Content Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {isPackageLoading ? (
+                <div className="p-16 text-center text-xs text-slate-500 font-semibold">
+                  Compiling cryptographic evidence manifest and audit chain...
+                </div>
+              ) : evidencePackageData ? (
+                <div className="space-y-6 max-w-3xl mx-auto">
+                  
+                  {/* State Emblems / Header */}
+                  <div className="text-center border-b pb-4 border-slate-200 dark:border-white/10 space-y-1">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                      GOVERNMENT OF GUJARAT · HOME DEPARTMENT
+                    </p>
+                    <h2 className="text-base sm:text-lg font-black tracking-tight">
+                      CERTIFICATE OF ELECTRONIC EVIDENCE
+                    </h2>
+                    <p className="text-xs font-medium text-slate-500">
+                      Pursuant to Section 65B of the Indian Evidence Act, 1872 &amp; Section 63 of Bharatiya Sakshya Adhiniyam, 2023
+                    </p>
+                  </div>
+
+                  {/* Requisition & Case Metadata */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-xl border bg-slate-50 dark:bg-white/3 border-slate-200 dark:border-white/10 text-xs">
+                    <div>
+                      <span className="text-slate-500 text-[11px] block">Requisition ID:</span>
+                      <strong className="font-mono">{evidencePackageData.ticket?.ticketId}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[11px] block">FIR / CR Number:</span>
+                      <strong className="font-mono">{evidencePackageData.ticket?.firNumber || 'N/A'}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[11px] block">Requesting Dept:</span>
+                      <strong className="truncate block">{evidencePackageData.ticket?.requestingDepartment}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[11px] block">Target Dept:</span>
+                      <strong className="truncate block">{evidencePackageData.ticket?.targetDepartment}</strong>
+                    </div>
+                  </div>
+
+                  {/* Camera & Time Coordinates */}
+                  <div className="p-4 rounded-xl border bg-slate-50 dark:bg-white/3 border-slate-200 dark:border-white/10 space-y-2 text-xs">
+                    <p className="font-bold text-[11px] uppercase tracking-wider text-slate-500">Camera &amp; Feed Technical Manifest</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Camera ID:</span>
+                        <strong className="font-mono">{evidencePackageData.ticket?.cameraId}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Incident Time Range:</span>
+                        <span>{new Date(evidencePackageData.ticket?.startTime).toLocaleString()} to {new Date(evidencePackageData.ticket?.endTime).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 text-[11px] block">Duration:</span>
+                        <strong>{evidencePackageData.ticket?.durationMinutes} minutes</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cryptographic Parameters */}
+                  <div className="p-4 rounded-xl border bg-emerald-500/5 border-emerald-500/25 space-y-3 text-xs">
+                    <div className="flex items-center gap-2 text-emerald-500 font-bold">
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Cryptographic Integrity Seal (Section 65B Mandatory)</span>
+                    </div>
+                    <div className="space-y-1.5 font-mono text-[11px]">
+                      <div>
+                        <span className="text-slate-500 block">SHA-256 Checksum:</span>
+                        <div className="p-2 rounded bg-black/40 text-emerald-400 font-bold break-all border border-emerald-500/20">
+                          {evidencePackageData.evidence?.sha256Hash || 'N/A'}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <span className="text-slate-500 block">Cipher Standard:</span>
+                          <strong>AES-256-GCM (Hardware/Software Authenticated)</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Evidence Vault Asset:</span>
+                          <strong className="truncate block">{evidencePackageData.evidence?.evidenceId}</strong>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legal Attestation Statement */}
+                  <div className="p-4 rounded-xl border bg-slate-50 dark:bg-white/3 border-slate-200 dark:border-white/10 text-xs leading-relaxed space-y-2">
+                    <p className="font-bold text-[11px] uppercase tracking-wider text-slate-500">Official Officer Certification</p>
+                    <p className="italic text-slate-600 dark:text-slate-300">
+                      "I hereby certify that the electronic optical video recording identified above was extracted from the authorized DrishtiGrid CCTV network operating under regular official custody. The optical and cryptographic verification methods confirm that no modification, tampering, deletion, or interception occurred throughout the evidentiary custody lifecycle."
+                    </p>
+                    <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200 dark:border-white/10 text-[11px]">
+                      <div>
+                        <p className="text-slate-500">Prepared &amp; Uploaded By:</p>
+                        <p className="font-bold">{evidencePackageData.evidence?.uploadedByName || 'Authorized CCTV Operator'}</p>
+                        <p className="text-slate-500">{new Date(evidencePackageData.evidence?.createdAt || Date.now()).toLocaleDateString()}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-slate-500">Nodal Authority Authorization:</p>
+                        <p className="font-bold">{evidencePackageData.ticket?.approval?.approvedByName || 'State Nodal Officer'}</p>
+                        <p className="text-slate-500">Certified Electronic Custody</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chain of Custody Timeline */}
+                  {evidencePackageData.ticket?.timeline?.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="font-bold text-xs uppercase tracking-wider text-slate-500">Chain of Custody Events</p>
+                      <div className="space-y-2">
+                        {evidencePackageData.ticket.timeline.map((item, idx) => (
+                          <div key={idx} className="p-2.5 rounded-lg border border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-white/2 text-[11px] flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-blue-500">{item.action}</span>: {item.remarks}
+                            </div>
+                            <span className="text-slate-500 font-mono text-[10px]">
+                              {new Date(item.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              ) : null}
+            </div>
+
           </div>
         </div>
       )}

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Marker, Circle, Popup, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { gisAPI } from '../../api';
+import toast from 'react-hot-toast';
 import {
   AlertTriangle,
   Radio,
@@ -14,6 +15,8 @@ import {
   CheckSquare,
   Square,
   ArrowRight,
+  Trash2,
+  CheckCircle2,
 } from 'lucide-react';
 
 function createIncidentMarkerIcon(priority = 'P2', isSelected = false) {
@@ -57,6 +60,26 @@ export default function IncidentRadiusLayer({
 }) {
   const [incidentRadius, setIncidentRadius] = useState(500); // 250, 500, 1000 meters
   const [selectedCamerasForEvidence, setSelectedCamerasForEvidence] = useState([]);
+  const queryClient = useQueryClient();
+  const isAdmin = String(userRole || '').toUpperCase() === 'ADMIN' || String(userRole || '').toUpperCase() === 'SUPERADMIN';
+
+  const resolveIncidentMutation = useMutation({
+    mutationFn: (id) => gisAPI.updateIncidentStatus(id, { status: 'resolved' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['gis-incidents']);
+      toast.success('Incident marked as Resolved and cleared from active surveillance grid');
+    },
+    onError: () => toast.error('Failed to update incident status'),
+  });
+
+  const deleteIncidentMutation = useMutation({
+    mutationFn: (id) => gisAPI.deleteIncident(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['gis-incidents']);
+      toast.success('Incident deleted successfully');
+    },
+    onError: () => toast.error('Failed to delete incident'),
+  });
 
   const selId = selectedIncident?.incidentId || selectedIncident?._id;
 
@@ -173,6 +196,37 @@ export default function IncidentRadiusLayer({
                         </div>
                       </div>
                     )}
+
+                    {/* Management & Status Actions */}
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-white/10 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => resolveIncidentMutation.mutate(inc._id || inc.incidentId)}
+                        disabled={resolveIncidentMutation.isPending}
+                        className="flex-1 py-1.5 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Mark as resolved (removes from active surveillance map)"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{resolveIncidentMutation.isPending ? 'Resolving...' : 'Resolve Incident'}</span>
+                      </button>
+
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Permanently delete incident #${inc.incidentId}?`)) {
+                              deleteIncidentMutation.mutate(inc._id || inc.incidentId);
+                            }
+                          }}
+                          disabled={deleteIncidentMutation.isPending}
+                          className="py-1.5 px-2.5 rounded-lg bg-red-600/15 hover:bg-red-600/25 text-red-500 hover:text-red-600 border border-red-500/30 transition-colors cursor-pointer flex items-center justify-center gap-1 text-[11px] font-semibold disabled:opacity-50"
+                          title="Delete Incident"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Suggested Evidence Cameras */}

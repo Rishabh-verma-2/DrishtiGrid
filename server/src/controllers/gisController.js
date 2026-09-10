@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Camera = require('../models/Camera');
 const Incident = require('../models/Incident');
 const Alert = require('../models/Alert');
@@ -880,6 +881,50 @@ const createGisIncident = async (req, res) => {
   }
 };
 
+const updateGisIncidentStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status = 'resolved' } = req.body;
+    const incident = await Incident.findOne({
+      $or: [{ _id: mongoose.isValidObjectId(id) ? id : null }, { incidentId: id }],
+    });
+    if (!incident) {
+      return res.status(404).json({ success: false, message: 'Incident not found' });
+    }
+    incident.status = status;
+    incident.timeline.push({
+      action: `Status updated to ${status}`,
+      performedBy: req.user?._id,
+      timestamp: new Date(),
+    });
+    await incident.save();
+
+    req.io?.emit('incident:updated', incident);
+    res.status(200).json({ success: true, data: incident });
+  } catch (error) {
+    logger.error(`Update GIS incident status error: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const deleteGisIncident = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const incident = await Incident.findOneAndDelete({
+      $or: [{ _id: mongoose.isValidObjectId(id) ? id : null }, { incidentId: id }],
+    });
+    if (!incident) {
+      return res.status(404).json({ success: false, message: 'Incident not found' });
+    }
+
+    req.io?.emit('incident:deleted', { incidentId: incident.incidentId, _id: incident._id });
+    res.status(200).json({ success: true, message: 'Incident deleted successfully' });
+  } catch (error) {
+    logger.error(`Delete GIS incident error: ${error.message}`);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   searchGis,
   getNearbyIntelligence,
@@ -895,4 +940,6 @@ module.exports = {
   getIncidentContext,
   getGisIncidents,
   createGisIncident,
+  updateGisIncidentStatus,
+  deleteGisIncident,
 };

@@ -6,13 +6,16 @@
 
 const express = require('express');
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
+const { authenticate, requirePermission } = require('../middleware/auth');
 const {
   analyzeFrame,
   getCrowdAlerts,
   getCrowdStats,
   resetCameraBaseline,
 } = require('../controllers/crowdController');
+
+router.use(authenticate);
+router.use(requirePermission('crowd'));
 
 /**
  * @route   POST /api/crowd/analyze

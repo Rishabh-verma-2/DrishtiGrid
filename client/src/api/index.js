@@ -50,6 +50,16 @@ export const footageTicketAPI = {
   getStats: () => apiClient.get('/footage-tickets/stats'),
   getById: (id) => apiClient.get(`/footage-tickets/${id}`),
   create: (data) => apiClient.post('/footage-tickets', data),
+  approve: (id, data) => apiClient.post(`/footage-tickets/${id}/approve`, data),
+  reject: (id, data) => apiClient.post(`/footage-tickets/${id}/reject`, data),
+  acknowledge: (id) => apiClient.post(`/footage-tickets/${id}/acknowledge`),
+  assign: (id, data) => apiClient.post(`/footage-tickets/${id}/assign`, data),
+  getDepartmentOperators: () => apiClient.get('/footage-tickets/department-operators'),
+  requestClarification: (id, data) => apiClient.post(`/footage-tickets/${id}/clarify`, data),
+  respondClarification: (id, data) => apiClient.post(`/footage-tickets/${id}/clarify-response`, data),
+  getEvidenceToken: (id, evidenceId) => apiClient.post(`/footage-tickets/${id}/evidence/${evidenceId}/token`),
+  complete: (id, data) => apiClient.post(`/footage-tickets/${id}/complete`, data),
+  getEvidencePackage: (id) => apiClient.get(`/footage-tickets/${id}/evidence-package`),
   updateStatus: (id, data) => apiClient.patch(`/footage-tickets/${id}/status`, data),
   uploadEvidence: (id, formData) =>
     apiClient.post(`/footage-tickets/${id}/evidence`, formData, {
@@ -69,6 +79,8 @@ export const notificationAPI = {
   getAll: (params) => apiClient.get('/notifications', { params }),
   markRead: (id) => apiClient.patch(`/notifications/${id}/read`),
   markAllRead: () => apiClient.patch('/notifications/read-all'),
+  delete: (id) => apiClient.delete(`/notifications/${id}`),
+  clearRead: () => apiClient.delete('/notifications/clear-read'),
 };
 
 export const userAPI = {
@@ -196,6 +208,8 @@ export const gisAPI = {
   getIncidentContext: (id, params) => apiClient.get(`/gis/incident/${id}/context`, { params }),
   getIncidents: (params) => apiClient.get('/gis/incidents', { params }),
   createIncident: (data) => apiClient.post('/gis/incidents', data),
+  updateIncidentStatus: (id, data) => apiClient.patch(`/gis/incidents/${id}/status`, data),
+  deleteIncident: (id) => apiClient.delete(`/gis/incidents/${id}`),
 };
 
 

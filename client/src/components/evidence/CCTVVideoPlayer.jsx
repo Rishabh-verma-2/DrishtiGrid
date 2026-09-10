@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import apiClient from '../../api/apiClient';
+import { footageTicketAPI } from '../../api';
 
 export default function CCTVVideoPlayer({
   ticket,
@@ -44,6 +45,7 @@ export default function CCTVVideoPlayer({
   const [loadError, setLoadError] = useState(null);
   const [blobUrl, setBlobUrl] = useState(null);
   const [showControls, setShowControls] = useState(true);
+  const [evidenceToken, setEvidenceToken] = useState('');
   const controlsTimeoutRef = useRef(null);
 
   // Formatted evidence and camera details
@@ -52,17 +54,15 @@ export default function CCTVVideoPlayer({
   const locationName = ticket?.locationName || ticket?.camera?.locationName || 'Gujarat Jurisdiction';
   const sha256 = evidence?.sha256Hash || ticket?.mediaHash || '';
 
-  // ─── Fetch Authenticated Video Blob ─────────────────────────────
+  // ─── Fetch Authenticated Video Blob with Short-Lived Token ───────
   const loadAuthenticatedVideo = useCallback(async () => {
     setIsLoading(true);
     setLoadError(null);
 
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
     const ticketIdent = ticket?.ticketId || ticket?._id;
     const evidenceIdent = evidence?.evidenceId || evidence?._id;
 
     if (!ticketIdent || !evidenceIdent) {
-      // If direct streamUrl is provided, parse it
       if (!streamUrl) {
         setLoadError('No streaming URL or evidence identifier configured for this ticket.');
         setIsLoading(false);
@@ -70,10 +70,23 @@ export default function CCTVVideoPlayer({
       }
     }
 
-    const endpoint = `/footage-tickets/${ticketIdent}/evidence/${evidenceIdent}/stream`;
-
     try {
-      // First attempt: Fetch authenticated blob via apiClient (passes Authorization: Bearer <accessToken>)
+      // Step 1: Obtain short-lived signed evidence access token (15 min)
+      let token = '';
+      if (ticketIdent && evidenceIdent) {
+        try {
+          const tokenRes = await footageTicketAPI.getEvidenceToken(ticketIdent, evidenceIdent);
+          if (tokenRes.data?.token) {
+            token = tokenRes.data.token;
+            setEvidenceToken(token);
+          }
+        } catch (tErr) {
+          console.warn('Short-lived evidence token fallback:', tErr.message);
+        }
+      }
+
+      // Step 2: Fetch decrypted video blob via authenticated API
+      const endpoint = `/footage-tickets/${ticketIdent}/evidence/${evidenceIdent}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
       const res = await apiClient.get(endpoint, {
         responseType: 'blob',
       });
@@ -83,8 +96,8 @@ export default function CCTVVideoPlayer({
       setIsLoading(false);
     } catch (err) {
       console.warn('apiClient blob fetch fallback to direct URL stream:', err.message);
-      // Fallback: Use direct stream URL with valid query token
-      const fallbackUrl = streamUrl || `/api${endpoint}?token=${encodeURIComponent(token)}`;
+      const endpoint = `/footage-tickets/${ticketIdent}/evidence/${evidenceIdent}/stream`;
+      const fallbackUrl = streamUrl || `/api${endpoint}`;
       setBlobUrl(fallbackUrl);
       setIsLoading(false);
     }

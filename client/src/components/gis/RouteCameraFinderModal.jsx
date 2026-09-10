@@ -14,8 +14,10 @@ import {
   Video,
   FileText,
   Eye,
+  Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isCameraInUserDepartment } from '../../utils/permissions';
 
 const PRESET_ROUTES = [
   {
@@ -47,8 +49,10 @@ export default function RouteCameraFinderModal({
   onOpenStream,
   onRequestFootage,
   isLight = false,
+  user = null,
   userRole = 'POLICE',
 }) {
+  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(String(user?.role || userRole || '').toUpperCase());
   const [startCoords, setStartCoords] = useState('72.5928, 23.0569');
   const [destCoords, setDestCoords] = useState('72.5255, 23.0768');
   const [corridorWidth, setCorridorWidth] = useState(150); // meters
@@ -299,23 +303,24 @@ export default function RouteCameraFinderModal({
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {isOnline && onOpenStream && (
+                        {isOnline && onOpenStream && isCameraInUserDepartment(user, c.camera || c) ? (
                           <button
-                            onClick={() => onOpenStream(c.camera)}
-                            title="Open Live Feed"
+                            onClick={() => onOpenStream(c.camera || c)}
+                            title="Open Live Feed (Own Department)"
                             className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 cursor-pointer"
                           >
                             <Video className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        {canRequestFootage && onRequestFootage && (
-                          <button
-                            onClick={() => onRequestFootage(c.camera)}
-                            title="Request Footage"
-                            className="p-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-400 border border-blue-500/30 cursor-pointer"
-                          >
-                            <FileText className="w-3.5 h-3.5" />
-                          </button>
+                        ) : (
+                          !isAdmin && onRequestFootage && (
+                            <button
+                              onClick={() => onRequestFootage(c.camera || c)}
+                              title={`Inter-Department Camera (${c.department || 'Other Dept'}) - Request Footage from Admin`}
+                              className="p-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 cursor-pointer flex items-center"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                            </button>
+                          )
                         )}
                       </div>
                     </div>

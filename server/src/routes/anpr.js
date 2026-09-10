@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { authenticate, authorize } = require('../middleware/auth');
+const { authenticate, authorize, requirePermission } = require('../middleware/auth');
 const {
   analyzeVehicleImages,
   uploadAndAnalyzeVideo,
@@ -56,6 +56,7 @@ const uploadVideo = multer({
 // All ANPR endpoints require authentication & government role authorization
 router.use(authenticate);
 router.use(authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'));
+router.use(requirePermission('anpr'));
 
 // Vehicle Image Analysis (single or batch up to 10 images)
 router.post(

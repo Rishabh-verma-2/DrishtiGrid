@@ -23,8 +23,13 @@ const authenticate = async (req, res, next) => {
       });
     }
     const decoded = verifyAccessToken(token);
+    const userId = decoded.id || decoded.userId || decoded._id;
 
-    const user = await User.findById(decoded.id).select('-password -refreshToken');
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Invalid token payload' });
+    }
+
+    const user = await User.findById(userId).select('-password -refreshToken');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'User not found' });
@@ -109,4 +114,35 @@ const authenticateSocket = async (socket, next) => {
   }
 };
 
-module.exports = { authenticate, authorize, authenticateSocket };
+/**
+ * Require Permission - check if user has feature authority
+ * ADMIN/SUPERADMIN always has full access
+ */
+const requirePermission = (...permissions) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated' });
+    }
+    const role = String(req.user.role || '').toUpperCase();
+    if (['SUPERADMIN', 'ADMIN'].includes(role)) {
+      return next();
+    }
+
+    const effective = typeof req.user.getEffectivePermissions === 'function'
+      ? req.user.getEffectivePermissions()
+      : (Array.isArray(req.user.permissions) && req.user.permissions.length > 0
+          ? req.user.permissions
+          : (User.ROLE_DEFAULT_PERMISSIONS?.[role] || []));
+
+    const hasAccess = permissions.some((p) => effective.includes(p));
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: `Forbidden: You do not have permission for feature '${permissions.join(', ')}'. Contact Administrator.`,
+      });
+    }
+    next();
+  };
+};
+
+module.exports = { authenticate, authorize, requirePermission, authenticateSocket };

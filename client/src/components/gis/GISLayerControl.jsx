@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Layers,
   Camera,
@@ -28,13 +28,53 @@ export default function GISLayerControl({
   isLight = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const [placement, setPlacement] = useState('left');
 
   const toggle = (key) => {
     onChangeLayer(key, !layers[key]);
   };
 
+  // Close when clicking outside
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  // Dynamically calculate alignment so panel never overflows screen boundaries
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+
+    const updatePlacement = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      // If there's less than 320px to the right edge of viewport, align to the right (right-0)
+      // Otherwise align to the left (left-0) so it comfortably opens toward the center/right
+      if (windowWidth - rect.left < 320) {
+        setPlacement('right');
+      } else {
+        setPlacement('left');
+      }
+    };
+
+    updatePlacement();
+    window.addEventListener('resize', updatePlacement);
+    return () => window.removeEventListener('resize', updatePlacement);
+  }, [isOpen]);
+
   return (
-    <div className="relative">
+    <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -54,7 +94,9 @@ export default function GISLayerControl({
 
       {isOpen && (
         <div
-          className={`absolute top-full right-0 mt-2 z-[1200] w-72 rounded-2xl border p-4 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 ${
+          className={`absolute top-full ${
+            placement === 'right' ? 'right-0' : 'left-0'
+          } mt-2 z-[1200] w-72 sm:w-80 max-w-[calc(100vw-1.5rem)] rounded-2xl border p-4 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200 ${
             isLight
               ? 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/50'
               : 'bg-[#0d121f]/95 border-white/10 text-slate-100 shadow-[0_12px_40px_rgba(0,0,0,0.6)]'
