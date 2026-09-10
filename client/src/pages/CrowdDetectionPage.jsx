@@ -102,7 +102,7 @@ export default function CrowdDetectionPage() {
   const [gridRows, gridCols] = gridConfig.split('x').map((n) => parseInt(n, 10));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-12">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-16">
       {/* ─── Top Header ─── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -253,21 +253,8 @@ export default function CrowdDetectionPage() {
 
       {/* ─── Main Two-Column Workstation ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Image Viewer & Upload Dropzone (7 of 12 cols) */}
+        {/* Left Column: Upload Dropzone & Image Viewer (7 of 12 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          <CrowdFrameViewer
-            annotatedSrc={analysisResult?.annotated_image_b64}
-            rawSrc={filePreview}
-            cameraName={selectedFile?.name || 'Uploaded Image'}
-            cameraId="image-upload"
-            crowdLevel={analysisResult?.crowd_level || 'LOW'}
-            timingMs={analysisResult?.processing_time_ms ?? analysisResult?.timing_ms}
-            zones={analysisResult?.zones || []}
-            gridRows={gridRows}
-            gridCols={gridCols}
-            isLight={isLight}
-          />
-
           {/* Drag & Drop Upload Zone */}
           <div
             onDragOver={(e) => {
@@ -312,6 +299,20 @@ export default function CrowdDetectionPage() {
               </div>
             </div>
           </div>
+
+          {/* Image Preview & YOLOv8 Annotation Viewer */}
+          <CrowdFrameViewer
+            annotatedSrc={analysisResult?.annotated_image_b64}
+            rawSrc={filePreview}
+            cameraName={selectedFile?.name || 'Uploaded Image'}
+            cameraId="image-upload"
+            crowdLevel={analysisResult?.crowd_level || 'LOW'}
+            timingMs={analysisResult?.processing_time_ms ?? analysisResult?.timing_ms}
+            zones={analysisResult?.zones || []}
+            gridRows={gridRows}
+            gridCols={gridCols}
+            isLight={isLight}
+          />
         </div>
 
         {/* Right Column: Itemized Person Detections & Sector Matrix (5 of 12 cols) */}

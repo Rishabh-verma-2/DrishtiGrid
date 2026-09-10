@@ -27,6 +27,8 @@
    - [8. 👥 3-Role Government RBAC & Security](#8--3-role-government-rbac--security)
    - [9. 🔔 Real-Time Notification & Alert Dispatch](#9--real-time-notification--alert-dispatch)
    - [10. 🧠 Crowd Detection & Scene Object Inventory](#10--crowd-detection--scene-object-inventory)
+   - [11. 📤 Bulk Camera Onboarding & GIS Registry Import](#11--bulk-camera-onboarding--gis-registry-import)
+   - [12. 🏢 Department Escalation & Offline Camera Ticketing](#12--department-escalation--offline-camera-ticketing)
 4. [Project Directory Structure](#-project-directory-structure)
 5. [Quick Start Guide (One-Click Setup & Launch)](#-quick-start-guide)
 6. [API Reference Overview](#-api-reference-overview)
@@ -101,10 +103,35 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
 - **Multi-Layout Switcher:** Grid (30 feeds), Quad (2x2), Matrix (3x3), and Theater/Spotlight mode.
 - **PTZ Simulation & HUD:** Pan, tilt, digital zoom reticle, and watermarked PNG frame capture.
 
-### 2. 🗺️ Gujarat GIS Spatial Command Map
-- Interactive geospatial map built on **Leaflet** & **OpenStreetMap** with camera clustering (`leaflet.markercluster`).
-- Covers all major Gujarat districts: Ahmedabad, Gandhinagar, Surat, Vadodara, Rajkot, Bhavnagar, Jamnagar, Junagadh, Anand, Bharuch, Mehsana, Kutch, and more.
-- Real-time unit distribution, live camera density heatmap, and click-to-inspect feeds.
+### 2. 🗺️ Gujarat GIS Spatial Command & Control System
+A state-grade geospatial command center built on **Leaflet**, **OpenStreetMap**, and **MongoDB 2dsphere Geospatial Indexing**, engineered for Gujarat State Police Headquarters and Municipal Smart Cities (Netram ICCC).
+
+- **Unified Omnibar Search & Inverted Area Masking**:
+  - Global debounced search indexing administrative districts, live camera units, operational geofence zones, and critical infrastructure.
+  - GeoJSON boundary highlighting with inverted masking (darkens non-selected regions to focus law enforcement attention on the active jurisdiction).
+  - Smooth camera flight animations (`map.flyTo` and dynamic bounding-box auto-zoom).
+- **Streamlined Single-Line Government Command Header**:
+  - Unified search bar, quick 33-district selector, and cascading jurisdiction filters arranged in an ergonomic, non-wrapping single line.
+  - Secondary cascading hierarchy filter (`AdminHierarchyFilter`): District ➔ City / Taluka ➔ Operational Zone ➔ Police Station jurisdiction.
+- **OpenStreetMap Real Critical Infrastructure Pipeline (6,200+ Gujarat Facilities)**:
+  - Live Overpass API ingestion script (`server/scripts/fetchGujaratOsmData.js` / `npm run fetch:osm`) fetching authentic facilities across Gujarat.
+  - Ingested **6,216 real-world facilities**: **5,451 Hospitals & Health Centers**, **76 Police Stations**, **678 Railway Stations**, and **Fire Stations**.
+  - Dynamic bottom-left Map Legend displaying real aggregate infrastructure counts per district with 1-click surrounding camera discovery.
+- **Admin Geofencing & Operational Zone Management Hub**:
+  - Dedicated **Zone Manager Hub** (`ZoneManagerModal`) empowering Admins and Police Chiefs to view, search, filter, fly-to, toggle active/inactive, delete, and create radial or polygon geofences.
+  - Custom rule engine for intrusion detection, curfew hours, speed limits, vehicle restrictions, and automatic alert dispatch via Socket.IO.
+- **CCTV Coverage Gap & Blind Spot Analysis**:
+  - Real-time geospatial visual radius coverage modeling (150m, 300m, 500m per camera node).
+  - Unmonitored intersection detection, coverage efficiency scores (%), and 1-click strategic camera deployment placement markers.
+- **Route-Based Camera Discovery (Corridor Tracking)**:
+  - Source-to-destination route corridor discovery with configurable spatial buffers (100m, 250m, 500m).
+  - Sequenced camera discovery along major state corridors (e.g., SG Highway, SP Ring Road, Ahmedabad–Gandhinagar Expressway) for suspect vehicle pursuit and convoy protection.
+- **Nearby Intelligence & Incident Radius Engine**:
+  - Radial spatial analysis (500m, 1km, 2km) around any map coordinate or camera node.
+  - Immediate proximity breakdown of nearby active cameras, police stations, civil hospitals, active incidents, and crowd density.
+- **Adaptive Government Theme & Stacking Hierarchy**:
+  - Non-overlapping z-index hierarchy (`z-[1500]` toolbar, `z-[3000]` autocomplete dropdown, `z-[99999]` modals/notifications, `z-[1000]` map controls).
+  - Bulletproof High-Contrast Light Mode (`theme-light`) and Tactical Dark Mode (`theme-dark`) with real-time dynamic evaluation.
 
 ### 3. 🚔 ANPR & AI Vehicle Surveillance Engine — *Vehicle-First Multi-Vehicle Architecture*
 - **Strict Vehicle-First Detection Pipeline**:
@@ -199,6 +226,40 @@ A fully integrated, zero-new-install crowd intelligence module built on the exis
 
 **API:** `POST /api/crowd/analyze` · `GET /api/crowd/alerts` · `GET /api/crowd/stats` · `POST /api/crowd/reset/:camId`
 
+### 11. 📤 Bulk Camera Onboarding & GIS Registry Import
+A production-grade, government-spec spreadsheet ingestion engine enabling authorized administrators to safely onboard hundreds of surveillance camera nodes at once via Excel (`.xlsx` or `.xls`) without risking database corruption or duplicate records.
+
+- **Multi-Sheet Template Generator (`GET /api/cameras/bulk/template`)**:
+  - Dynamically generated via `exceljs` with an **Instructions & Field Definitions** sheet, a stylized **Camera Data Entry** sheet with embedded data-validation dropdowns, and an **Allowed Values & Enums Reference** sheet.
+- **Smart Header & Column Aliasing**:
+  - Automatically resolves colloquial or legacy column headers (e.g., `cam_id` / `Camera ID` ➔ `cameraId`, `lat` ➔ `latitude`, `lng_coord` ➔ `longitude`, `dist` ➔ `district`, `dept` ➔ `departmentCode`).
+- **Comprehensive Geolocation Bounds Validation**:
+  - **Global Bounds**: Strictly enforces valid geographic coordinates ($-90 \le \text{lat} \le 90$, $-180 \le \text{lng} \le 180$) as fatal errors.
+  - **Gujarat Regional Bounding Box**: Automatically flags coordinates falling outside the Gujarat bounding box ($20.0 \le \text{lat} \le 24.8$, $68.0 \le \text{lng} \le 74.5$) as non-blocking operator warnings.
+- **Two-Tier Duplicate Collision Prevention**:
+  - **In-File Deduplication**: Flags duplicate camera IDs within the same uploaded spreadsheet.
+  - **Database Registry Collision**: Cross-references candidate camera IDs against active registered cameras in MongoDB, excluding existing nodes to protect current operational configurations.
+- **State Isolation & Pre-Save Analysis Session**:
+  - Ingestion occurs in a sandboxed, temporary `ImportSession` with a 2-hour TTL. **Zero cameras are written to the database during the upload/validation phase.**
+- **Interactive Leaflet Pre-Save Map Preview**:
+  - Allows operators to preview candidate camera coordinates as temporary pins on a Leaflet map before persistence, verifying spatial distribution before committing to the state GIS registry.
+- **Atomic Two-Phase Commit & Audit Trail**:
+  - Mandatory administrator confirmation dialog. Valid records are committed atomically via MongoDB `bulkWrite`.
+  - Automatically logs an immutable `SystemAuditLog` entry documenting user ID, imported count, session ID, and timestamp.
+  - Dispatches a real-time `camera:bulk_imported` event over Socket.IO to instantly synchronize all connected GIS and monitoring consoles.
+- **Downloadable Excel Audit Report (`GET /api/cameras/bulk/import/:importId/report`)**:
+  - Generates an exportable diagnostic workbook with row-by-row status badges, problems detected, and suggested corrections.
+- **Automated Verification**:
+  - 34-test automated test suite (`npm run test:bulk-import`) ensuring 100% verification coverage across aliases, boundary rules, database duplicates, state isolation, atomic commits, and audit logging.
+
+### 12. 🏢 Department Escalation & Offline Camera Ticketing
+- **Netram ICCC Camera Fault Escalation**:
+  - Formal dispatch modal (`ReportToDeptModal`) for offline, malfunctioning, or vandalized cameras.
+  - Automatically routes tickets to designated departments (Gujarat Police, Traffic Command, Municipal Corporation, Roads & Buildings Department).
+  - Real-time notification broadcast via Socket.IO with priority levels (`Low`, `Medium`, `High`, `Critical`).
+- **Full Light & Dark Mode Accessibility**:
+  - High-contrast government light mode (`theme-light`) and tactical dark mode (`theme-dark`) with first-class color contrast across all dialogs, tables, and buttons.
+
 ---
 
 ## 📂 Project Directory Structure
@@ -225,48 +286,70 @@ DrishtiGrid/
 │
 ├── client/                           # React 19 Frontend (Vite + Tailwind v4) (:5173)
 │   ├── src/
-│   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts, crowd)
+│   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts, crowd, gis)
 │   │   ├── components/
 │   │   │   ├── anpr/
 │   │   │   │   ├── MatchAlertModal.jsx      # Gujarat Police ICCC tactical intercept modal
 │   │   │   │   ├── WatchlistModal.jsx       # Add/Edit hotlist records
 │   │   │   │   ├── VideoUploadZone.jsx      # Video drag-and-drop & progress HUD
 │   │   │   │   ├── VideoAnalysisResults.jsx # Scrubber player & vehicle timeline cards
-│   │   │   │   └── DetectionsExplorer.jsx   # Filterable sighting registry
-│   │   │   ├── cameras/              # CameraPlayer.jsx, CameraStreamModal.jsx
+│   │   │   ├── cameras/              # CameraPlayer.jsx, CameraStreamModal.jsx, BulkImportModal.jsx, ReportToDeptModal.jsx
+│   │   │   ├── gis/                  # Gujarat GIS Command & Control Components
+│   │   │   │   ├── UnifiedSearchBar.jsx     # Omnibar autocomplete search (districts, cams, zones, infra)
+│   │   │   │   ├── AdminHierarchyFilter.jsx # 4-tier cascading administrative jurisdiction filter
+│   │   │   │   ├── ZoneManagerModal.jsx     # Full C&C operational geofence zone hub (create, edit, fly, delete)
+│   │   │   │   ├── ZoneModal.jsx            # Geofence creation & rule definition modal
+│   │   │   │   ├── RouteCameraFinderModal.jsx # Corridor-based sequential camera discovery
+│   │   │   │   ├── CoverageGapModal.jsx     # Spatial coverage gap & blind spot analysis
+│   │   │   │   ├── AreaIntelligenceDrawer.jsx # District-level telemetry & incident breakdown
+│   │   │   │   ├── NearbyIntelligencePanel.jsx # Radial spatial proximity analytics (500m-2km)
+│   │   │   │   ├── InfrastructureLayer.jsx  # Real OpenStreetMap critical infrastructure visualization
+│   │   │   │   ├── OperationalZonesLayer.jsx# Geofence polygon/circle interactive layer
+│   │   │   │   ├── IncidentRadiusLayer.jsx  # Dynamic incident impact radius visualization
+│   │   │   │   └── GISLayerControl.jsx      # Grouped multi-layer visibility toggle hub
 │   │   │   ├── layout/               # DashboardLayout.jsx (Bilingual Gov Navigation)
-│   │   │   └── notifications/        # NotificationCenter.jsx
+│   │   │   └── notifications/        # NotificationCenter.jsx (High z-index stack)
 │   │   ├── pages/
 │   │   │   ├── ANPRPage.jsx          # ANPR 5-Tab Command Center
 │   │   │   ├── AlertsPage.jsx        # Security alert dispatch & triage
 │   │   │   ├── CameraMonitoringPage.jsx # Multi-layout live CCTV feeds
-│   │   │   ├── GISMapPage.jsx        # Full-screen Gujarat Leaflet GIS
+│   │   │   ├── CameraManagementPage.jsx # Camera registry & Bulk Import launcher
+│   │   │   ├── CrowdDetectionPage.jsx   # YOLOv8 Crowd & People Density analyzer
+│   │   │   ├── GISMapPage.jsx        # Full-screen Gujarat Leaflet GIS Command & Control
 │   │   │   ├── FootageRequestsPage.jsx # Chain-of-custody ticketing
 │   │   │   └── DashboardPage.jsx     # Executive telemetry
 │   │   ├── store/
 │   │   │   ├── authStore.js          # Authentication & token store
 │   │   │   ├── anprStore.js          # Persistent batch cache & active tab state
 │   │   │   └── themeStore.js         # Gujarat Gov light/dark themes
-│   │   └── index.css                 # Gujarat Government theme tokens & plate pills
+│   │   └── index.css                 # Gujarat Government theme tokens, plate pills & Leaflet popup styles
 │   └── vite.config.js
 │
 ├── server/                           # Node.js Express 5 Backend (:5001)
 │   ├── src/
 │   │   ├── controllers/
+│   │   │   ├── bulkCameraController.js# Excel spreadsheet validation & atomic 2-phase commit
+│   │   │   ├── deptReportController.js# Offline camera escalation ticketing
+│   │   │   ├── gisController.js      # GIS search, real OSM infra, zones, coverage, corridors
 │   │   │   ├── anprController.js     # Image batch, video pipeline, watchlist, stats, clear
 │   │   │   ├── alertController.js    # Alert dispatch & triage
 │   │   │   ├── cameraController.js   # Camera catalog & heartbeat
 │   │   │   └── crowdController.js    # Crowd analysis, alerts, stats, baseline reset
 │   │   ├── middleware/               # auth.js (JWT & RBAC), errorHandler.js
 │   │   ├── models/
+│   │   │   ├── ImportSession.js      # Temporary 2-hour TTL bulk validation sessions
+│   │   │   ├── OperationalZone.js    # Radial & polygon geofences with rule definitions
+│   │   │   ├── CriticalInfrastructure.js # Real Gujarat hospitals, police, fire, rail (OSM 2dsphere)
+│   │   │   ├── Incident.js           # Spatial incident logging & impact radii
 │   │   │   ├── PlateRecord.js        # Monitored watchlist definitions
 │   │   │   ├── PlateDetection.js     # Timestamped sightings with frame seconds
 │   │   │   ├── StoredPlate.js        # Unique vehicle registry
-│   │   │   ├── Alert.js              # Native incident alerts (ANPR + crowd_surge)
+│   │   │   ├── Alert.js              # Native incident alerts (ANPR + crowd_surge + geofence)
 │   │   │   ├── Camera.js             # Camera metadata & coordinates
 │   │   │   └── User.js               # Police/Admin user accounts
-│   │   ├── routes/                   # anpr.js, alerts.js, cameras.js, stream.js, crowd.js
+│   │   ├── routes/                   # cameras.js, gis.js, anpr.js, alerts.js, stream.js, crowd.js, deptReports.js
 │   │   ├── services/
+│   │   │   ├── bulkCameraService.js  # Excel generation, header aliasing, coordinate bounds & duplicate checking
 │   │   │   ├── videoService.js       # 1-FPS video pipeline & temporal deduplication
 │   │   │   ├── crowdDetectionService.js # Crowd AI bridge, alert creation, Socket.IO events
 │   │   │   ├── plateStorageService.js# Local JSON/TXT + MongoDB sync
@@ -274,7 +357,10 @@ DrishtiGrid/
 │   │   │   └── cryptoService.js      # AES-256 & SHA-256 evidence sealing
 │   │   ├── socket/socketHandler.js   # Real-time WebSocket broadcasting
 │   │   └── utils/plateUtils.js       # Positional repair & Levenshtein matching
-│   └── scripts/seed.js               # Gujarat cameras & users seeder
+│   └── scripts/
+│       ├── seed.js                   # Gujarat cameras & users seeder
+│       ├── testBulkCameraImport.js   # 34-test automated verification suite for bulk onboarding
+│       └── fetchGujaratOsmData.js    # Live Overpass API pipeline ingesting 6,200+ real Gujarat facilities
 │
 ├── storage_data/                     # Local file-based plate registry backup
 │   ├── stored_number_plates.json     # JSON plate export
@@ -353,6 +439,12 @@ cd server
 npm run seed
 ```
 
+Ingest **6,200+ authentic OpenStreetMap facilities** across Gujarat (Hospitals, Police, Fire, Rail):
+```bash
+cd server
+npm run fetch:osm
+```
+
 | Role | Email | Password | Access Scope |
 |---|---|---|---|
 | **Super Admin** | `adminuser@gov.in` | `adminpass@123` | Full Access (Users, Health, Audits, Settings) |
@@ -390,6 +482,37 @@ npm run seed
 | `PATCH` | `/api/alerts/:id/acknowledge` | Authenticated | Acknowledge active incident |
 | `POST` | `/api/footage-tickets` | Authenticated | Submit chain-of-custody footage request |
 | `POST` | `/api/footage-tickets/:id/evidence` | Authenticated | Upload SHA-256 sealed evidence clip |
+
+### 📤 Bulk Camera Onboarding & Department Escalation Endpoints
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `GET`  | `/api/cameras/bulk/template` | Admin | Download official multi-sheet Excel onboarding template |
+| `POST` | `/api/cameras/bulk/validate` | Admin | Upload and validate spreadsheet (returns row diagnostics & summary) |
+| `POST` | `/api/cameras/bulk/import` | Admin | Explicit commit of validated cameras into MongoDB |
+| `GET`  | `/api/cameras/bulk/import/:importId` | Admin | Retrieve status and row diagnostics of an import session |
+| `GET`  | `/api/cameras/bulk/import/:importId/report` | Admin | Download detailed `.xlsx` post-validation / audit report |
+| `POST` | `/api/cameras/bulk/import/:importId/cancel` | Admin | Discard an uncommitted import session |
+| `POST` | `/api/dept-reports` | Police, Traffic, Admin | Dispatch formal offline camera escalation ticket to department |
+| `GET`  | `/api/dept-reports` | Authenticated | List all active camera escalation reports |
+| `GET`  | `/api/dept-reports/:id` | Authenticated | Fetch thread details for a specific report |
+| `PATCH`| `/api/dept-reports/:id/status` | Admin, Police | Update ticket status (open, in_progress, resolved) |
+
+### 🗺️ Geospatial & GIS Command Endpoints
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/gis/search?q={query}` | Authenticated | Omnibar search across districts, cams, zones, infrastructure |
+| `GET` | `/api/gis/nearby?lat={lat}&lng={lng}&radius={m}` | Authenticated | Radial spatial proximity intelligence (cameras, incidents, infra) |
+| `GET` | `/api/gis/area-intelligence?district={d}` | Authenticated | District-level operational telemetry & incident analytics |
+| `POST`| `/api/gis/route-cameras` | Authenticated | Corridor camera discovery along polyline trajectory |
+| `GET` | `/api/gis/coverage?district={d}` | Authenticated | Spatial visual coverage buffers, blind spots & placement suggestions |
+| `GET` | `/api/gis/infrastructure?district={d}` | Authenticated | Query 6,200+ OpenStreetMap hospitals, police, fire & rail stations |
+| `POST`| `/api/gis/infrastructure` | Admin | Register new critical infrastructure asset |
+| `GET` | `/api/gis/zones?district={d}` | Authenticated | Query active radial & polygon geofence zones |
+| `POST`| `/api/gis/zones` | Admin, Police | Create new geofence zone with intrusion/curfew rules |
+| `PATCH`| `/api/gis/zones/:id` | Admin, Police | Update geofence zone properties, active status & rules |
+| `DELETE`| `/api/gis/zones/:id` | Admin | Remove operational geofence zone |
+| `GET` | `/api/gis/incidents?district={d}` | Authenticated | Query active geo-located security & traffic incidents |
+| `GET` | `/api/gis/incident/:id/context` | Authenticated | Immediate incident impact radius & surrounding CCTV evidence |
 
 ### Crowd Detection Endpoints
 | Method | Route | Access | Description |

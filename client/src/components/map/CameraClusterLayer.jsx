@@ -74,94 +74,159 @@ function createCameraIcon(cam, isSelected = false) {
 }
 
 /**
- * Builds rich metadata popup content
+ * Builds rich metadata popup content conforming to Government Command specifications
  */
-function createPopupContent(cam) {
+function createPopupContent(cam, userRole, isLight = false) {
   const statusKey = (cam.status || 'offline').toLowerCase();
   const cfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.offline;
   const lat = cam.latitude || cam.location?.coordinates?.[1] || 0;
   const lng = cam.longitude || cam.location?.coordinates?.[0] || 0;
   const address = cam.address?.full || cam.address?.street || cam.address || 'Gujarat, India';
-  const streamId = cam.streamId || `GJ-STREAM-${cam.cameraId}`;
-  const model = cam.camera_model || cam.model || 'Commercial IP Surveillance';
+  const locationText = cam.locationName || cam.roadName || cam.landmark || cam.district || 'Main Corridor';
+  const deptName = cam.departmentName || 'Gujarat Police Department';
+  const healthScore = Math.round(cam.healthMetrics?.uptime24h || (statusKey === 'online' ? 94 : 42));
+  const crowdLevel = cam.alertsEnabled?.crowdDetection ? 'HIGH' : 'NORMAL';
+  const anprStatus = cam.alertsEnabled?.anprEnabled ? 'ACTIVE' : 'STANDBY';
+  const isAuthorizedFootage = ['ADMIN', 'POLICE'].includes((userRole || '').toUpperCase());
+
+  // Real-time dynamic light mode detection (checks DOM classList as fallback)
+  const activeLight =
+    typeof document !== 'undefined'
+      ? document.documentElement.classList.contains('theme-light') ||
+        document.documentElement.classList.contains('light') ||
+        Boolean(isLight)
+      : Boolean(isLight);
+
+  // High-contrast Light/Dark adaptive color palette
+  const textTitle = activeLight ? '#0f172a' : '#f8fafc';
+  const textLabel = activeLight ? '#334155' : '#94a3b8';
+  const textVal = activeLight ? '#0f172a' : '#e2e8f0';
+  const textSub = activeLight ? '#1e293b' : '#cbd5e1';
+  const borderCol = activeLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)';
+
+  const badgeIdBg = activeLight ? '#e0f2fe' : 'rgba(56,189,248,0.15)';
+  const badgeIdText = activeLight ? '#0369a1' : '#38bdf8';
+  const badgeIdBorder = activeLight ? '#bae6fd' : 'rgba(56,189,248,0.3)';
+
+  const btnAnalyzeBg = activeLight ? '#f1f5f9' : 'rgba(255,255,255,0.1)';
+  const btnAnalyzeText = activeLight ? '#0f172a' : '#e2e8f0';
+  const btnAnalyzeBorder = activeLight ? '#cbd5e1' : 'rgba(255,255,255,0.15)';
+
+  const btnIntelBg = activeLight ? '#e0f2fe' : 'rgba(56,189,248,0.15)';
+  const btnIntelText = activeLight ? '#0284c7' : '#38bdf8';
+  const btnIntelBorder = activeLight ? '#bae6fd' : 'rgba(56,189,248,0.3)';
+
+  const btnNearbyBg = activeLight ? '#ede9fe' : 'rgba(99,102,241,0.15)';
+  const btnNearbyText = activeLight ? '#4338ca' : '#a5b4fc';
+  const btnNearbyBorder = activeLight ? '#ddd6fe' : 'rgba(99,102,241,0.3)';
 
   return `
-    <div class="cctv-rich-popup-card" data-camera-id="${cam.cameraId}">
+    <div class="cctv-rich-popup-card" data-camera-id="${cam.cameraId}" style="min-width: 290px; font-family: inherit;">
       <!-- Header -->
-      <div class="cctv-popup-header">
-        <div class="header-top-row">
-          <span class="camera-id-chip">${cam.cameraId}</span>
-          <span class="status-pill-badge ${cfg.badgeClass}">
-            <span class="status-dot"></span>
-            ${cfg.label}
+      <div class="cctv-popup-header" style="border-bottom: 1px solid ${borderCol}; padding-bottom: 8px; margin-bottom: 8px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+          <span class="cctv-chip-id" style="font-family: monospace; font-size: 11px; font-weight: 800; color: ${badgeIdText}; background: ${badgeIdBg}; padding: 2px 6px; border-radius: 6px; border: 1px solid ${badgeIdBorder};">
+            CAMERA ${cam.cameraId}
           </span>
-          ${cam.verified ? '<span class="verified-tag">✓ Verified</span>' : '<span class="simulated-tag">Simulated</span>'}
+          <span class="status-pill-badge ${cfg.badgeClass}" style="display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px;">
+            <span class="status-dot"></span>
+            ${cfg.label.toUpperCase()}
+          </span>
         </div>
-        <h4 class="camera-title">${cam.name || cam.cameraName || 'CCTV Surveillance Camera'}</h4>
+        <h4 class="cctv-title" style="font-size: 13px; font-weight: 700; margin: 0; color: ${textTitle}; line-height: 1.3;">
+          ${cam.name || cam.cameraName || 'CCTV Node'}
+        </h4>
       </div>
 
-      <!-- Main Metadata Grid -->
-      <div class="cctv-popup-body">
-        <!-- Location Section -->
-        <div class="popup-section">
-          <div class="section-title">
-            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-            Location & Placement
-          </div>
-          <div class="meta-row"><span class="label">Location Name</span><span class="val font-semibold">${cam.locationName || 'Main Corridor'}</span></div>
-          <div class="meta-row"><span class="label">Landmark</span><span class="val">${cam.landmark || '—'}</span></div>
-          <div class="meta-row"><span class="label">Road / Street</span><span class="val">${cam.roadName || '—'}</span></div>
-          <div class="meta-row"><span class="label">Taluka & District</span><span class="val">${cam.taluka ? cam.taluka + ', ' : ''}${cam.district || 'Gujarat'}</span></div>
-          <div class="meta-row"><span class="label">Pincode</span><span class="val font-mono">${cam.pincode || cam.address?.pincode || '—'}</span></div>
-          <div class="meta-row"><span class="label">Full Address</span><span class="val text-address">${address}</span></div>
-          <div class="meta-row"><span class="label">GIS Coords</span><span class="val font-mono text-cyan-400">${Number(lat).toFixed(5)}°N, ${Number(lng).toFixed(5)}°E</span></div>
+      <!-- Quick Command Telemetry Grid -->
+      <div class="cctv-telemetry-grid" style="display: flex; flex-direction: column; gap: 5px; font-size: 11px; margin-bottom: 10px;">
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">Department:</span>
+          <span class="cctv-telemetry-val" style="font-weight: 700; color: ${textVal};">${deptName}</span>
         </div>
-
-        <!-- Hardware & Stream Specs -->
-        <div class="popup-section">
-          <div class="section-title">
-            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
-            Feed & Camera Specifications
-          </div>
-          <div class="meta-grid-2">
-            <div class="meta-box"><span class="box-label">Camera Type</span><span class="box-val">${cam.type || cam.cameraType || 'Fixed'}</span></div>
-            <div class="meta-box"><span class="box-label">Model</span><span class="box-val text-truncate">${model}</span></div>
-            <div class="meta-box"><span class="box-label">Stream Protocol</span><span class="box-val text-emerald-400 font-mono">${cam.streamType || 'RTSP'} (${cam.streamStatus || 'ACTIVE'})</span></div>
-            <div class="meta-box"><span class="box-label">Stream ID</span><span class="box-val font-mono text-truncate">${streamId}</span></div>
-            <div class="meta-box"><span class="box-label">Framerate</span><span class="box-val">${cam.fps || 25} FPS</span></div>
-            <div class="meta-box"><span class="box-label">History Retain</span><span class="box-val">${cam.recording_history_days || 30} Days</span></div>
-            <div class="meta-box"><span class="box-label">Field of View</span><span class="box-val">${cam.fieldOfView || 90}°</span></div>
-            <div class="meta-box"><span class="box-label">Mount Height</span><span class="box-val">${cam.mountingHeight || 6} Meters</span></div>
-          </div>
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">Location:</span>
+          <span class="cctv-telemetry-val-sub" style="font-weight: 600; color: ${textSub}; max-width: 170px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${locationText}</span>
         </div>
-
-        <!-- Administrative -->
-        <div class="popup-section">
-          <div class="section-title">
-            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            Authority & Department
-          </div>
-          <div class="meta-row"><span class="label">Managing Dept</span><span class="val font-medium">${cam.departmentName || 'Gujarat Police Command'}</span></div>
-          <div class="meta-row"><span class="label">Data Source</span><span class="val">${cam.dataSource || 'Integrated Gujarat Grid'}</span></div>
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">Health Metric:</span>
+          <span class="cctv-telemetry-health" style="font-family: monospace; font-weight: 800; color: ${healthScore > 80 ? (activeLight ? '#059669' : '#34d399') : (activeLight ? '#dc2626' : '#f87171')};">
+            ${healthScore}/100
+          </span>
+        </div>
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">Nearby Incidents:</span>
+          <span class="cctv-telemetry-incident" style="font-family: monospace; font-weight: 800; color: ${activeLight ? '#dc2626' : '#f87171'};">2 Active</span>
+        </div>
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">Crowd Status:</span>
+          <span class="cctv-telemetry-crowd" style="font-family: monospace; font-weight: 800; color: ${activeLight ? '#b45309' : '#fbbf24'};">${crowdLevel}</span>
+        </div>
+        <div class="cctv-telemetry-row" style="display: flex; justify-content: space-between;">
+          <span class="cctv-telemetry-label" style="color: ${textLabel}; font-weight: 600;">ANPR Engine:</span>
+          <span class="cctv-telemetry-anpr" style="font-family: monospace; font-weight: 800; color: ${activeLight ? '#0284c7' : '#22d3ee'};">${anprStatus}</span>
         </div>
       </div>
 
-      <!-- Action Footer -->
-      <div class="cctv-popup-footer" style="display: flex; gap: 8px; align-items: center;">
-        <button type="button" class="btn-popup-stream" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))" style="flex: 1;">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-          Live Feed
-        </button>
-        <button type="button" class="btn-popup-requisition" onclick="window.dispatchEvent(new CustomEvent('cctv:request-footage', { detail: '${cam.cameraId}' }))" style="flex: 1; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; box-shadow: 0 2px 8px rgba(37,99,235,0.35);">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-          Request Footage
-        </button>
+      <!-- Action Buttons Grid (RBAC Protected) -->
+      <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 6px; border-top: 1px solid ${borderCol};">
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn-popup-stream cctv-btn-live" onclick="window.dispatchEvent(new CustomEvent('cctv:open-stream', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: #059669; color: #ffffff; border: none; box-shadow: 0 1px 3px rgba(5,150,105,0.3);">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            LIVE VIEW
+          </button>
+          <button type="button" class="cctv-btn-analyze" onclick="window.dispatchEvent(new CustomEvent('cctv:analyze', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnAnalyzeBg}; color: ${btnAnalyzeText}; border: 1px solid ${btnAnalyzeBorder};">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m10 15 5-3-5-3v6Z"></path></svg>
+            ANALYZE
+          </button>
+        </div>
+
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="cctv-btn-intel" onclick="window.dispatchEvent(new CustomEvent('cctv:area-intel', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnIntelBg}; color: ${btnIntelText}; border: 1px solid ${btnIntelBorder};">
+            AREA INTEL
+          </button>
+          <button type="button" class="cctv-btn-nearby" onclick="window.dispatchEvent(new CustomEvent('cctv:nearby-cams', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnNearbyBg}; color: ${btnNearbyText}; border: 1px solid ${btnNearbyBorder};">
+            NEARBY CAMS
+          </button>
+        </div>
+
+        ${
+          isAuthorizedFootage
+            ? `
+          <button type="button" class="cctv-btn-footage" onclick="window.dispatchEvent(new CustomEvent('cctv:request-footage', { detail: '${cam.cameraId}' }))" style="width: 100%; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #fff; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            REQUEST FOOTAGE
+          </button>
+        `
+            : ''
+        }
+
+        ${
+          ['offline', 'maintenance', 'fault'].includes(statusKey)
+            ? `
+          <button type="button" class="cctv-btn-report-dept" onclick="window.dispatchEvent(new CustomEvent('cctv:report-dept', { detail: '${cam.cameraId}' }))" style="width: 100%; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; border: 1px solid rgba(255,255,255,0.2); box-shadow: 0 2px 6px rgba(220,38,38,0.35);">
+            <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
+            REPORT OUTAGE TO DEPT
+          </button>
+        `
+            : ''
+        }
       </div>
     </div>
   `;
 }
 
-export default function CameraClusterLayer({ cameras = [], onOpenStream, onRequestFootage }) {
+export default function CameraClusterLayer({
+  cameras = [],
+  onOpenStream,
+  onRequestFootage,
+  onOpenAnalyze,
+  onOpenAreaIntel,
+  onOpenNearbyCams,
+  onReportToDept,
+  userRole = 'POLICE',
+  isLight = false,
+}) {
   const map = useMap();
   const clusterGroupRef = useRef(null);
   const markersMapRef = useRef(new Map());
@@ -171,26 +236,55 @@ export default function CameraClusterLayer({ cameras = [], onOpenStream, onReque
     const handleStreamEvent = (e) => {
       const cameraId = e.detail;
       const cam = cameras.find((c) => c.cameraId === cameraId);
-      if (cam && onOpenStream) {
-        onOpenStream(cam);
-      }
+      if (cam && onOpenStream) onOpenStream(cam);
     };
 
     const handleRequisitionEvent = (e) => {
       const cameraId = e.detail;
       const cam = cameras.find((c) => c.cameraId === cameraId);
-      if (cam && onRequestFootage) {
-        onRequestFootage(cam);
-      }
+      if (cam && onRequestFootage) onRequestFootage(cam);
+    };
+
+    const handleAnalyzeEvent = (e) => {
+      const cameraId = e.detail;
+      const cam = cameras.find((c) => c.cameraId === cameraId);
+      if (cam && onOpenAnalyze) onOpenAnalyze(cam);
+    };
+
+    const handleAreaIntelEvent = (e) => {
+      const cameraId = e.detail;
+      const cam = cameras.find((c) => c.cameraId === cameraId);
+      if (cam && onOpenAreaIntel) onOpenAreaIntel(cam);
+    };
+
+    const handleNearbyCamsEvent = (e) => {
+      const cameraId = e.detail;
+      const cam = cameras.find((c) => c.cameraId === cameraId);
+      if (cam && onOpenNearbyCams) onOpenNearbyCams(cam);
+    };
+
+    const handleReportDeptEvent = (e) => {
+      const cameraId = e.detail;
+      const cam = cameras.find((c) => c.cameraId === cameraId);
+      if (cam && onReportToDept) onReportToDept(cam);
     };
 
     window.addEventListener('cctv:open-stream', handleStreamEvent);
     window.addEventListener('cctv:request-footage', handleRequisitionEvent);
+    window.addEventListener('cctv:analyze', handleAnalyzeEvent);
+    window.addEventListener('cctv:area-intel', handleAreaIntelEvent);
+    window.addEventListener('cctv:nearby-cams', handleNearbyCamsEvent);
+    window.addEventListener('cctv:report-dept', handleReportDeptEvent);
+
     return () => {
       window.removeEventListener('cctv:open-stream', handleStreamEvent);
       window.removeEventListener('cctv:request-footage', handleRequisitionEvent);
+      window.removeEventListener('cctv:analyze', handleAnalyzeEvent);
+      window.removeEventListener('cctv:area-intel', handleAreaIntelEvent);
+      window.removeEventListener('cctv:nearby-cams', handleNearbyCamsEvent);
+      window.removeEventListener('cctv:report-dept', handleReportDeptEvent);
     };
-  }, [cameras, onOpenStream, onRequestFootage]);
+  }, [cameras, onOpenStream, onRequestFootage, onOpenAnalyze, onOpenAreaIntel, onOpenNearbyCams, onReportToDept]);
 
   useEffect(() => {
     if (!map) return;
@@ -259,9 +353,8 @@ export default function CameraClusterLayer({ cameras = [], onOpenStream, onReque
         title: `${cam.cameraId} - ${cam.name || cam.cameraName || ''}`,
       });
 
-      // Bind rich popup
-      const popupHtml = createPopupContent(cam);
-      marker.bindPopup(popupHtml, {
+      // Bind rich popup with real-time theme evaluation
+      marker.bindPopup(() => createPopupContent(cam, userRole, isLight), {
         maxWidth: 380,
         minWidth: 320,
         className: 'cctv-cyber-popup',
@@ -284,7 +377,7 @@ export default function CameraClusterLayer({ cameras = [], onOpenStream, onReque
         map.removeLayer(clusterGroupRef.current);
       }
     };
-  }, [map, cameras]);
+  }, [map, cameras, userRole, isLight]);
 
   return null;
 }

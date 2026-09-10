@@ -17,4 +17,5 @@ const useSocketStore = create((set, get) => ({
   },
 }));
 
+export { useSocketStore };
 export default useSocketStore;

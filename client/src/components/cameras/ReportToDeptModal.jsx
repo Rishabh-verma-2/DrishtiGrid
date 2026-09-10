@@ -85,10 +85,10 @@ export default function ReportToDeptModal({ isOpen, onClose, camera }) {
 
   if (!isOpen || !camera) return null;
 
-  // Role guard — should never render for non-admin, but defensive check
+  // Role guard — allow Admin, Police, and Traffic Command personnel
   const userRole = String(user?.role || '').toUpperCase();
-  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(userRole);
-  if (!isAdmin) return null;
+  const isAuthorized = ['ADMIN', 'SUPERADMIN', 'POLICE', 'TRAFFIC_POLICE'].includes(userRole);
+  if (!isAuthorized) return null;
 
   const camStatus = (camera.status || '').toLowerCase();
   const statusInfo = STATUS_BADGE[camStatus] || { label: camStatus, cls: 'bg-slate-500/15 text-slate-400 border-slate-500/25' };

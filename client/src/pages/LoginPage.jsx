@@ -67,7 +67,7 @@ export default function LoginPage() {
           </div>
 
           {/* Heading */}
-          <h2 className="text-xl font-bold text-slate-100 mb-1">Admin Sign In</h2>
+          <h2 className="text-xl font-bold text-slate-100 mb-1">Sign In</h2>
           <p className="text-sm text-slate-500 mb-7">Enter your credentials to access the command center</p>
 
           {/* Server error */}

@@ -16,6 +16,20 @@ export const cameraAPI = {
   delete: (id) => apiClient.delete(`/cameras/${id}`),
   heartbeat: (id, status) => apiClient.patch(`/cameras/${id}/heartbeat`, { status }),
   getStats: () => apiClient.get('/cameras/stats'),
+  downloadBulkTemplate: () =>
+    apiClient.get('/cameras/bulk/template', { responseType: 'blob' }),
+  validateBulk: (formData) =>
+    apiClient.post('/cameras/bulk/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  commitBulkImport: (importId) =>
+    apiClient.post('/cameras/bulk/import', { importId }),
+  getImportSession: (importId) =>
+    apiClient.get(`/cameras/bulk/import/${importId}`),
+  downloadImportReport: (importId) =>
+    apiClient.get(`/cameras/bulk/import/${importId}/report`, { responseType: 'blob' }),
+  cancelBulkImport: (importId) =>
+    apiClient.post(`/cameras/bulk/import/${importId}/cancel`),
 };
 
 export const alertAPI = {
@@ -165,6 +179,23 @@ export const crowdAPI = {
 
   /** Reset per-camera surge baseline + alert cooldown */
   resetBaseline: (camId) => apiClient.post(`/crowd/reset/${camId}`),
+};
+
+export const gisAPI = {
+  search: (params) => apiClient.get('/gis/search', { params }),
+  getNearby: (params) => apiClient.get('/gis/nearby', { params }),
+  getAreaIntelligence: (params) => apiClient.get('/gis/area-intelligence', { params }),
+  discoverRouteCameras: (data) => apiClient.post('/gis/route-cameras', data),
+  getCoverage: (params) => apiClient.get('/gis/coverage', { params }),
+  getInfrastructure: (params) => apiClient.get('/gis/infrastructure', { params }),
+  createInfrastructure: (data) => apiClient.post('/gis/infrastructure', data),
+  getZones: (params) => apiClient.get('/gis/zones', { params }),
+  createZone: (data) => apiClient.post('/gis/zones', data),
+  updateZone: (id, data) => apiClient.patch(`/gis/zones/${id}`, data),
+  deleteZone: (id) => apiClient.delete(`/gis/zones/${id}`),
+  getIncidentContext: (id, params) => apiClient.get(`/gis/incident/${id}/context`, { params }),
+  getIncidents: (params) => apiClient.get('/gis/incidents', { params }),
+  createIncident: (data) => apiClient.post('/gis/incidents', data),
 };
 
 

@@ -7,7 +7,9 @@
     "start": "node index.js",
     "ai": "cd ../ai-service && .\\venv\\Scripts\\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
     "seed": "node scripts/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "fetch:osm": "node scripts/fetchGujaratOsmData.js",
+    "test:gis": "node scripts/testGisCapabilities.js",
+    "test": "node scripts/testGisCapabilities.js"
   },
   "keywords": [],
   "author": "DrishtiGrid Team",

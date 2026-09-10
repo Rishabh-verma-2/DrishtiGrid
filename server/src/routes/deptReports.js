@@ -13,8 +13,8 @@ const {
 // GET /api/dept-reports/attempts — must be BEFORE /:reportId to avoid param clash
 router.get('/attempts', authenticate, authorize('ADMIN'), getAttemptLogs);
 
-// POST /api/dept-reports — Admin only (also enforced inside controller)
-router.post('/', authenticate, authorize('ADMIN'), createReport);
+// POST /api/dept-reports — Authorized Command Staff (Admin, Police, Traffic)
+router.post('/', authenticate, authorize('ADMIN', 'POLICE', 'TRAFFIC_POLICE'), createReport);
 
 // GET /api/dept-reports — role-filtered inside controller
 router.get('/', authenticate, getReports);

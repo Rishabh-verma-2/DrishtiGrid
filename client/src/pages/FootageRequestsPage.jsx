@@ -130,12 +130,33 @@ export default function FootageRequestsPage() {
   const [integrityReport, setIntegrityReport] = useState(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Read ticket parameter from URL if provided (e.g. from notification click)
+  // Read ticket parameter or footage request candidate parameters from URL
   useEffect(() => {
     const tParam = searchParams.get('ticket') || searchParams.get('ticketId');
     if (tParam) {
       setSelectedTicketId(tParam);
       setIsDetailModalOpen(true);
+      return;
+    }
+
+    const reqCam = searchParams.get('requestCam') || searchParams.get('cameras');
+    const incId = searchParams.get('incidentId');
+    const incTitle = searchParams.get('incidentTitle');
+    if (reqCam || incId) {
+      setIsCreateModalOpen(true);
+      setCreateForm((prev) => ({
+        ...prev,
+        title: incTitle
+          ? `Footage Evidence for Incident #${incId}: ${incTitle}`
+          : reqCam
+          ? `Footage Request for CCTV Camera ${reqCam}`
+          : prev.title,
+        description: incId
+          ? `Surveillance evidence requisition automatically populated from GIS Incident #${incId}. Candidate cameras: ${reqCam || 'surrounding cluster'}.`
+          : prev.description,
+        firNumber: incId ? `INC-${incId}` : prev.firNumber,
+        selectedCameras: reqCam ? reqCam.split(',').map((c) => c.trim()).filter(Boolean) : prev.selectedCameras,
+      }));
     }
   }, [searchParams]);
 

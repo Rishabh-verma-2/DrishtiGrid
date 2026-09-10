@@ -1,18 +1,42 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { MapContainer, TileLayer, ZoomControl, Polygon, useMap, useMapEvents } from 'react-leaflet';
-import { cameraAPI, departmentAPI, reportAPI } from '../api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  MapContainer,
+  TileLayer,
+  ZoomControl,
+  Polygon,
+  Polyline,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet';
+import { cameraAPI, departmentAPI, reportAPI, gisAPI } from '../api';
 import toast from 'react-hot-toast';
 import { useThemeStore } from '../store/themeStore';
+import useAuthStore from '../store/authStore';
+import useSocketStore from '../store/socketStore';
+
 import CameraClusterLayer from '../components/map/CameraClusterLayer';
 import CameraStreamModal from '../components/cameras/CameraStreamModal';
 import ReportToDeptModal from '../components/cameras/ReportToDeptModal';
+import BulkImportModal from '../components/cameras/BulkImportModal';
 import UnifiedSearchBar from '../components/gis/UnifiedSearchBar';
 import GISStatsDrawer from '../components/gis/GISStatsDrawer';
 import CoverageGapModal from '../components/gis/CoverageGapModal';
 import SendReportModal from '../components/gis/SendReportModal';
 import FilterDropdown from '../components/gis/FilterDropdown';
+import GISLayerControl from '../components/gis/GISLayerControl';
+import AreaIntelligenceDrawer from '../components/gis/AreaIntelligenceDrawer';
+import NearbyIntelligencePanel from '../components/gis/NearbyIntelligencePanel';
+import RouteCameraFinderModal from '../components/gis/RouteCameraFinderModal';
+import OperationalZonesLayer from '../components/gis/OperationalZonesLayer';
+import ZoneModal from '../components/gis/ZoneModal';
+import ZoneManagerModal from '../components/gis/ZoneManagerModal';
+import InfrastructureLayer from '../components/gis/InfrastructureLayer';
+import IncidentRadiusLayer from '../components/gis/IncidentRadiusLayer';
+import CoverageGridLayer from '../components/gis/CoverageGridLayer';
+import AdminHierarchyFilter from '../components/gis/AdminHierarchyFilter';
+
 import {
   OFFICIAL_DISTRICTS,
   getOfficialAreaFeature,
@@ -20,10 +44,9 @@ import {
   getOfficialInvertedMask,
   getOfficialAreaBounds,
   isCameraInOfficialArea,
-  getOfficialAreaCameras,
 } from '../utils/geoUtils';
+
 import {
-  Search,
   MapPin,
   Camera,
   RotateCcw,
@@ -44,17 +67,17 @@ import {
   Cctv,
   Map,
   Users,
+  Navigation,
+  Globe,
+  PlusCircle,
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  UploadCloud,
 } from 'lucide-react';
 
-const STATUS_COLOR = {
-  online:      { fill: '#10b981', label: 'Online',      tw: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' },
-  offline:     { fill: '#ef4444', label: 'Offline',     tw: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20' },
-  maintenance: { fill: '#f59e0b', label: 'Maintenance', tw: 'text-amber-400',   bg: 'bg-amber-500/10',   border: 'border-amber-500/20' },
-  fault:       { fill: '#f87171', label: 'Fault',       tw: 'text-rose-400',    bg: 'bg-rose-500/10',    border: 'border-rose-500/20' },
-};
-
 /**
- * Helper component inside MapContainer to programmatically fly or fit bounds
+ * Programmatic controller for bounds fitting and flyTo transitions
  */
 function MapController({ targetBounds, flyTarget }) {
   const map = useMap();
@@ -67,7 +90,7 @@ function MapController({ targetBounds, flyTarget }) {
 
   useEffect(() => {
     if (flyTarget) {
-      map.flyTo(flyTarget, 17, { duration: 1.2 });
+      map.flyTo(flyTarget, 16, { duration: 1.2 });
     }
   }, [map, flyTarget]);
 
@@ -75,7 +98,7 @@ function MapController({ targetBounds, flyTarget }) {
 }
 
 /**
- * Captures background map clicks to clear selection
+ * Background map clicks listener
  */
 function MapClickHandler({ onMapClick }) {
   useMapEvents({
@@ -86,7 +109,7 @@ function MapClickHandler({ onMapClick }) {
         target?.tagName === 'path' ||
         target?.classList?.contains('leaflet-tile')
       ) {
-        onMapClick();
+        onMapClick([e.latlng.lat, e.latlng.lng]);
       }
     },
   });
@@ -95,59 +118,219 @@ function MapClickHandler({ onMapClick }) {
 
 export default function GISMapPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { theme } = useThemeStore();
+  const { user } = useAuthStore();
+  const { socket } = useSocketStore();
   const isLight = theme === 'light';
+  const userRole = String(user?.role || 'POLICE').toUpperCase();
 
-  // Filters
+  // Language support (English / Gujarati)
+  const [language, setLanguage] = useState('en');
+
+  // Layer Visibility Controls
+  const [layers, setLayers] = useState({
+    allCameras: true,
+    policeCameras: true,
+    trafficCameras: true,
+    municipalCameras: true,
+    incidents: true,
+    crowdHotspots: false,
+    anprActivity: false,
+    infrastructure: false,
+    hospitals: false,
+    policeStations: false,
+    fireStations: false,
+    operationalZones: true,
+    coverageBuffers: false,
+    coverageGaps: false,
+  });
+
+  // Administrative Hierarchy State
+  const [hierarchy, setHierarchy] = useState({
+    district: 'all',
+    city: 'all',
+    zone: 'all',
+    policeStation: 'all',
+  });
+
+  // Camera & Query Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [districtFilter, setDistrictFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
 
-  // Interactive Highlighting & Selection State
+  // Selection & Navigation State
   const [selectedArea, setSelectedArea] = useState(null);
   const [selectedCamera, setSelectedCamera] = useState(null);
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [selectedAsset, setSelectedAsset] = useState(null);
   const [mapFlyTarget, setMapFlyTarget] = useState(null);
   const [mapTargetBounds, setMapTargetBounds] = useState(null);
 
-  // Modals & Panels State
-  const [isStatsOpen, setIsStatsOpen] = useState(false);
+  // Drawers & Modals State
+  const [isAreaIntelOpen, setIsAreaIntelOpen] = useState(false);
+  const [isNearbyIntelOpen, setIsNearbyIntelOpen] = useState(false);
+  const [nearbyCoords, setNearbyCoords] = useState([23.0225, 72.5714]);
+  const [nearbyLabel, setNearbyLabel] = useState('Ahmedabad Center');
+
+  const [isRouteModalOpen, setIsRouteModalOpen] = useState(false);
+  const [activeRoute, setActiveRoute] = useState(null);
+
+  const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
+  const [isZoneManagerOpen, setIsZoneManagerOpen] = useState(false);
+  const [showHierarchy, setShowHierarchy] = useState(false);
   const [isCoverageModalOpen, setIsCoverageModalOpen] = useState(false);
   const [isSendReportModalOpen, setIsSendReportModalOpen] = useState(false);
   const [reportModalContext, setReportModalContext] = useState({});
+
   const [streamCamera, setStreamCamera] = useState(null);
-  const [showCoverageLayer, setShowCoverageLayer] = useState(false);
   const [isDeptReportOpen, setIsDeptReportOpen] = useState(false);
   const [deptReportCamera, setDeptReportCamera] = useState(null);
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [isGeneratingAudit, setIsGeneratingAudit] = useState(false);
 
-  // Fetch cameras
-  const { data: cameras = [], isLoading } = useQuery({
+  // Real-time listener for bulk camera ingestion
+  useEffect(() => {
+    if (!socket) return;
+    const handleBulkImported = (data) => {
+      queryClient.invalidateQueries({ queryKey: ['cameras'] });
+      toast.success(`GIS Synchronized: ${data.importedCount} new cameras imported.`);
+    };
+    socket.on('camera:bulk_imported', handleBulkImported);
+    return () => socket.off('camera:bulk_imported', handleBulkImported);
+  }, [socket, queryClient]);
+
+  // ─── Queries ──────────────────────────────────────────────────
+  // 1. Cameras
+  const { data: cameras = [], isLoading: isCamerasLoading } = useQuery({
     queryKey: ['cameras', 'gis-all'],
     queryFn: () => cameraAPI.getAll({ limit: 0 }).then((r) => r.data.data || []),
     staleTime: 60000,
   });
 
-  // Fetch departments
+  // 2. Critical Infrastructure Assets
+  const { data: infraResponse = { data: [], summary: {} } } = useQuery({
+    queryKey: ['gis-infrastructure', hierarchy.district],
+    queryFn: () =>
+      gisAPI
+        .getInfrastructure({
+          district: hierarchy.district !== 'all' ? hierarchy.district : undefined,
+          limit: 250,
+        })
+        .then((r) => r.data || { data: [], summary: {} }),
+    staleTime: 120000,
+  });
+
+  const infrastructure = infraResponse.data || [];
+  const infraSummary = infraResponse.summary || {};
+
+  // 3. Operational Geofence Zones
+  const { data: zones = [] } = useQuery({
+    queryKey: ['gis-zones', hierarchy.district],
+    queryFn: () =>
+      gisAPI
+        .getZones({
+          district: hierarchy.district !== 'all' ? hierarchy.district : undefined,
+        })
+        .then((r) => r.data.data || []),
+    staleTime: 60000,
+  });
+
+  // 4. Active Incidents
+  const { data: incidents = [] } = useQuery({
+    queryKey: ['gis-incidents', hierarchy.district],
+    queryFn: () =>
+      gisAPI
+        .getIncidents({
+          district: hierarchy.district !== 'all' ? hierarchy.district : undefined,
+          status: 'active',
+        })
+        .then((r) => r.data.data || []),
+    staleTime: 30000,
+  });
+
+  // 5. Coverage Analysis
+  const { data: coverageData } = useQuery({
+    queryKey: ['gis-coverage', hierarchy.district],
+    queryFn: () =>
+      gisAPI
+        .getCoverage({
+          district: hierarchy.district !== 'all' ? hierarchy.district : undefined,
+        })
+        .then((r) => r.data.data || null),
+    enabled: layers.coverageGaps,
+    staleTime: 60000,
+  });
+
+  // 6. Departments list
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],
     queryFn: () => departmentAPI.getAll().then((r) => r.data.data || []),
     staleTime: 120000,
   });
 
-  const districts = useMemo(() => {
-    return ['all', 'Gujarat', ...OFFICIAL_DISTRICTS];
-  }, []);
+  // ─── Real-time Socket.IO Listeners ───────────────────────────
+  useEffect(() => {
+    if (!socket) return;
 
-  const cameraTypes = useMemo(() => {
-    const list = new Set(cameras.map((c) => c.type || c.cameraType).filter(Boolean));
-    return ['all', ...Array.from(list).sort()];
-  }, [cameras]);
+    const handleCameraStatus = ({ cameraId, status }) => {
+      queryClient.setQueryData(['cameras', 'gis-all'], (old) => {
+        if (!old) return old;
+        return old.map((c) => (c.cameraId === cameraId ? { ...c, status } : c));
+      });
+    };
 
-  // Helper to resolve camera to its canonical department code based on metadata
+    const handleNewAlert = (alert) => {
+      toast(
+        (t) => (
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+            <span className="font-bold text-xs">New Alert: {alert.title}</span>
+          </div>
+        ),
+        { id: `alert-${alert._id}`, duration: 4000 }
+      );
+      queryClient.invalidateQueries(['gis-incidents']);
+      queryClient.invalidateQueries(['gis-nearby']);
+    };
+
+    const handleNewIncident = (incident) => {
+      queryClient.setQueryData(['gis-incidents', hierarchy.district], (old = []) => [
+        incident,
+        ...old,
+      ]);
+      toast.success(`New incident reported: #${incident.incidentId}`);
+    };
+
+    const handleZoneChange = () => {
+      queryClient.invalidateQueries(['gis-zones']);
+    };
+
+    socket.on('camera:status', handleCameraStatus);
+    socket.on('alert:new', handleNewAlert);
+    socket.on('incident:new', handleNewIncident);
+    socket.on('gis:zone:created', handleZoneChange);
+    socket.on('gis:zone:updated', handleZoneChange);
+    socket.on('gis:zone:deleted', handleZoneChange);
+
+    return () => {
+      socket.off('camera:status', handleCameraStatus);
+      socket.off('alert:new', handleNewAlert);
+      socket.off('incident:new', handleNewIncident);
+      socket.off('gis:zone:created', handleZoneChange);
+      socket.off('gis:zone:updated', handleZoneChange);
+      socket.off('gis:zone:deleted', handleZoneChange);
+    };
+  }, [socket, queryClient, hierarchy.district]);
+
+  // ─── Department Resolver Helper ───────────────────────────────
   const getCameraDeptCode = (c) => {
-    if (c.departmentCode && ['POLICE', 'TRAFFIC', 'HOME_DEPT', 'SMART_CITY', 'MUNICIPAL'].includes(c.departmentCode)) {
+    if (
+      c.departmentCode &&
+      ['POLICE', 'TRAFFIC', 'HOME_DEPT', 'SMART_CITY', 'MUNICIPAL'].includes(c.departmentCode)
+    ) {
       return c.departmentCode;
     }
     const name = (c.departmentName || c.department || '').toLowerCase();
@@ -168,411 +351,492 @@ export default function GISMapPage() {
     return 'POLICE';
   };
 
-  const departmentOptions = useMemo(() => {
-    const counts = {
-      all: cameras.length,
-      POLICE: 0,
-      TRAFFIC: 0,
-      HOME_DEPT: 0,
-      SMART_CITY: 0,
-      MUNICIPAL: 0,
-    };
-
-    cameras.forEach((c) => {
-      const code = getCameraDeptCode(c);
-      if (counts[code] !== undefined) {
-        counts[code]++;
-      }
-    });
-
-    return [
-      { code: 'all',        label: 'All Departments',          badge: counts.all },
-      { code: 'POLICE',     label: 'Gujarat Police',           badge: counts.POLICE },
-      { code: 'TRAFFIC',    label: 'Gujarat Traffic Police',   badge: counts.TRAFFIC },
-      { code: 'HOME_DEPT',  label: 'Gujarat Home Department',  badge: counts.HOME_DEPT },
-      { code: 'SMART_CITY', label: 'Smart City Mission',       badge: counts.SMART_CITY },
-      { code: 'MUNICIPAL',  label: 'Municipal Corporation',    badge: counts.MUNICIPAL },
-    ];
-  }, [cameras]);
-
-  // Filter cameras based on multi-dimensional criteria & live search
-  const filtered = useMemo(() => {
+  // ─── Multi-Dimensional Camera Filtering ───────────────────────
+  const filteredCameras = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
 
     return cameras.filter((c) => {
-      const matchStatus = statusFilter === 'all' || (c.status || '').toLowerCase() === statusFilter.toLowerCase();
-      const matchDistrict =
-        districtFilter === 'all' ||
-        districtFilter === 'Gujarat' ||
-        (c.district || '').toLowerCase() === districtFilter.toLowerCase();
+      // 1. Layer toggles
+      if (!layers.allCameras) return false;
+      const deptCode = getCameraDeptCode(c);
+      if (deptCode === 'POLICE' && !layers.policeCameras) return false;
+      if (deptCode === 'TRAFFIC' && !layers.trafficCameras) return false;
+      if (deptCode === 'MUNICIPAL' && !layers.municipalCameras) return false;
+
+      // 2. Administrative Hierarchy Filters
+      if (
+        hierarchy.district !== 'all' &&
+        hierarchy.district !== 'Gujarat' &&
+        (c.district || '').toLowerCase() !== hierarchy.district.toLowerCase()
+      ) {
+        return false;
+      }
+      if (hierarchy.city !== 'all') {
+        const cCity = c.city || c.address?.city || '';
+        if (cCity.toLowerCase() !== hierarchy.city.toLowerCase()) return false;
+      }
+      if (hierarchy.zone !== 'all') {
+        const cZone = c.zone || c.taluka || '';
+        if (cZone.toLowerCase() !== hierarchy.zone.toLowerCase()) return false;
+      }
+      if (hierarchy.policeStation !== 'all') {
+        if ((c.policeStation || '').toLowerCase() !== hierarchy.policeStation.toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 3. UI Status & Type Filters
+      if (statusFilter !== 'all' && (c.status || '').toLowerCase() !== statusFilter.toLowerCase()) {
+        return false;
+      }
       const camType = c.type || c.cameraType;
-      const matchType = typeFilter === 'all' || camType === typeFilter;
+      if (typeFilter !== 'all' && camType !== typeFilter) return false;
+      if (deptFilter !== 'all' && deptCode !== deptFilter) return false;
 
-      const camDeptCode = getCameraDeptCode(c);
-      const matchDept = deptFilter === 'all' || camDeptCode === deptFilter;
-
-      const matchSearch =
-        !q ||
-        (c.name || '').toLowerCase().includes(q) ||
-        (c.cameraName || '').toLowerCase().includes(q) ||
-        (c.cameraId || '').toLowerCase().includes(q) ||
-        (c.roadName || '').toLowerCase().includes(q) ||
-        (c.landmark || '').toLowerCase().includes(q) ||
-        (c.locationName || '').toLowerCase().includes(q) ||
-        (c.taluka || '').toLowerCase().includes(q) ||
-        (c.district || '').toLowerCase().includes(q);
+      // 4. Live Search Box Query
+      if (q) {
+        const match =
+          (c.name || '').toLowerCase().includes(q) ||
+          (c.cameraName || '').toLowerCase().includes(q) ||
+          (c.cameraId || '').toLowerCase().includes(q) ||
+          (c.roadName || '').toLowerCase().includes(q) ||
+          (c.landmark || '').toLowerCase().includes(q) ||
+          (c.locationName || '').toLowerCase().includes(q) ||
+          (c.taluka || '').toLowerCase().includes(q) ||
+          (c.district || '').toLowerCase().includes(q) ||
+          (c.policeStation || '').toLowerCase().includes(q);
+        if (!match) return false;
+      }
 
       const hasCoords =
         (c.latitude && c.longitude) ||
         (Array.isArray(c.location?.coordinates) && c.location.coordinates.length === 2);
 
-      return matchStatus && matchDistrict && matchType && matchDept && matchSearch && hasCoords;
+      return hasCoords;
     });
-  }, [cameras, statusFilter, districtFilter, typeFilter, deptFilter, searchQuery]);
+  }, [
+    cameras,
+    layers,
+    hierarchy,
+    statusFilter,
+    typeFilter,
+    deptFilter,
+    searchQuery,
+  ]);
 
-  // Handle Official Map Administrative Boundary & Google Maps Style Inverted Mask
-  const { officialFeature, closedBorderPolygon, invertedMask, areaCameras } = useMemo(() => {
-    if (!selectedArea) {
-      return { officialFeature: null, closedBorderPolygon: null, invertedMask: null, areaCameras: [] };
+  // ─── Official Administrative Boundary & Inverted Mask ─────────
+  const activeArea = selectedArea || (hierarchy.district !== 'all' ? hierarchy.district : null);
+  const { officialFeature, closedBorderPolygon, invertedMask } = useMemo(() => {
+    if (!activeArea) {
+      return { officialFeature: null, closedBorderPolygon: null, invertedMask: null };
     }
 
-    const feature = getOfficialAreaFeature(selectedArea);
+    const feature = getOfficialAreaFeature(activeArea);
     if (!feature) {
-      return { officialFeature: null, closedBorderPolygon: null, invertedMask: null, areaCameras: [] };
+      return { officialFeature: null, closedBorderPolygon: null, invertedMask: null };
     }
 
     const borderPositions = getOfficialBorderPositions(feature);
     const mask = getOfficialInvertedMask(feature);
-    const inArea = cameras.filter((c) => isCameraInOfficialArea(c, feature));
 
     return {
       officialFeature: feature,
       closedBorderPolygon: borderPositions,
       invertedMask: mask,
-      areaCameras: inArea,
     };
-  }, [cameras, selectedArea]);
+  }, [activeArea]);
 
-  // HIDE cameras outside the official administrative boundary
+  // Final displayed cameras inside administrative boundary
   const displayedCameras = useMemo(() => {
-    if (selectedArea && officialFeature) {
-      return filtered.filter((c) => isCameraInOfficialArea(c, officialFeature));
+    if (activeArea && officialFeature) {
+      return filteredCameras.filter((c) => isCameraInOfficialArea(c, officialFeature));
     }
-    return filtered;
-  }, [filtered, selectedArea, officialFeature]);
+    return filteredCameras;
+  }, [filteredCameras, activeArea, officialFeature]);
 
-  // Handlers for Area & Camera Selection
+  // Filtered Infrastructure Assets based on layer toggles
+  const displayedInfrastructure = useMemo(() => {
+    if (!layers.infrastructure) return [];
+    return infrastructure.filter((asset) => {
+      if (asset.type === 'HOSPITAL' && !layers.hospitals) return false;
+      if (asset.type === 'POLICE_STATION' && !layers.policeStations) return false;
+      if (asset.type === 'FIRE_STATION' && !layers.fireStations) return false;
+      return true;
+    });
+  }, [infrastructure, layers]);
+
+  // ─── Handlers ─────────────────────────────────────────────────
   const handleSelectArea = (areaName) => {
     setSelectedArea(areaName);
-    setDistrictFilter(areaName === 'Gujarat' ? 'all' : areaName);
+    setHierarchy((prev) => ({
+      ...prev,
+      district: areaName === 'Gujarat' ? 'all' : areaName,
+      city: 'all',
+      zone: 'all',
+      policeStation: 'all',
+    }));
     setSelectedCamera(null);
-    setIsStatsOpen(true);
+    setIsAreaIntelOpen(true);
 
     const feature = getOfficialAreaFeature(areaName);
     if (feature) {
       const bounds = getOfficialAreaBounds(feature);
-      if (bounds) {
-        setMapTargetBounds(bounds);
-      }
+      if (bounds) setMapTargetBounds(bounds);
     }
   };
 
   const handleSelectCamera = (cam) => {
     setSelectedCamera(cam);
-    setIsStatsOpen(true);
-
     const lat = cam.latitude || cam.location?.coordinates?.[1];
     const lng = cam.longitude || cam.location?.coordinates?.[0];
     if (lat && lng) {
       setMapFlyTarget([lat, lng]);
+      setNearbyCoords([lat, lng]);
+      setNearbyLabel(cam.name || cam.cameraId);
     }
   };
 
-  const handleSearchChange = (text) => {
-    setSearchQuery(text);
-    const q = text.trim();
-    if (!q) {
-      if (selectedArea && districtFilter === 'all') {
-        setSelectedArea(null);
-        setMapTargetBounds(null);
-      }
+  const handleSelectZone = (zone) => {
+    if (zone.geometry?.coordinates) {
+      const coords =
+        zone.geometry.type === 'Polygon'
+          ? zone.geometry.coordinates[0][0]
+          : zone.geometry.coordinates;
+      setMapFlyTarget([coords[1], coords[0]]);
+      toast.success(`Navigated to Operational Zone: ${zone.name}`);
     }
   };
 
-  const handleClearAreaHighlight = () => {
+  const handleSelectInfra = (asset) => {
+    setSelectedAsset(asset);
+    const lat = asset.latitude || asset.location?.coordinates?.[1];
+    const lng = asset.longitude || asset.location?.coordinates?.[0];
+    if (lat && lng) {
+      setMapFlyTarget([lat, lng]);
+      setNearbyCoords([lat, lng]);
+      setNearbyLabel(asset.name);
+      setIsNearbyIntelOpen(true);
+    }
+  };
+
+  const handleOpenNearbyIntelForCoords = (coords, label = 'Selected Point') => {
+    setNearbyCoords(coords);
+    setNearbyLabel(label);
+    setIsNearbyIntelOpen(true);
+  };
+
+  const handleMapBackgroundClick = (coords) => {
+    // Open nearby intelligence around clicked point
+    setNearbyCoords(coords);
+    setNearbyLabel(`${coords[0].toFixed(4)}°N, ${coords[1].toFixed(4)}°E`);
+  };
+
+  const handleApplyRoute = ({ geometry, cameras: rCams }) => {
+    setActiveRoute({ geometry, cameras: rCams });
+    if (geometry?.coordinates?.length > 0) {
+      const bounds = geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+      setMapTargetBounds(bounds);
+    }
+  };
+
+  const handleClearRoute = () => {
+    setActiveRoute(null);
+  };
+
+  const handleClearArea = () => {
     setSelectedArea(null);
-    setDistrictFilter('all');
+    setHierarchy((prev) => ({ ...prev, district: 'all' }));
     setMapTargetBounds(null);
+    setIsAreaIntelOpen(false);
   };
 
   const resetAllFilters = () => {
     setSearchQuery('');
     setStatusFilter('all');
-    setDistrictFilter('all');
     setTypeFilter('all');
     setDeptFilter('all');
+    setHierarchy({ district: 'all', city: 'all', zone: 'all', policeStation: 'all' });
     setSelectedArea(null);
     setSelectedCamera(null);
+    setSelectedIncident(null);
+    setSelectedAsset(null);
+    setActiveRoute(null);
     setMapFlyTarget(null);
     setMapTargetBounds(null);
-    setIsStatsOpen(false);
+    setIsAreaIntelOpen(false);
+    setIsNearbyIntelOpen(false);
   };
 
   const isFiltered =
     selectedArea ||
+    hierarchy.district !== 'all' ||
+    hierarchy.city !== 'all' ||
+    hierarchy.zone !== 'all' ||
+    hierarchy.policeStation !== 'all' ||
     statusFilter !== 'all' ||
-    districtFilter !== 'all' ||
     typeFilter !== 'all' ||
-    deptFilter !== 'all';
+    deptFilter !== 'all' ||
+    activeRoute;
 
-  const counts = useMemo(
-    () => ({
+  // Header Counters
+  const counts = useMemo(() => {
+    return {
       total: cameras.length,
       online: cameras.filter((c) => (c.status || '').toLowerCase() === 'online').length,
       offline: cameras.filter((c) => (c.status || '').toLowerCase() === 'offline').length,
-      maintenance: cameras.filter((c) => (c.status || '').toLowerCase() === 'maintenance').length,
-    }),
-    [cameras]
-  );
-
-  const legendCounts = useMemo(() => {
-    const list = isFiltered ? displayedCameras : cameras;
-    return {
-      total: list.length,
-      online: list.filter((c) => (c.status || '').toLowerCase() === 'online').length,
-      offline: list.filter((c) => (c.status || '').toLowerCase() === 'offline').length,
-      maintenance: list.filter((c) => (c.status || '').toLowerCase() === 'maintenance').length,
     };
-  }, [cameras, displayedCameras, isFiltered]);
+  }, [cameras]);
 
-  const handleGenerateAreaAudit = async (districtParam) => {
-    const dist = districtParam && districtParam !== 'all' ? districtParam : (selectedArea || 'Gujarat');
-    const label = dist.toLowerCase() === 'gujarat' || dist.toLowerCase() === 'all' ? 'Gujarat State' : `${dist} District`;
-    try {
-      setIsGeneratingAudit(true);
-      toast.loading(`Generating official Area Compliance & Gap Audit PDF for ${label}...`, { id: 'audit-pdf' });
-
-      const res = await reportAPI.dispatch({
-        reportType: 'COVERAGE_GAP',
-        departmentCode: 'ALL',
-        district: dist,
-        timeframe: '30d',
-        format: 'PDF',
-        sendEmail: false,
-      });
-
-      const fileName = res.data?.data?.fileName;
-      if (fileName) {
-        toast.loading(`Downloading verified audit PDF for ${label}...`, { id: 'audit-pdf' });
-        try {
-          const blobRes = await reportAPI.download(fileName);
-          const blob = new Blob([blobRes.data], { type: 'application/pdf' });
-          const blobUrl = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          link.setAttribute('download', fileName);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(blobUrl);
-
-          toast.success(`Area Compliance & Gap Audit PDF for ${label} downloaded successfully!`, { id: 'audit-pdf' });
-        } catch (downloadErr) {
-          const link = document.createElement('a');
-          link.href = res.data?.data?.downloadUrl || `/api/reports/download/${fileName}`;
-          link.setAttribute('download', fileName);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          toast.success(`Area Compliance & Gap Audit PDF downloaded!`, { id: 'audit-pdf' });
-        }
-      } else {
-        toast.success(`Audit report generated successfully!`, { id: 'audit-pdf' });
-      }
-    } catch (err) {
-      console.error('Audit PDF error:', err);
-      toast.error('Failed to generate Area Compliance & Gap Audit PDF.', { id: 'audit-pdf' });
-    } finally {
-      setIsGeneratingAudit(false);
-    }
-  };
+  // Translations dictionary
+  const t = {
+    en: {
+      title: 'Gujarat State GIS Surveillance Grid',
+      subtitle: 'Geospatial Area Highlighting • Optical Buffers & Compliance Dispatch',
+      cams: 'TOTAL CAMS',
+      online: 'Online',
+      offline: 'Offline',
+      routeFinder: 'Route Discovery',
+      newZone: 'New Zone',
+      gapAnalysis: 'Gap Analysis',
+      areaIntel: 'Area Intel',
+      legend: 'Map Legend',
+    },
+    gu: {
+      title: 'ગુજરાત રાજ્ય જીઆઈએસ સર્વેલન્સ ગ્રીડ',
+      subtitle: 'ભૌગોલિક વિસ્તાર હાઇલાઇટિંગ • ઓપ્ટિકલ બફર્સ અને કાયદો અમલ',
+      cams: 'કુલ કેમેરા',
+      online: 'ઓનલાઇન',
+      offline: 'ઑફલાઇન',
+      routeFinder: 'રૂટ શોધ',
+      newZone: 'નવો ઝોન',
+      gapAnalysis: 'ગેપ વિશ્લેષણ',
+      areaIntel: 'વિસ્તાર ઇન્ટેલ',
+      legend: 'નકશો લિજેન્ડ',
+    },
+  }[language];
 
   return (
-    <div className={`flex flex-col h-full relative overflow-hidden ${isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'}`}>
-      {/* Top Header & Toolbar */}
+    <div
+      className={`flex flex-col h-full relative overflow-hidden ${
+        isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#0a0d14] text-slate-100'
+      }`}
+    >
+      {/* ─── STREAMLINED COMPACT TOP TOOLBAR ─────────────────────── */}
       <div
-        className={`px-4 lg:px-6 py-2.5 border-b shrink-0 flex flex-wrap items-center justify-between gap-3 transition-colors ${
+        className={`px-3 py-2 border-b shrink-0 flex flex-wrap items-center justify-between gap-2.5 transition-colors relative z-[1500] ${
           isLight
             ? 'bg-white/95 border-slate-200 shadow-xs backdrop-blur-md'
             : 'bg-[#0e1322]/90 border-white/5 backdrop-blur-md'
         }`}
       >
-        {/* Left Branding & Live Stats */}
-        <div className="flex items-center gap-3">
+        {/* Left Branding & Live Stats Pill */}
+        <div className="flex items-center gap-2 shrink-0">
           <div
-            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
+            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all ${
               isLight
                 ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-xs'
                 : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
             }`}
           >
-            <MapPin className="w-5 h-5" />
+            <MapPin className="w-4 h-4" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className={`text-sm font-bold tracking-wide ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-                Gujarat State GIS Surveillance Grid
-              </h1>
-              <span
-                className={`text-[11px] font-sans px-2.5 py-0.5 rounded-full font-bold border tracking-normal ${
-                  isLight
-                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                    : 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-                }`}
-              >
-                {counts.total} TOTAL CAMS
-              </span>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-bold tracking-wide ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+              DrishtiGrid GIS
+            </span>
+            <div
+              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${
+                isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-white/5 border-white/10 text-slate-300'
+              }`}
+              title="Camera Live Stream Telemetry"
+            >
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="font-bold text-emerald-400">{counts.online}</span>
+              <span className="text-slate-500">/</span>
+              <span>{counts.total}</span>
             </div>
-            <p className={`text-[11px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-              Geospatial Area Highlighting • Optical Buffers & Compliance Dispatch
-            </p>
           </div>
         </div>
 
-        {/* Live Counters */}
-        <div
-          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs border ${
-            isLight ? 'bg-slate-50 border-slate-200 shadow-xs' : 'bg-white/3 border-white/6'
-          }`}
-        >
-          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            {counts.online} Online
-          </span>
-          <span className={isLight ? 'text-slate-300' : 'text-slate-600'}>|</span>
-          <span className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-semibold">
-            <span className="w-2 h-2 bg-red-500 rounded-full" />
-            {counts.offline} Offline
-          </span>
-          <span className={isLight ? 'text-slate-300' : 'text-slate-600'}>|</span>
-          <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-semibold">
-            <span className="w-2 h-2 bg-amber-500 rounded-full" />
-            {counts.maintenance} Maint.
-          </span>
-        </div>
-
-        {/* Unified Search & Filters */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Unified Search with Area & Camera Autocomplete */}
+        {/* Center: Search & Quick Administrative District Select (Single Line) */}
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
           <UnifiedSearchBar
             cameras={cameras}
-            districts={districts}
+            districts={OFFICIAL_DISTRICTS}
             onSelectArea={handleSelectArea}
             onSelectCamera={handleSelectCamera}
-            onSearchChange={handleSearchChange}
+            onSelectZone={handleSelectZone}
+            onSelectInfrastructure={handleSelectInfra}
+            onSearchChange={(q) => setSearchQuery(q)}
             onClear={resetAllFilters}
-            selectedArea={selectedArea}
+            selectedArea={activeArea}
             selectedCamera={selectedCamera}
             isLight={isLight}
           />
 
-          {/* Status Dropdown */}
-          <FilterDropdown
-            value={statusFilter}
-            onChange={setStatusFilter}
-            isLight={isLight}
-            icon={<CircleDot className="w-3.5 h-3.5" />}
-            width="min-w-[120px]"
-            options={[
-              { value: 'all', label: 'All Status' },
-              { value: 'online',      label: 'Online',      dot: '#10b981' },
-              { value: 'offline',     label: 'Offline',     dot: '#ef4444' },
-              { value: 'maintenance', label: 'Maintenance', dot: '#f59e0b' },
-            ]}
-          />
-
-          {/* Camera Type Dropdown */}
-          <FilterDropdown
-            value={typeFilter}
-            onChange={setTypeFilter}
-            isLight={isLight}
-            icon={<Cctv className="w-3.5 h-3.5" />}
-            width="min-w-[120px]"
-            options={[
-              { value: 'all', label: 'All Types' },
-              ...cameraTypes
-                .filter((t) => t !== 'all')
-                .map((t) => ({ value: t, label: `${t} Camera` })),
-            ]}
-          />
-
-          {/* District Dropdown */}
-          <FilterDropdown
-            value={selectedArea || districtFilter}
-            onChange={(val) => {
-              if (val === 'all') handleClearAreaHighlight();
-              else handleSelectArea(val);
+          {/* Inline Quick District Select */}
+          <select
+            value={hierarchy.district}
+            onChange={(e) => {
+              const d = e.target.value;
+              setHierarchy({ district: d, city: 'all', zone: 'all', policeStation: 'all' });
+              if (d !== 'all') {
+                setSelectedArea(d);
+                const feat = getOfficialAreaFeature(d);
+                if (feat) {
+                  const bounds = getOfficialAreaBounds(feat);
+                  if (bounds) setMapTargetBounds(bounds);
+                }
+              } else {
+                setSelectedArea(null);
+              }
             }}
-            isLight={isLight}
-            icon={<Map className="w-3.5 h-3.5" />}
-            width="min-w-[130px]"
-            groups={[
-              {
-                label: 'Overview',
-                options: [
-                  { value: 'all', label: 'All Districts' },
-                  { value: 'Gujarat', label: 'Gujarat State' },
-                ],
-              },
-              {
-                label: 'Districts',
-                options: OFFICIAL_DISTRICTS.map((d) => ({ value: d, label: d })),
-              },
-            ]}
-          />
-
-          {/* Department Filter Dropdown */}
-          <FilterDropdown
-            value={deptFilter}
-            onChange={setDeptFilter}
-            isLight={isLight}
-            icon={<Users className="w-3.5 h-3.5" />}
-            width="min-w-[160px]"
-            options={departmentOptions.map((opt) => ({
-              value: opt.code,
-              label: opt.label,
-              badge: opt.badge,
-            }))}
-          />
-
-          {/* Coverage Gap Analysis Trigger */}
-          <button
-            onClick={() => setIsCoverageModalOpen(true)}
-            className={`px-3 py-2 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-              isLight
-                ? 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-400'
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer shrink-0 whitespace-nowrap transition-colors ${
+              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-white/5 border-white/10 text-slate-200'
             }`}
-            title="Open Coverage Gap Analysis"
+            title="Filter by Gujarat District"
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Gap Analysis</span>
+            <option value="all">District (All Gujarat)</option>
+            {OFFICIAL_DISTRICTS.map((d) => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
+          </select>
+
+          {/* Toggle Secondary Hierarchy Bar (City, Police Station) */}
+          <button
+            type="button"
+            onClick={() => setShowHierarchy((prev) => !prev)}
+            className={`px-2.5 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap ${
+              showHierarchy
+                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                : hierarchy.city !== 'all' || hierarchy.policeStation !== 'all'
+                ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
+                : isLight
+                ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+                : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-300'
+            }`}
+            title="Toggle fine-grained cascading jurisdiction filters (City, Police Station)"
+          >
+            <Layers className="w-3.5 h-3.5 text-blue-400" />
+            <span>
+              {hierarchy.policeStation !== 'all'
+                ? hierarchy.policeStation
+                : hierarchy.city !== 'all'
+                ? hierarchy.city
+                : 'More Filters'}
+            </span>
+            {showHierarchy ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+        </div>
+
+        {/* Right Tools & Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Grouped GIS Layer Control */}
+          <GISLayerControl
+            layers={layers}
+            onChangeLayer={(key, val) => setLayers((p) => ({ ...p, [key]: val }))}
+            onOpenZoneManager={() => setIsZoneManagerOpen(true)}
+            isLight={isLight}
+          />
+
+          {/* Manage Geofence Zones (Admin & Police) */}
+          {['ADMIN', 'SUPER_ADMIN', 'POLICE'].includes(userRole) && (
+            <button
+              type="button"
+              onClick={() => setIsZoneManagerOpen(true)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                isLight
+                  ? 'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-800'
+                  : 'bg-indigo-500/15 hover:bg-indigo-500/25 border-indigo-500/30 text-indigo-400'
+              }`}
+              title="Open Geofence Zones Management Hub (Edit, Delete, Fly to, Create)"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Manage Zones</span>
+            </button>
+          )}
+
+          {/* Bulk Camera Onboarding (Admin) */}
+          {['ADMIN', 'SUPERADMIN', 'SUPER_ADMIN'].includes(userRole) && (
+            <button
+              type="button"
+              id="gis-bulk-import-btn"
+              onClick={() => setIsBulkImportOpen(true)}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                isLight
+                  ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800'
+                  : 'bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/30 text-blue-400'
+              }`}
+              title="Bulk Camera Onboarding & GIS Registry Import"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              <span className="hidden xl:inline">Bulk Import</span>
+            </button>
+          )}
+
+          {/* Route-based Camera Discovery */}
+          <button
+            onClick={() => setIsRouteModalOpen(true)}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+              activeRoute
+                ? 'bg-blue-600 text-white border-blue-500 shadow-blue-500/25'
+                : isLight
+                ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800'
+                : 'bg-blue-500/15 hover:bg-blue-500/25 border-blue-500/30 text-blue-400'
+            }`}
+            title="Discover cameras along route corridors"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">{t.routeFinder}</span>
           </button>
 
-          {/* Sliding Stats Drawer Toggle */}
+          {/* CCTV Coverage Gap Analysis */}
           <button
-            onClick={() => setIsStatsOpen(!isStatsOpen)}
-            className={`px-3 py-2 rounded-lg text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
-              isStatsOpen
+            onClick={() => {
+              setLayers((p) => ({ ...p, coverageGaps: !p.coverageGaps }));
+              setIsCoverageModalOpen(true);
+            }}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+              layers.coverageGaps
+                ? 'bg-amber-500 text-slate-950 font-black border-amber-400'
+                : isLight
+                ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
+                : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-400'
+            }`}
+            title="Coverage Gap Analysis"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span className="hidden lg:inline">{t.gapAnalysis}</span>
+          </button>
+
+          {/* Area Intelligence Drawer Toggle */}
+          <button
+            onClick={() => setIsAreaIntelOpen(!isAreaIntelOpen)}
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+              isAreaIntelOpen
                 ? 'bg-cyan-500 text-slate-950 font-black border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.4)]'
                 : isLight
                 ? 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
                 : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
             }`}
-            title="Toggle Statistics Tab"
+            title="Toggle Area Intelligence Drawer"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Stats Panel</span>
+            <span className="hidden lg:inline">{t.areaIntel}</span>
+          </button>
+
+          {/* Language Switcher */}
+          <button
+            onClick={() => setLanguage((prev) => (prev === 'en' ? 'gu' : 'en'))}
+            className={`px-2 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
+              isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-white/5 border-white/10 text-slate-300'
+            }`}
+            title="Switch Language / ભાષા બદલો"
+          >
+            <Globe className="w-3 h-3" />
+            <span className="font-mono text-[10px]">{language === 'en' ? 'ગુજ' : 'ENG'}</span>
           </button>
 
           {/* Reset Filters */}
@@ -580,7 +844,7 @@ export default function GISMapPage() {
             <button
               onClick={resetAllFilters}
               title="Reset all filters and selection"
-              className={`p-2 border rounded-lg transition-all cursor-pointer ${
+              className={`p-1.5 border rounded-xl transition-all cursor-pointer ${
                 isLight
                   ? 'text-slate-500 hover:text-blue-600 bg-white hover:bg-slate-50 border-slate-200 shadow-xs'
                   : 'text-slate-400 hover:text-cyan-400 bg-white/4 hover:bg-cyan-500/10 border-white/8'
@@ -592,10 +856,38 @@ export default function GISMapPage() {
         </div>
       </div>
 
-      {/* Main Map Canvas */}
+      {/* ─── CASCADING ADMINISTRATIVE HIERARCHY (ONLY WHEN EXPANDED) ─ */}
+      {showHierarchy && (
+        <AdminHierarchyFilter
+          cameras={cameras}
+          selectedDistrict={hierarchy.district}
+          selectedCity={hierarchy.city}
+          selectedZone={hierarchy.zone}
+          selectedPoliceStation={hierarchy.policeStation}
+          onChange={(updated) => {
+            setHierarchy(updated);
+            if (updated.district !== 'all') {
+              setSelectedArea(updated.district);
+              const feat = getOfficialAreaFeature(updated.district);
+              if (feat) {
+                const bounds = getOfficialAreaBounds(feat);
+                if (bounds) setMapTargetBounds(bounds);
+              }
+            } else {
+              setSelectedArea(null);
+            }
+          }}
+          onReset={() =>
+            setHierarchy({ district: 'all', city: 'all', zone: 'all', policeStation: 'all' })
+          }
+          isLight={isLight}
+        />
+      )}
+
+      {/* ─── MAIN MAP CANVAS ──────────────────────────────────────── */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Active Area Official Boundary Banner */}
-        {selectedArea && (
+        {/* Active Boundary Banner */}
+        {activeArea && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1100] animate-in fade-in slide-in-from-top-4 duration-300">
             <div
               className={`px-4 py-2 rounded-2xl border shadow-xl backdrop-blur-xl flex items-center gap-3 text-xs ${
@@ -607,29 +899,35 @@ export default function GISMapPage() {
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping" />
                 <span className={isLight ? 'text-slate-700 font-semibold' : 'text-slate-300'}>
-                  Official Administrative Boundary:
+                  Administrative Jurisdiction:
                 </span>
-                <strong
-                  className={`font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg border ${
-                    isLight
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
-                  }`}
-                >
-                  {selectedArea === 'Gujarat' ? 'Gujarat State' : `${selectedArea} District`}
+                <strong className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
+                  {activeArea === 'Gujarat' ? 'Gujarat State' : `${activeArea} District`}
                 </strong>
-                <span className={isLight ? 'text-slate-500 font-medium' : 'text-slate-400'}>
-                  ({displayedCameras.length} cameras in boundary)
-                </span>
+                <span className="text-slate-400">({displayedCameras.length} CCTV nodes)</span>
               </div>
               <button
-                onClick={handleClearAreaHighlight}
-                className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                  isLight
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800'
-                    : 'bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white'
-                }`}
-                title="Clear Area Highlighting"
+                onClick={handleClearArea}
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Active Route Corridor Banner */}
+        {activeRoute && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 z-[1100] animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="px-4 py-2 rounded-2xl bg-blue-600/90 text-white border border-blue-400/30 shadow-xl backdrop-blur-xl flex items-center gap-3 text-xs font-bold">
+              <Navigation className="w-4 h-4 text-cyan-300" />
+              <span>
+                Active Route Corridor: {activeRoute.cameras?.length || 0} cameras discovered
+              </span>
+              <button
+                onClick={handleClearRoute}
+                className="p-1 rounded-lg hover:bg-white/20 text-white/80 hover:text-white transition-colors cursor-pointer"
+                title="Clear route corridor"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -638,18 +936,20 @@ export default function GISMapPage() {
         )}
 
         {/* Loading Overlay */}
-        {isLoading && (
+        {isCamerasLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-[2000] backdrop-blur-sm">
             <div
               className={`flex flex-col items-center gap-3 p-6 rounded-2xl border shadow-2xl ${
-                isLight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#141929] border-white/10 text-slate-200'
+                isLight
+                  ? 'bg-white border-slate-200 text-slate-900'
+                  : 'bg-[#141929] border-white/10 text-slate-200'
               }`}
             >
               <div className="w-10 h-10 border-3 border-slate-300 border-t-blue-500 rounded-full animate-spin" />
               <div className="text-center">
                 <p className="text-sm font-bold">Loading Gujarat Surveillance Network</p>
-                <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Syncing CCTV nodes and geospatial bounds...
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Synchronizing GIS coordinates, infrastructure & geofences...
                 </p>
               </div>
             </div>
@@ -657,8 +957,8 @@ export default function GISMapPage() {
         )}
 
         <MapContainer
-          center={[22.4, 71.9]}
-          zoom={7}
+          center={[23.0225, 72.5714]} // Ahmedabad Central Coords
+          zoom={11}
           maxZoom={19}
           minZoom={6}
           style={{ height: '100%', width: '100%' }}
@@ -670,82 +970,149 @@ export default function GISMapPage() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          {/* Programmatic map navigation controller */}
+          {/* Map Navigation Controller */}
           <MapController targetBounds={mapTargetBounds} flyTarget={mapFlyTarget} />
 
-          {/* Map click listener to clear active selection */}
-          <MapClickHandler
-            onMapClick={() => {
-              if (selectedCamera) setSelectedCamera(null);
-            }}
-          />
+          {/* Background Map Click Handler */}
+          <MapClickHandler onMapClick={handleMapBackgroundClick} />
 
-          {/* ============================================================ */}
-          {/* OFFICIAL ADMINISTRATIVE BOUNDARY & OUTSIDE DARKEN MASK       */}
-          {/* ============================================================ */}
-          {/* 1. Inverted Mask: Dims everything OUTSIDE official border */}
+          {/* 1. Official Administrative Inverted Mask */}
           {invertedMask && (
             <Polygon
-              key={`mask-${selectedArea}`}
+              key={`mask-${activeArea}`}
               positions={invertedMask}
               pathOptions={{
                 color: 'transparent',
                 fillColor: isLight ? '#0f172a' : '#030712',
-                fillOpacity: isLight ? 0.65 : 0.76,
+                fillOpacity: isLight ? 0.6 : 0.75,
                 interactive: false,
               }}
             />
           )}
 
-          {/* 2. Official Administrative Border (Google Maps style) */}
-          {closedBorderPolygon && (() => {
-            const borderStyle = {
-              color: '#2563eb',
-              weight: 2.5,
-              opacity: 1,
-              fillColor: '#3b82f6',
-              fillOpacity: 0.06,
-              interactive: false,
-            };
+          {/* 2. Official Boundary Line */}
+          {closedBorderPolygon && (
+            <Polygon
+              key={`border-${activeArea}`}
+              positions={closedBorderPolygon}
+              pathOptions={{
+                color: '#2563eb',
+                weight: 2.5,
+                opacity: 1,
+                fillColor: '#3b82f6',
+                fillOpacity: 0.05,
+                interactive: false,
+              }}
+            />
+          )}
 
-            // Determine shape: flat ring array (single Polygon rings), or nested array (MultiPolygon parts or state districts)
-            const isFlat = Array.isArray(closedBorderPolygon[0]) && typeof closedBorderPolygon[0][0] === 'number';
-            const isRingsArray = !isFlat && Array.isArray(closedBorderPolygon[0]) && Array.isArray(closedBorderPolygon[0][0]) && typeof closedBorderPolygon[0][0][0] === 'number';
-            // isRingsArray: [[lat,lng], ...] array (single polygon with rings) or array of districts for state
+          {/* 3. Discovered Route Polyline */}
+          {activeRoute?.geometry?.coordinates && (
+            <Polyline
+              positions={activeRoute.geometry.coordinates.map(([lng, lat]) => [lat, lng])}
+              pathOptions={{
+                color: '#06b6d4',
+                weight: 6,
+                opacity: 0.85,
+                dashArray: '1, 10',
+              }}
+            />
+          )}
 
-            if (isFlat) {
-              // Shouldn't normally happen but guard: treat as single ring
-              return (
-                <Polygon
-                  key={`border-${selectedArea}`}
-                  positions={closedBorderPolygon}
-                  pathOptions={borderStyle}
-                />
-              );
-            }
+          {/* 4. Operational Zones Layer */}
+          {layers.operationalZones && (
+            <OperationalZonesLayer
+              zones={zones}
+              isLight={isLight}
+              onSelectZone={handleSelectZone}
+              onManageZone={() => setIsZoneManagerOpen(true)}
+            />
+          )}
 
-            // Array of polygons (each is [[lat,lng], ...]) — handles Polygon rings, MultiPolygon parts, or state districts
-            return closedBorderPolygon.map((part, idx) => (
-              <Polygon
-                key={`border-${selectedArea}-${idx}`}
-                positions={Array.isArray(part[0]?.[0]) ? part : [part]}
-                pathOptions={borderStyle}
-              />
-            ));
-          })()}
+          {/* 5. Critical Infrastructure Layer */}
+          {layers.infrastructure && (
+            <InfrastructureLayer
+              assets={displayedInfrastructure}
+              onSelectAsset={handleSelectInfra}
+              onFindNearbyCameras={handleOpenNearbyIntelForCoords}
+              isLight={isLight}
+            />
+          )}
 
-          {/* Camera Clustering Layer: Shows only cameras matching criteria & in highlighted area */}
+          {/* 6. Active Incidents & Radius Layer */}
+          {layers.incidents && (
+            <IncidentRadiusLayer
+              incidents={incidents}
+              selectedIncident={selectedIncident}
+              onSelectIncident={(inc) => {
+                setSelectedIncident(inc);
+                const lat = inc.location?.coordinates?.[1];
+                const lng = inc.location?.coordinates?.[0];
+                if (lat && lng) {
+                  setMapFlyTarget([lat, lng]);
+                  setNearbyCoords([lat, lng]);
+                  setNearbyLabel(`Incident #${inc.incidentId}`);
+                }
+              }}
+              onRequestEvidenceFootage={({ incident, cameraIds }) => {
+                navigate(
+                  `/footage-requests?incidentId=${incident.incidentId}&incidentTitle=${encodeURIComponent(
+                    incident.title
+                  )}&cameras=${cameraIds.join(',')}`
+                );
+              }}
+              isLight={isLight}
+              userRole={userRole}
+            />
+          )}
+
+          {/* 7. CCTV Coverage Gap Analysis Layer */}
+          {layers.coverageGaps && coverageData && (
+            <CoverageGridLayer
+              coverageData={coverageData}
+              onViewNearbyCameras={(center, title) => {
+                handleOpenNearbyIntelForCoords(center, title);
+              }}
+              onAddPlanningMarker={(center, cluster) => {
+                toast.success(`Planning marker registered for ${cluster.title}`);
+              }}
+              isLight={isLight}
+            />
+          )}
+
+          {/* 8. CCTV Cameras Cluster Layer */}
           <CameraClusterLayer
             cameras={displayedCameras}
             onOpenStream={(cam) => setStreamCamera(cam)}
-            onRequestFootage={(cam) => navigate(`/footage-requests?requestCam=${cam.cameraId}`)}
-            onSelectCamera={handleSelectCamera}
-            selectedCameraId={selectedCamera?.cameraId}
-            showCoverageLayer={showCoverageLayer}
+            onRequestFootage={(cam) =>
+              navigate(`/footage-requests?requestCam=${cam.cameraId}`)
+            }
+            onOpenAnalyze={(cam) => {
+              toast(`Opening AI crowd analysis for ${cam.cameraId}...`);
+              navigate(`/crowd-detection?cam=${cam.cameraId}`);
+            }}
+            onOpenAreaIntel={(cam) => {
+              setSelectedArea(cam.district);
+              setSelectedCamera(cam);
+              setIsAreaIntelOpen(true);
+            }}
+            onOpenNearbyCams={(cam) => {
+              const lat = cam.latitude || cam.location?.coordinates?.[1];
+              const lng = cam.longitude || cam.location?.coordinates?.[0];
+              if (lat && lng) {
+                handleOpenNearbyIntelForCoords([lat, lng], cam.name || cam.cameraId);
+              }
+            }}
+            onReportToDept={(cam) => {
+              setDeptReportCamera(cam);
+              setIsDeptReportOpen(true);
+            }}
+            userRole={userRole}
+            isLight={isLight}
           />
         </MapContainer>
 
-        {/* Map Legend */}
+        {/* Bottom Left Legend */}
         <div
           className={`absolute bottom-6 left-5 z-[1000] backdrop-blur-md border rounded-2xl p-3.5 space-y-2.5 min-w-[215px] transition-colors ${
             isLight
@@ -753,162 +1120,195 @@ export default function GISMapPage() {
               : 'bg-[#0d121f]/95 border-white/10 text-slate-100 shadow-2xl'
           }`}
         >
-          <div
-            className={`flex items-center justify-between pb-2 border-b text-[11px] font-bold uppercase tracking-wider ${
-              isLight ? 'border-slate-200 text-slate-700' : 'border-white/8 text-slate-300'
-            }`}
-          >
+          <div className="flex items-center justify-between pb-2 border-b border-inherit text-[11px] font-bold uppercase tracking-wider">
             <div className="flex items-center gap-1.5">
-              <Layers className={`w-3.5 h-3.5 ${isLight ? 'text-blue-600' : 'text-cyan-400'}`} />
-              Map Legend
+              <Layers className="w-3.5 h-3.5 text-blue-500" />
+              {t.legend}
             </div>
             <span
-              className={`text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded ${
-                isLight
-                  ? 'bg-slate-100 text-slate-600 border border-slate-200'
-                  : 'bg-white/5 text-slate-400 border border-white/8'
+              className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-semibold ${
+                isLight ? 'bg-slate-100 text-slate-700' : 'bg-white/5 text-slate-400'
               }`}
             >
-              {legendCounts.total} Units
+              {displayedCameras.length} Active
             </span>
           </div>
 
-          <div className="space-y-2 text-[11px]">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                <span className={isLight ? 'text-slate-700 font-medium' : 'text-slate-300'}>Online Units</span>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-bold ${
-                  isLight
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                    : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                }`}
-              >
-                {legendCounts.online}
+          <div className="space-y-1.5 text-[11px]">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                Online Units
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>
+                {displayedCameras.filter((c) => (c.status || '').toLowerCase() === 'online').length}
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]" />
-                <span className={isLight ? 'text-slate-700 font-medium' : 'text-slate-300'}>Offline Units</span>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-bold ${
-                  isLight
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-red-500/15 text-red-400 border border-red-500/25'
-                }`}
-              >
-                {legendCounts.offline}
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                Offline Units
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-red-700' : 'text-red-400'}`}>
+                {displayedCameras.filter((c) => (c.status || '').toLowerCase() === 'offline').length}
               </span>
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]" />
-                <span className={isLight ? 'text-slate-700 font-medium' : 'text-slate-300'}>Maintenance</span>
-              </div>
-              <span
-                className={`px-2 py-0.5 rounded-md font-mono text-[11px] font-bold ${
-                  isLight
-                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                    : 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
-                }`}
-              >
-                {legendCounts.maintenance}
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                Civil Hospitals
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-rose-700' : 'text-rose-400'}`}>
+                {infraSummary.HOSPITAL !== undefined
+                  ? infraSummary.HOSPITAL
+                  : infrastructure.filter((a) => a.type === 'HOSPITAL').length}
               </span>
             </div>
 
-            {/* Coverage Buffer Toggle Indicator in Legend */}
-            <div className="pt-2 border-t border-inherit">
-              <button
-                type="button"
-                onClick={() => setShowCoverageLayer(!showCoverageLayer)}
-                className={`w-full py-1 px-2 rounded-lg text-[10px] font-semibold flex items-center justify-between transition-colors cursor-pointer ${
-                  showCoverageLayer
-                    ? isLight
-                      ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                      : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                    : isLight
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                      : 'bg-white/5 hover:bg-white/10 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-3 h-3" />
-                  <span>Optical Buffers</span>
-                </div>
-                <span className="font-mono text-[9px]">{showCoverageLayer ? 'ON' : 'OFF'}</span>
-              </button>
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                Police Stations
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-blue-700' : 'text-blue-400'}`}>
+                {infraSummary.POLICE_STATION !== undefined
+                  ? infraSummary.POLICE_STATION
+                  : infrastructure.filter((a) => a.type === 'POLICE_STATION').length}
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                Geofence Zones
+              </span>
+              <span className={`font-mono font-bold ${isLight ? 'text-indigo-700' : 'text-indigo-400'}`}>
+                {zones.length}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Sliding Statistics & Intelligence Panel (2 Changeable Views) */}
-        <GISStatsDrawer
-          isOpen={isStatsOpen}
-          onClose={() => setIsStatsOpen(false)}
-          selectedArea={selectedArea}
-          selectedCamera={selectedCamera}
-          areaCameras={areaCameras.length > 0 ? areaCameras : displayedCameras}
-          onSelectCamera={handleSelectCamera}
-          onOpenStream={(cam) => setStreamCamera(cam)}
-          onRequestFootage={(cam) => navigate(`/footage-requests?requestCam=${cam.cameraId}`)}
-          onRequestReport={({ camera, district: dist, type }) => {
-            if (type === 'area') {
-              handleGenerateAreaAudit(dist || selectedArea || 'all');
-            } else {
-              setReportModalContext({ camera, district: dist || selectedArea || 'all' });
-              setIsSendReportModalOpen(true);
-            }
+        {/* Area Intelligence Drawer (Right Side) */}
+        <AreaIntelligenceDrawer
+          isOpen={isAreaIntelOpen}
+          onClose={() => setIsAreaIntelOpen(false)}
+          selectedArea={activeArea}
+          district={hierarchy.district}
+          onViewCameras={() => {
+            setIsAreaIntelOpen(false);
           }}
-          onReportToDept={(cam) => {
-            setDeptReportCamera(cam);
-            setIsDeptReportOpen(true);
+          onViewIncidents={() => {
+            setLayers((p) => ({ ...p, incidents: true }));
+            setIsAreaIntelOpen(false);
           }}
-          isGeneratingAudit={isGeneratingAudit}
+          onOpenNearbyIntelligence={() => {
+            setIsNearbyIntelOpen(true);
+          }}
+          onCreateIncident={() => {
+            setIsAreaIntelOpen(false);
+            navigate('/alerts');
+          }}
           isLight={isLight}
         />
-      </div>
 
-      {/* Coverage Gap Analysis & Report Generator Modal */}
-      <CoverageGapModal
-        isOpen={isCoverageModalOpen}
-        onClose={() => setIsCoverageModalOpen(false)}
-        district={selectedArea || 'all'}
-        onToggleCoverageLayer={() => setShowCoverageLayer(!showCoverageLayer)}
-        isCoverageLayerActive={showCoverageLayer}
-        isLight={isLight}
-      />
-
-      {/* Departmental Report Request / Dispatch Modal */}
-      <SendReportModal
-        isOpen={isSendReportModalOpen}
-        onClose={() => setIsSendReportModalOpen(false)}
-        targetCamera={reportModalContext.camera}
-        targetDistrict={reportModalContext.district || selectedArea || 'all'}
-        departments={departments || []}
-        isLight={isLight}
-      />
-
-      {/* Report to Department Modal — Admin only */}
-      <ReportToDeptModal
-        isOpen={isDeptReportOpen}
-        onClose={() => { setIsDeptReportOpen(false); setDeptReportCamera(null); }}
-        camera={deptReportCamera}
-      />
-
-      {/* Stream Modal */}
-      {streamCamera && (
-        <CameraStreamModal
-          camera={streamCamera}
-          isOpen={!!streamCamera}
-          onClose={() => setStreamCamera(null)}
+        {/* Nearby Intelligence Panel (Bottom Right Floating) */}
+        <NearbyIntelligencePanel
+          isOpen={isNearbyIntelOpen}
+          onClose={() => setIsNearbyIntelOpen(false)}
+          coordinates={nearbyCoords}
+          locationName={nearbyLabel}
+          onOpenStream={(cam) => setStreamCamera(cam)}
+          onRequestFootage={(cam) =>
+            navigate(`/footage-requests?requestCam=${cam.cameraId}`)
+          }
+          onFitNearbyBounds={(bounds) => setMapTargetBounds(bounds)}
+          isLight={isLight}
+          userRole={userRole}
         />
-      )}
+
+        {/* Route Camera Finder Modal */}
+        <RouteCameraFinderModal
+          isOpen={isRouteModalOpen}
+          onClose={() => setIsRouteModalOpen(false)}
+          onApplyRoute={handleApplyRoute}
+          onOpenStream={(cam) => setStreamCamera(cam)}
+          onRequestFootage={(cam) =>
+            navigate(`/footage-requests?requestCam=${cam.cameraId}`)
+          }
+          isLight={isLight}
+          userRole={userRole}
+        />
+
+        {/* Operational Zone Creation Modal */}
+        <ZoneModal
+          isOpen={isZoneModalOpen}
+          onClose={() => setIsZoneModalOpen(false)}
+          onZoneCreated={(newZ) => {
+            queryClient.invalidateQueries(['gis-zones']);
+          }}
+          district={hierarchy.district !== 'all' ? hierarchy.district : 'Ahmedabad'}
+          isLight={isLight}
+        />
+
+        {/* Operational Geofence Zones Management Hub */}
+        <ZoneManagerModal
+          isOpen={isZoneManagerOpen}
+          onClose={() => setIsZoneManagerOpen(false)}
+          zones={zones}
+          onRefreshZones={() => {
+            queryClient.invalidateQueries(['gis-zones']);
+          }}
+          onFlyToZone={(zone) => {
+            handleSelectZone(zone);
+          }}
+          userRole={userRole}
+          district={hierarchy.district}
+          isLight={isLight}
+        />
+
+        {/* Coverage Gap Analysis Modal */}
+        <CoverageGapModal
+          isOpen={isCoverageModalOpen}
+          onClose={() => setIsCoverageModalOpen(false)}
+          district={hierarchy.district || 'all'}
+          onToggleCoverageLayer={() => setLayers((p) => ({ ...p, coverageGaps: !p.coverageGaps }))}
+          isCoverageLayerActive={layers.coverageGaps}
+          isLight={isLight}
+        />
+
+        {/* Stream Modal */}
+        {streamCamera && (
+          <CameraStreamModal
+            camera={streamCamera}
+            isOpen={!!streamCamera}
+            onClose={() => setStreamCamera(null)}
+          />
+        )}
+
+        {/* Department Escalation Report Modal */}
+        {deptReportCamera && (
+          <ReportToDeptModal
+            isOpen={isDeptReportOpen}
+            onClose={() => {
+              setIsDeptReportOpen(false);
+              setDeptReportCamera(null);
+            }}
+            camera={deptReportCamera}
+          />
+        )}
+
+        {/* Bulk Camera Onboarding Modal */}
+        <BulkImportModal
+          isOpen={isBulkImportOpen}
+          onClose={() => setIsBulkImportOpen(false)}
+          onImportSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['cameras'] });
+          }}
+        />
+      </div>
     </div>
   );
 }

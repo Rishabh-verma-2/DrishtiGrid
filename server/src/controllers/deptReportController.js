@@ -39,31 +39,57 @@ const normalizeRole = (role) => {
 
 /**
  * Resolve users whose department case-insensitively matches the camera's departmentName.
- * Returns empty array if no match — this triggers the "unresolved" flow.
+ * Cascades to keyword/category matching and active administrators so reports are never dropped.
  */
 const resolveDepartmentUsers = async (departmentName) => {
-  if (!departmentName) return [];
-  // Case-insensitive exact match first
-  const users = await User.find({
+  if (!departmentName) {
+    return await User.find({ role: 'ADMIN', isActive: true }).select('_id name email department role');
+  }
+
+  // 1. Case-insensitive exact match
+  let users = await User.find({
     department: { $regex: new RegExp(`^${departmentName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
     isActive: true,
-    role: { $exists: true },
   }).select('_id name email department role');
 
   if (users.length > 0) return users;
 
-  // Fallback: substring match (handles "Gujarat Traffic Police" vs "Traffic Police")
+  // 2. Substring match
   const words = departmentName.trim().split(/\s+/).filter((w) => w.length > 3);
-  if (words.length === 0) return [];
+  if (words.length > 0) {
+    const substringPattern = words.map((w) => `(?=.*${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`).join('');
+    users = await User.find({
+      department: { $regex: new RegExp(substringPattern, 'i') },
+      isActive: true,
+    }).select('_id name email department role');
 
-  const substringPattern = words.map((w) => `(?=.*${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`).join('');
-  const fallback = await User.find({
-    department: { $regex: new RegExp(substringPattern, 'i') },
-    isActive: true,
-    role: { $exists: true },
-  }).select('_id name email department role');
+    if (users.length > 0) return users;
+  }
 
-  return fallback;
+  // 3. Department category heuristics (Traffic, Police, Municipal, Admin)
+  const lower = departmentName.toLowerCase();
+  if (lower.includes('traffic')) {
+    users = await User.find({
+      $or: [
+        { department: { $regex: /traffic/i } },
+        { role: { $in: ['TRAFFIC', 'TRAFFIC_POLICE'] } },
+      ],
+      isActive: true,
+    }).select('_id name email department role');
+  } else if (lower.includes('police') || lower.includes('control room') || lower.includes('chowki') || lower.includes('station')) {
+    users = await User.find({
+      $or: [
+        { department: { $regex: /police/i } },
+        { role: 'POLICE' },
+      ],
+      isActive: true,
+    }).select('_id name email department role');
+  }
+
+  if (users && users.length > 0) return users;
+
+  // 4. Ultimate fallback: DrishtiGrid Administrator users so report is delivered to command authority
+  return await User.find({ role: 'ADMIN', isActive: true }).select('_id name email department role');
 };
 
 /**
@@ -98,6 +124,16 @@ const pushNotification = async ({ recipientUserIds, recipientDepartment, senderU
         actionUrl: notif.actionUrl,
       });
     });
+
+    // Also broadcast to department room and admin room so all connected staff in target department see it
+    if (recipientDepartment) {
+      emitToDepartment(recipientDepartment, 'notification:new', {
+        title,
+        message,
+        type,
+        actionUrl,
+      });
+    }
   } catch (err) {
     logger.error(`pushNotification error: ${err.message}`);
   }
@@ -108,16 +144,16 @@ const pushNotification = async ({ recipientUserIds, recipientDepartment, senderU
 /**
  * @desc  Create a new department escalation report
  * @route POST /api/dept-reports
- * @access ADMIN only
+ * @access ADMIN, POLICE, TRAFFIC_POLICE
  */
 const createReport = async (req, res) => {
   try {
     const userRole = normalizeRole(req.user.role);
-    if (userRole !== 'ADMIN') {
+    if (!['ADMIN', 'POLICE', 'TRAFFIC_POLICE'].includes(userRole)) {
       return res.status(403).json({
         success: false,
         errorCode: 'FORBIDDEN_ROLE',
-        message: 'Only Admin users can generate department reports.',
+        message: 'Only Command and Police personnel can generate department reports.',
       });
     }
 
@@ -568,4 +604,5 @@ module.exports = {
   replyToReport,
   updateReportStatus,
   getAttemptLogs,
+  resolveDepartmentUsers,
 };

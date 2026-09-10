@@ -206,11 +206,15 @@ body {
 .theme-light [class*="bg-[#0b0f19]"],
 .theme-light [class*="bg-[#080c16]"],
 .theme-light [class*="bg-[#111625]"],
+.theme-light [class*="bg-[#0d1322]"],
+.theme-light [class*="bg-[#0a0f1d]"],
 .theme-light .bg-\[\#141929\],
 .theme-light .bg-\[\#0e1220\],
 .theme-light .bg-\[\#0f1422\],
 .theme-light .bg-\[\#1e2740\],
-.theme-light .bg-\[\#111625\] {
+.theme-light .bg-\[\#111625\],
+.theme-light .bg-\[\#0d1322\],
+.theme-light .bg-\[\#0a0f1d\] {
   background-color: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   color: #0f172a !important;
@@ -1128,7 +1132,7 @@ body {
 .theme-light .leaflet-popup.cctv-cyber-popup a.leaflet-popup-close-button {
   top: 12px !important;
   right: 12px !important;
-  color: #64748b !important;
+  color: #475569 !important;
   background: #f1f5f9 !important;
 }
 
@@ -1142,30 +1146,142 @@ body {
   border-bottom: 1px solid #e2e8f0 !important;
 }
 
-.theme-light .camera-id-chip {
-  color: #0284c7 !important;
-  background: rgba(2, 132, 199, 0.1) !important;
-  border: 1px solid rgba(2, 132, 199, 0.25) !important;
-}
-
-.theme-light .camera-title {
+.theme-light .cctv-rich-popup-card {
   color: #0f172a !important;
 }
 
-.theme-light .cctv-popup-body {
-  background: #ffffff !important;
+.theme-light .cctv-chip-id,
+.theme-light .camera-id-chip {
+  color: #0369a1 !important;
+  background: #e0f2fe !important;
+  border: 1px solid #bae6fd !important;
 }
 
-.theme-light .section-title {
-  color: #475569 !important;
+.theme-light .cctv-title,
+.theme-light .camera-title,
+.theme-light .cctv-rich-popup-card h4 {
+  color: #0f172a !important;
+  font-weight: 700 !important;
 }
 
-.theme-light .section-icon {
+.theme-light .cctv-telemetry-label {
+  color: #334155 !important;
+  font-weight: 600 !important;
+}
+
+.theme-light .cctv-telemetry-val {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.theme-light .cctv-telemetry-val-sub {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+.theme-light .cctv-telemetry-health {
+  font-weight: 800 !important;
+}
+
+.theme-light .cctv-telemetry-incident {
+  color: #dc2626 !important;
+  font-weight: 800 !important;
+}
+
+.theme-light .cctv-telemetry-crowd {
+  color: #b45309 !important;
+  font-weight: 800 !important;
+}
+
+.theme-light .cctv-telemetry-anpr {
+  color: #0284c7 !important;
+  font-weight: 800 !important;
+}
+
+/* Light mode action buttons in rich popup */
+.theme-light .cctv-btn-live {
+  background: #059669 !important;
+  color: #ffffff !important;
+}
+
+.theme-light .cctv-btn-analyze {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.theme-light .cctv-btn-analyze:hover {
+  background: #e2e8f0 !important;
+}
+
+.theme-light .cctv-btn-intel {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  border: 1px solid #bae6fd !important;
+}
+
+.theme-light .cctv-btn-intel:hover {
+  background: #bae6fd !important;
+}
+
+.theme-light .cctv-btn-nearby {
+  background: #ede9fe !important;
+  color: #4338ca !important;
+  border: 1px solid #ddd6fe !important;
+}
+
+.theme-light .cctv-btn-nearby:hover {
+  background: #ddd6fe !important;
+}
+
+.theme-light .cctv-btn-footage {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb) !important;
+  color: #ffffff !important;
+}
+
+/* Universal Light Mode Fallbacks for CCTV Popups (prevents dark inline styles bleed) */
+.theme-light .cctv-rich-popup-card [style*="color: #94a3b8"],
+.theme-light .cctv-rich-popup-card [style*="color: rgb(148, 163, 184)"] {
+  color: #334155 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #e2e8f0"],
+.theme-light .cctv-rich-popup-card [style*="color: rgb(226, 232, 240)"] {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #cbd5e1"],
+.theme-light .cctv-rich-popup-card [style*="color: rgb(203, 213, 225)"] {
+  color: #1e293b !important;
+  font-weight: 600 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #f8fafc"],
+.theme-light .cctv-rich-popup-card [style*="color: rgb(248, 250, 252)"] {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #34d399"] {
+  color: #059669 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #f87171"] {
+  color: #dc2626 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #fbbf24"] {
+  color: #b45309 !important;
+}
+
+.theme-light .cctv-rich-popup-card [style*="color: #22d3ee"],
+.theme-light .cctv-rich-popup-card [style*="color: #38bdf8"] {
   color: #0284c7 !important;
 }
 
-.theme-light .meta-row .label {
-  color: #64748b !important;
+.theme-light .cctv-rich-popup-card button:hover {
+  filter: brightness(0.96);
 }
 
 .theme-light .meta-row .val {

@@ -11,8 +11,25 @@ const {
 } = require('../controllers/cameraController');
 const { authenticate, authorize } = require('../middleware/auth');
 
+const {
+  getTemplate,
+  validateBulk,
+  commitImport,
+  getImportSession,
+  downloadReport,
+  cancelImport,
+} = require('../controllers/bulkCameraController');
+
 // Stats (before :id to avoid route conflict)
 router.get('/stats', authenticate, getCameraStats);
+
+// ── Bulk Camera Onboarding & Registry Import ────────────────────────────────
+router.get('/bulk/template', authenticate, authorize('ADMIN', 'SUPERADMIN'), getTemplate);
+router.post('/bulk/validate', authenticate, authorize('ADMIN', 'SUPERADMIN'), validateBulk);
+router.post('/bulk/import', authenticate, authorize('ADMIN', 'SUPERADMIN'), commitImport);
+router.get('/bulk/import/:importId', authenticate, authorize('ADMIN', 'SUPERADMIN'), getImportSession);
+router.get('/bulk/import/:importId/report', authenticate, authorize('ADMIN', 'SUPERADMIN'), downloadReport);
+router.post('/bulk/import/:importId/cancel', authenticate, authorize('ADMIN', 'SUPERADMIN'), cancelImport);
 
 // CRUD
 router.get('/', authenticate, getCameras);

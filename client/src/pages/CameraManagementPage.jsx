@@ -4,11 +4,13 @@ import { cameraAPI } from '../api';
 import {
   Camera, Search, Plus, MapPin, Filter, Edit2, Trash2,
   Video, RefreshCw, CheckCircle2, AlertTriangle, XCircle,
-  Clock, Shield, Eye, ChevronLeft, ChevronRight, X
+  Clock, Shield, Eye, ChevronLeft, ChevronRight, X, UploadCloud
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CameraFormModal from '../components/cameras/CameraFormModal';
 import CameraStreamModal from '../components/cameras/CameraStreamModal';
+import BulkImportModal from '../components/cameras/BulkImportModal';
+import { useThemeStore } from '../store/themeStore';
 
 const STATUS_BADGE = {
   online:      'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
@@ -19,6 +21,8 @@ const STATUS_BADGE = {
 
 export default function CameraManagementPage() {
   const queryClient = useQueryClient();
+  const { theme } = useThemeStore();
+  const isLight = theme === 'light';
 
   // Search and filters
   const [search, setSearch] = useState('');
@@ -33,6 +37,7 @@ export default function CameraManagementPage() {
 
   // Modal states
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [editingCamera, setEditingCamera] = useState(null);
   const [streamCamera, setStreamCamera] = useState(null);
   const [deletingCamera, setDeletingCamera] = useState(null);
@@ -160,9 +165,25 @@ export default function CameraManagementPage() {
             onClick={() => refetch()}
             title="Refresh list"
             disabled={isFetching}
-            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/8 transition-colors"
+            className={`p-2.5 rounded-xl border transition-colors cursor-pointer ${
+              isLight
+                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/8'
+            }`}
           >
-            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-blue-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${isFetching ? 'animate-spin text-blue-500' : isLight ? 'text-slate-600' : 'text-slate-400'}`} />
+          </button>
+          <button
+            id="bulk-import-camera-btn"
+            onClick={() => setBulkImportOpen(true)}
+            className={`flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-sm ${
+              isLight
+                ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 hover:border-blue-400 shadow-blue-500/5'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 hover:border-blue-500/40'
+            }`}
+          >
+            <UploadCloud className={`w-4 h-4 shrink-0 ${isLight ? 'text-blue-600' : 'text-blue-400'}`} />
+            <span className={isLight ? 'text-blue-700 font-bold' : 'text-slate-200 font-bold'}>Bulk Import</span>
           </button>
           <button
             id="add-camera-btn"
@@ -548,6 +569,13 @@ export default function CameraManagementPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk Camera Onboarding & Registry Import Modal */}
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        onImportSuccess={() => refetch()}
+      />
     </div>
   );
 }
