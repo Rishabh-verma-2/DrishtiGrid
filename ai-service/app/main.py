@@ -50,9 +50,10 @@ async def lifespan(app: FastAPI):
     logger.info("=== ANPR AI Service — Starting up ===")
 
     # 1. YOLO
+    lp_model = None
     try:
-        from app.detection.yolo_detector import load_yolo_model
-        load_yolo_model()
+        from app.detection.yolo_detector import load_yolo_model, get_lp_model_diagnostics
+        lp_model = load_yolo_model()
     except Exception as e:
         logger.error(f"YOLO model loading failed: {e}")
 
@@ -70,12 +71,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Real-ESRGAN loading failed (non-fatal, bicubic fallback): {e}")
 
-    # 4. PaddleOCR
+    # 4. OCR Engine (PaddleOCR / EasyOCR)
     try:
-        from app.ocr.paddle_ocr import load_ocr_engine
+        from app.ocr.paddle_ocr import load_ocr_engine, get_ocr_diagnostics
         load_ocr_engine()
     except Exception as e:
-        logger.error(f"PaddleOCR loading failed: {e}")
+        logger.error(f"OCR engine loading failed: {e}")
 
     # 5. YOLO Vehicle Attributes Model
     try:
@@ -93,6 +94,40 @@ async def lifespan(app: FastAPI):
         logger.info("Crowd detector warmed up successfully.")
     except Exception as e:
         logger.warning(f"Crowd detector warm-up failed (non-fatal): {e}")
+
+    # 7. Comprehensive 10-Point ANPR Diagnostics Logging
+    try:
+        import torch
+        from pathlib import Path
+        from app.detection.yolo_detector import get_lp_model_diagnostics
+        from app.ocr.paddle_ocr import get_ocr_diagnostics
+
+        lp_diag = get_lp_model_diagnostics()
+        ocr_diag = get_ocr_diagnostics()
+        cuda_avail = torch.cuda.is_available() if torch else False
+        dedicated_path = Path("model_weights/license_plate_detector.pt")
+        dedicated_exists = dedicated_path.is_file()
+
+        logger.info("============================================================")
+        logger.info("           ANPR RUNTIME STARTUP DIAGNOSTICS                 ")
+        logger.info("============================================================")
+        logger.info(f" 1. Primary YOLO Model:    {lp_diag.get('lp_model_path') or 'None'}")
+        logger.info(f" 2. Dedicated LP Exists:   {dedicated_exists} ({dedicated_path})")
+        logger.info(f" 3. Model Path:            {lp_diag.get('lp_model_path')}")
+        logger.info(f" 4. Model Class Names:     {list(lp_model.names.values()) if lp_model and hasattr(lp_model, 'names') else 'N/A'}")
+        logger.info(f" 5. Has LP Class:          {lp_diag.get('lp_model_available', False)} (matched: {lp_diag.get('lp_model_classes', [])})")
+        logger.info(f" 6. Loaded OCR Engine:     {ocr_diag.get('ocr_engine')}")
+        logger.info(f" 7. OCR Engine Version:    {ocr_diag.get('ocr_version')}")
+        logger.info(f" 8. OCR Initialized:       {ocr_diag.get('ocr_available')} ({ocr_diag.get('ocr_status')})")
+        logger.info(f" 9. CUDA / GPU Available:  {cuda_avail}")
+        logger.info(f"10. CPU Fallback Active:   {not cuda_avail}")
+        logger.info("============================================================")
+
+        if not lp_diag.get("lp_model_available", False):
+            logger.warning("DEDICATED LP MODEL NOT FOUND — PLATE DETECTION QUALITY WILL BE LIMITED")
+
+    except Exception as e:
+        logger.error(f"Startup diagnostics logging error: {e}")
 
     logger.info("=== All models loaded. Ready to serve requests. ===")
 

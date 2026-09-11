@@ -25,16 +25,22 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'],
+      enum: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE', 'DEPARTMENT', 'POLICE_STATION'],
       default: 'POLICE',
       set: (val) => {
         if (!val) return 'POLICE';
         const upper = String(val).toUpperCase();
         if (['SUPERADMIN', 'ADMIN'].includes(upper)) return 'ADMIN';
-        if (['OPERATOR', 'VIEWER', 'POLICE'].includes(upper)) return 'POLICE';
+        if (['POLICE_STATION', 'STATION'].includes(upper)) return 'POLICE_STATION';
+        if (['DEPARTMENT', 'DEPT', 'INVESTIGATION_DEPT'].includes(upper)) return 'DEPARTMENT';
         if (['TRAFFIC', 'TRAFFIC_POLICE', 'TRAFFICPOLICE'].includes(upper)) return 'TRAFFIC_POLICE';
+        if (['OPERATOR', 'VIEWER', 'POLICE'].includes(upper)) return 'POLICE';
         return upper;
       },
+    },
+    policeStation: {
+      type: String,
+      trim: true,
     },
     department: {
       type: String,
@@ -161,12 +167,15 @@ const ALL_PERMISSIONS = [
   'system_health',
   'audit_logs',
   'camera_management',
+  'investigation',
 ];
 
 const ROLE_DEFAULT_PERMISSIONS = {
   ADMIN: ALL_PERMISSIONS,
-  POLICE: ['gis_map', 'camera_monitoring', 'footage_requests', 'reports'],
-  TRAFFIC_POLICE: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports'],
+  POLICE: ['gis_map', 'camera_monitoring', 'footage_requests', 'reports', 'investigation'],
+  POLICE_STATION: ['gis_map', 'camera_monitoring', 'footage_requests', 'reports', 'investigation'],
+  TRAFFIC_POLICE: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports', 'investigation'],
+  DEPARTMENT: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports', 'investigation'],
 };
 
 // Method: get effective permissions (explicit array or role defaults)
@@ -179,6 +188,21 @@ userSchema.methods.getEffectivePermissions = function () {
     return this.permissions;
   }
   return ROLE_DEFAULT_PERMISSIONS[role] || ROLE_DEFAULT_PERMISSIONS.POLICE;
+};
+
+// Method: get normalized investigation role (ADMIN, POLICE_STATION, or DEPARTMENT)
+userSchema.methods.getInvestigationRole = function () {
+  const r = String(this.role || '').toUpperCase();
+  if (['ADMIN', 'SUPERADMIN'].includes(r)) return 'ADMIN';
+  if (['POLICE_STATION', 'POLICE'].includes(r)) return 'POLICE_STATION';
+  if (['TRAFFIC_POLICE', 'DEPARTMENT'].includes(r)) return 'DEPARTMENT';
+
+  const dept = String(this.department || '').toLowerCase();
+  if (dept.includes('home')) return 'ADMIN';
+  if (dept.includes('station') || dept.includes('police department') || dept.includes('thana')) return 'POLICE_STATION';
+  if (dept.includes('traffic') || dept.includes('crime') || dept.includes('sog') || dept.includes('branch')) return 'DEPARTMENT';
+
+  return 'POLICE_STATION';
 };
 
 const User = mongoose.model('User', userSchema);

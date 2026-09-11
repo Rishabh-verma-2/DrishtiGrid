@@ -148,6 +148,8 @@ async def process_image(
         "original_image": pipeline_result.get("original_image_b64", ""),
         "processed_image": pipeline_result.get("processed_image_b64", ""),
         "plates": plates_response,
+        "successful_anpr_results": pipeline_result.get("successful_anpr_results", []),
+        "vehicles": pipeline_result.get("vehicles", pipeline_result.get("vehicle_results", [])),
         "vehicle_results": pipeline_result.get("vehicle_results", []),
         "timings": pipeline_result.get("timings", {}),
     }

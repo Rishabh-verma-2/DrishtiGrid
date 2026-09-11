@@ -212,6 +212,31 @@ export const gisAPI = {
   deleteIncident: (id) => apiClient.delete(`/gis/incidents/${id}`),
 };
 
+export const investigationAPI = {
+  getCases: (params) => apiClient.get('/investigation/cases', { params }),
+  getCaseById: (id) => apiClient.get(`/investigation/cases/${id}`),
+  createCase: (formData) =>
+    apiClient.post('/investigation/cases', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  reviewCase: (id, data) => apiClient.post(`/investigation/cases/${id}/review`, data),
+  getWatchlist: (params) => apiClient.get('/investigation/watchlist', { params }),
+  assignDepartments: (id, data) => apiClient.post(`/investigation/watchlist/${id}/assign`, data),
+  batchCreateAndDistributeWatchlist: (data) =>
+    apiClient.post('/investigation/watchlist/batch-create-and-distribute', data),
+  getAssignments: (params) => apiClient.get('/investigation/assignments', { params }),
+  runSearch: (data) => apiClient.post('/investigation/search', data),
+  submitResult: (formData) =>
+    apiClient.post('/investigation/results', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }),
+  validateResult: (id, data) => apiClient.post(`/investigation/results/${id}/validate`, data),
+  forwardResult: (id, data) => apiClient.post(`/investigation/results/${id}/forward`, data),
+  acknowledgeResult: (id, data) => apiClient.post(`/investigation/results/${id}/acknowledge`, data),
+  checkDuplicate: (params) => apiClient.get('/investigation/check-duplicate', { params }),
+  getAnalytics: () => apiClient.get('/investigation/analytics'),
+};
+
 
 
 

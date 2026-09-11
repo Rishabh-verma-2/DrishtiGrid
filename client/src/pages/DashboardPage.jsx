@@ -16,12 +16,48 @@ import { format } from 'date-fns';
 // ─── Stat Card Component ──────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, color = 'blue', isLight = false }) {
   const colorMap = {
-    blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/20', icon: 'text-blue-500', val: isLight ? 'text-blue-700' : 'text-blue-400' },
-    green: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', icon: 'text-emerald-500', val: isLight ? 'text-emerald-700' : 'text-emerald-400' },
-    red: { bg: 'bg-red-500/10', border: 'border-red-500/20', icon: 'text-red-500', val: isLight ? 'text-red-700' : 'text-red-400' },
-    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', icon: 'text-amber-500', val: isLight ? 'text-amber-700' : 'text-amber-400' },
-    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/20', icon: 'text-purple-500', val: isLight ? 'text-purple-700' : 'text-purple-400' },
-    cyan: { bg: 'bg-cyan-500/10', border: 'border-cyan-500/20', icon: 'text-cyan-500', val: isLight ? 'text-cyan-700' : 'text-cyan-400' },
+    blue: {
+      bg: isLight ? 'bg-blue-50' : 'bg-blue-950/40',
+      border: isLight ? 'border-blue-200' : 'border-blue-500/30',
+      icon: isLight ? 'text-blue-600' : 'text-blue-400',
+      val: isLight ? 'text-blue-700' : 'text-blue-300',
+    },
+    mono: {
+      bg: isLight ? 'bg-slate-100' : 'bg-slate-800/80',
+      border: isLight ? 'border-slate-200' : 'border-slate-700/60',
+      icon: isLight ? 'text-slate-800' : 'text-white',
+      val: isLight ? 'text-slate-900' : 'text-white',
+    },
+    green: {
+      bg: isLight ? 'bg-slate-100' : 'bg-slate-800/60',
+      border: isLight ? 'border-slate-200' : 'border-slate-700/60',
+      icon: isLight ? 'text-blue-600' : 'text-blue-400',
+      val: isLight ? 'text-emerald-700' : 'text-emerald-400',
+    },
+    red: {
+      bg: isLight ? 'bg-slate-100' : 'bg-slate-800/60',
+      border: isLight ? 'border-slate-200' : 'border-slate-700/60',
+      icon: isLight ? 'text-slate-800' : 'text-white',
+      val: isLight ? 'text-red-700' : 'text-red-400',
+    },
+    amber: {
+      bg: isLight ? 'bg-blue-50' : 'bg-blue-950/30',
+      border: isLight ? 'border-blue-200' : 'border-blue-500/30',
+      icon: isLight ? 'text-blue-600' : 'text-blue-400',
+      val: isLight ? 'text-amber-700' : 'text-amber-400',
+    },
+    purple: {
+      bg: isLight ? 'bg-slate-100' : 'bg-slate-800/60',
+      border: isLight ? 'border-slate-200' : 'border-slate-700/60',
+      icon: isLight ? 'text-blue-600' : 'text-blue-400',
+      val: isLight ? 'text-slate-900' : 'text-blue-300',
+    },
+    cyan: {
+      bg: isLight ? 'bg-blue-50' : 'bg-blue-950/40',
+      border: isLight ? 'border-blue-200' : 'border-blue-500/30',
+      icon: isLight ? 'text-blue-600' : 'text-blue-400',
+      val: isLight ? 'text-blue-700' : 'text-blue-300',
+    },
   };
   const c = colorMap[color] || colorMap.blue;
 
@@ -32,7 +68,7 @@ function StatCard({ icon: Icon, label, value, sub, color = 'blue', isLight = fal
         <div className={`w-10 h-10 ${c.bg} border ${c.border} rounded-xl flex items-center justify-center`}>
           <Icon className={`w-5 h-5 ${c.icon}`} />
         </div>
-        <TrendingUp className={`w-3.5 h-3.5 ${isLight ? 'text-slate-400' : 'text-slate-600'}`} />
+        <TrendingUp className={`w-3.5 h-3.5 ${isLight ? 'text-slate-400' : 'text-slate-500'}`} />
       </div>
       <p className={`text-2xl font-black ${c.val} mb-1 font-mono`}>{value ?? '—'}</p>
       <p className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>{label}</p>
@@ -296,7 +332,7 @@ export default function DashboardPage() {
               </div>
               <Link
                 to="/footage-requests"
-                className="text-xs font-bold text-blue-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
               >
                 <span>View All</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -320,7 +356,7 @@ export default function DashboardPage() {
                   <tbody className={`divide-y ${isLight ? 'divide-slate-200' : 'divide-white/4'}`}>
                     {recentTickets.map((t) => (
                       <tr key={t._id} className="hover:bg-slate-50 dark:hover:bg-white/2 cursor-pointer" onClick={() => navigate('/footage-requests')}>
-                        <td className="py-2.5 font-mono font-bold text-blue-600 dark:text-cyan-400">
+                        <td className="py-2.5 font-mono font-bold text-blue-600 dark:text-blue-400">
                           {t.ticketId}
                         </td>
                         <td className="py-2.5 font-medium truncate max-w-[150px]">

@@ -5,13 +5,14 @@ import {
   LayoutDashboard, Map, Camera, Video, Bell, Settings,
   LogOut, Shield, ChevronLeft, ChevronRight, Activity,
   Users, Menu, X, Sun, Moon, Landmark, FileText, BarChart3, Lock, Car,
-  Flame, UserCog
+  UserCog, ShieldAlert
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSocketStore from '../../store/socketStore';
 import { useThemeStore } from '../../store/themeStore';
+import GovernmentLogo from '../common/GovernmentLogo';
 import NotificationCenter from '../notifications/NotificationCenter';
-import { notificationAPI, footageTicketAPI } from '../../api';
+import { notificationAPI, footageTicketAPI, investigationAPI } from '../../api';
 import { hasPermission } from '../../utils/permissions';
 import toast from 'react-hot-toast';
 
@@ -21,8 +22,9 @@ const ALL_NAV_ITEMS = [
   { to: '/gis-map',             icon: Map,             label: 'GIS Camera Map',         labelGu: 'નકશો (GIS)',         roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'gis_map' },
   { to: '/camera-monitoring',   icon: Video,           label: 'Live Monitoring',        labelGu: 'લાઇવ ફીડ્સ',          roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'camera_monitoring' },
   { to: '/anpr',                icon: Car,             label: 'ANPR Surveillance',      labelGu: 'નંબર પ્લેટ (ANPR)',  roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'anpr' },
-  { to: '/crowd-detection',     icon: Flame,           label: 'Crowd & Density AI',     labelGu: 'ભીડ વિશ્લેષણ (Crowd)', roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'crowd' },
+  { to: '/crowd-detection',     icon: Users,           label: 'Crowd & Density AI',     labelGu: 'ભીડ વિશ્લેષણ (Crowd)', roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'crowd' },
   { to: '/footage-requests',    icon: FileText,        label: 'Footage Requests',       labelGu: 'ફૂટેજ વિનંતી',        roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'footage_requests' },
+  { to: '/investigation',       icon: ShieldAlert,     label: 'FIR Investigation',      labelGu: 'તપાસ અને વોચલિસ્ટ',   roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'investigation', isInvestigationTab: true },
   { to: '/reports',             icon: BarChart3,       label: 'Reports',                labelGu: 'અહેવાલો',             roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'], permission: 'reports' },
   { to: '/camera-management',   icon: Camera,          label: 'Camera Management',      labelGu: 'કેમેરા યાદી',         roles: ['ADMIN'] },
   { to: '/users',               icon: Users,           label: 'Users & Roles',          labelGu: 'વપરાશકર્તાઓ',        roles: ['ADMIN'] },
@@ -76,6 +78,15 @@ export default function DashboardLayout() {
   });
   const pendingAdminCount = ticketStats?.pendingAdmin || 0;
 
+  // Query investigation stats for badge
+  const { data: invData } = useQuery({
+    queryKey: ['investigation-analytics-badge'],
+    queryFn: () => investigationAPI.getAnalytics().then((r) => r.data.data),
+    staleTime: 25000,
+    refetchInterval: 30000,
+  });
+  const pendingFirCount = invData?.kpis?.pendingFirs || 0;
+
   const handleLogout = async () => {
     await logout();
     toast.success('Logged out successfully');
@@ -103,6 +114,28 @@ export default function DashboardLayout() {
           isFootageAdminTab: true,
         };
       }
+      // Role-specific FIR Investigation tab labeling
+      if (item.to === '/investigation') {
+        if (normalizedRole === 'ADMIN') {
+          return {
+            ...item,
+            label: 'FIR Watchlist & Command',
+            labelGu: 'FIR વોચલિસ્ટ અને કમાન્ડ',
+          };
+        }
+        if (normalizedRole === 'TRAFFIC_POLICE') {
+          return {
+            ...item,
+            label: 'Assigned Inquiries & Search',
+            labelGu: 'સોંપાયેલ તપાસ અને સર્ચ',
+          };
+        }
+        return {
+          ...item,
+          label: 'FIR Requests & Results',
+          labelGu: 'FIR વિનંતીઓ અને પરિણામો',
+        };
+      }
       return item;
     });
   }, [normalizedRole, user]);
@@ -111,26 +144,10 @@ export default function DashboardLayout() {
     <div className={`flex flex-col h-full ${isLight ? 'bg-white text-slate-800' : 'bg-[#080c16] text-slate-200'}`}>
       
       {/* Official Government Emblem & Logo */}
-      <div className={`flex items-center gap-3 px-4 py-4 border-b shrink-0 ${
+      <div className={`flex items-center px-4 py-3.5 border-b shrink-0 ${
         isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080c16] border-white/5'
       } ${collapsed ? 'justify-center px-2' : ''}`}>
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 font-bold shadow-sm ${
-          isLight
-            ? 'bg-blue-600 text-white border border-blue-700'
-            : 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_0_14px_rgba(59,130,246,0.5)]'
-        }`}>
-          <Shield className="w-5 h-5" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className={`font-black text-sm tracking-tight ${isLight ? 'text-slate-900' : 'gradient-text'}`}>
-              DrishtiGrid
-            </p>
-            <p className={`text-[10px] font-semibold truncate ${isLight ? 'text-amber-700' : 'text-amber-300/90'}`}>
-              ગુજરાત સરકાર · Gov of Gujarat
-            </p>
-          </div>
-        )}
+        <GovernmentLogo size="md" collapsed={collapsed} />
       </div>
 
       {/* Navigation */}
@@ -150,7 +167,7 @@ export default function DashboardLayout() {
           </div>
         )}
         <ul className="space-y-1">
-          {visibleNavItems.map(({ to, icon: Icon, label, labelGu, isNotificationTab, isFootageAdminTab }) => (
+          {visibleNavItems.map(({ to, icon: Icon, label, labelGu, isNotificationTab, isFootageAdminTab, isInvestigationTab }) => (
             <li key={to}>
               <NavLink
                 to={to}
@@ -184,6 +201,9 @@ export default function DashboardLayout() {
                       {isFootageAdminTab && pendingAdminCount > 0 && collapsed && (
                         <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-[#080c16] animate-pulse" />
                       )}
+                      {isInvestigationTab && pendingFirCount > 0 && collapsed && (
+                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-600 border-2 border-[#080c16]" />
+                      )}
                     </div>
                     {!collapsed && (
                       <div className="flex flex-col min-w-0 flex-1">
@@ -203,6 +223,11 @@ export default function DashboardLayout() {
                           {isFootageAdminTab && pendingAdminCount > 0 && (
                             <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-amber-500 text-amber-950 shadow-sm shadow-amber-500/30 shrink-0 animate-pulse">
                               {pendingAdminCount}
+                            </span>
+                          )}
+                          {isInvestigationTab && pendingFirCount > 0 && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-blue-600 text-white shrink-0">
+                              {pendingFirCount}
                             </span>
                           )}
                         </div>
@@ -371,13 +396,13 @@ export default function DashboardLayout() {
             {/* Official Government Page Title */}
             <div className="hidden lg:flex items-center gap-3">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-xs ${
-                isLight ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-blue-500/10 text-blue-400'
+                isLight ? 'bg-blue-50 border border-blue-200 text-blue-700' : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
               }`}>
                 <Landmark className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-black ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>
+                  <span className={`text-xs font-black ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                     ગુજરાત સરકાર · Government of Gujarat
                   </span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${

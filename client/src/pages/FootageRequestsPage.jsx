@@ -57,8 +57,8 @@ const STATUS_CONFIG = {
   },
   AVAILABLE: {
     label: 'Evidence Available',
-    badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
-    dot: 'bg-cyan-400',
+    badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+    dot: 'bg-blue-400',
   },
   VIEWED: {
     label: 'Evidence Viewed',
@@ -80,7 +80,7 @@ const STATUS_CONFIG = {
   Accepted: { label: 'Dept Acknowledged', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-500' },
   Processing: { label: 'Preparation In Progress', badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-500' },
   'Evidence Uploaded': { label: 'Evidence Uploaded', badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-500' },
-  Available: { label: 'Evidence Available', badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
+  Available: { label: 'Evidence Available', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-400' },
   Viewed: { label: 'Evidence Viewed', badgeClass: 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30', dot: 'bg-purple-400' },
   Responded: { label: 'Responded', badgeClass: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border-teal-500/30', dot: 'bg-teal-400' },
   Closed: { label: 'Completed & Certified', badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30', dot: 'bg-slate-400' },
@@ -88,7 +88,7 @@ const STATUS_CONFIG = {
   submitted: { label: 'Pending Nodal Review', badgeClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30', dot: 'bg-amber-500' },
   under_review: { label: 'Dept Acknowledged', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-500' },
   approved: { label: 'Preparation In Progress', badgeClass: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30', dot: 'bg-indigo-500' },
-  dispatched: { label: 'Evidence Available', badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30', dot: 'bg-cyan-400' },
+  dispatched: { label: 'Evidence Available', badgeClass: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30', dot: 'bg-blue-400' },
   closed: { label: 'Completed & Certified', badgeClass: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/30', dot: 'bg-slate-400' },
   rejected: { label: 'Rejected', badgeClass: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30', dot: 'bg-rose-500' },
 };
@@ -835,10 +835,10 @@ export default function FootageRequestsPage() {
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">Evidence Available</span>
-            <Video className="w-4 h-4 text-cyan-500" />
+            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">Evidence Available</span>
+            <Video className="w-4 h-4 text-blue-500" />
           </div>
-          <p className="text-2xl font-black mt-1 text-cyan-600 dark:text-cyan-400">{stats.available || stats.evidenceUploaded || 0}</p>
+          <p className="text-2xl font-black mt-1 text-blue-600 dark:text-blue-400">{stats.available || stats.evidenceUploaded || 0}</p>
         </div>
 
         <div className={`p-4 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#121727] border-white/5'}`}>
@@ -1298,7 +1298,7 @@ export default function FootageRequestsPage() {
                   <button
                     onClick={handleOpenEvidencePackage}
                     disabled={isPackageLoading}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-cyan-600/20 text-cyan-400 hover:bg-cyan-600 hover:text-white border border-cyan-500/30 text-xs font-bold transition-all cursor-pointer"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white border border-blue-500/30 text-xs font-bold transition-all cursor-pointer"
                   >
                     <FileCheck className="w-3.5 h-3.5" />
                     <span>Sec 65B Certificate</span>

@@ -19,6 +19,8 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import ANPRPage from './pages/ANPRPage';
 import CrowdDetectionPage from './pages/CrowdDetectionPage';
 import NotificationsPage from './pages/NotificationsPage';
+import InvestigationPage from './pages/InvestigationPage';
+import CaseDetailPage from './pages/CaseDetailPage';
 import RoleRoute from './components/auth/RoleRoute';
 
 // Protected route wrapper
@@ -86,6 +88,22 @@ function App() {
           }
         />
         <Route path="tickets" element={<Navigate to="/footage-requests" replace />} />
+        <Route
+          path="investigation"
+          element={
+            <RoleRoute permission="investigation">
+              <InvestigationPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="investigation/cases/:id"
+          element={
+            <RoleRoute permission="investigation">
+              <CaseDetailPage />
+            </RoleRoute>
+          }
+        />
         <Route
           path="reports"
           element={

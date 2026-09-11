@@ -91,19 +91,19 @@ body {
 }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
-/* ─── Gradient text helper ──────────────────────── */
-.theme-light .gradient-text {
-  background: linear-gradient(135deg, #1e40af, #0369a1);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* ─── Solid High-Contrast Typography (De-vibe-coded) ──── */
+.gradient-text {
+  color: #0f172a;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+  background-clip: border-box !important;
 }
 
 .theme-dark .gradient-text {
-  background: linear-gradient(135deg, #60a5fa, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+  background-clip: border-box !important;
 }
 
 /* ═════════════════════════════════════════════════

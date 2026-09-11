@@ -85,248 +85,202 @@ def _box_contains(outer: Tuple[int, int, int, int], inner: Tuple[int, int, int, 
 def _classify_bgr_hsv_color(b: float, g: float, r: float) -> str:
     """
     Robust vehicle paint color classifier combining RGB channel deltas and HSV.
-
-    Calibrated for outdoor surveillance cameras (6500K daylight, diffuse sky light).
-    Neutral vehicles (white/silver/black) show HSV saturation up to ~50 due to sky
-    reflections; chromatic vehicles (red/blue/green) show saturation >= 40.
+    Calibrated for outdoor surveillance cameras (daylight, sky diffuse reflection).
+    Supported classes:
+      White, Black, Silver / Gray, Red, Maroon, Blue, Green, Yellow, Brown, Orange, Other, Unknown.
     """
     mean_val = (r + g + b) / 3.0
     channel_delta = max(r, g, b) - min(r, g, b)
 
-    # Convert single BGR triplet to HSV
     bgr_pixel = np.uint8([[[int(b), int(g), int(r)]]])
     hsv_pixel = cv2.cvtColor(bgr_pixel, cv2.COLOR_BGR2HSV)[0][0]
     h, s, v = float(hsv_pixel[0]), float(hsv_pixel[1]), float(hsv_pixel[2])
 
-    # ------------------------------------------------------------------
     # 1. Achromatic / Neutral Paint Detection
-    # Threshold lowered to S < 40 / channel_delta < 22 for outdoor surveillance:
-    # - White vehicles: S=5-30, V=180-255
-    # - Silver/Gray: S=5-45, V=90-180
-    # - Black: S=0-30, V=0-55
-    # - Sky reflections on neutral metal add at most ~40 saturation
-    # ------------------------------------------------------------------
-    # ------------------------------------------------------------------
-    # 1. Achromatic / Neutral Paint Detection
-    # Threshold calibrated for outdoor surveillance:
-    # - Black: V < 72 or mean_val < 72 (sunlit black paint shows diffuse glare 50-70)
-    # - White: V > 155 or mean_val > 155
-    # - Silver / Gray: 72 <= V <= 155
-    # ------------------------------------------------------------------
-    if s < 40 or channel_delta < 22:
-        if v < 72 or mean_val < 72:
+    # Sky reflections on neutral metal add at most ~40 saturation with low channel delta
+    if s < 38 or channel_delta < 20:
+        if v < 68 or mean_val < 68:
             return "Black"
-        elif v > 155 or mean_val > 155:
+        elif v > 160 or mean_val > 160:
             return "White"
         else:
             return "Silver / Gray"
 
-    # ------------------------------------------------------------------
-    # 2. Chromatic / Vivid Paint Detection (S >= 40 and channel_delta >= 22)
-    # Red wraps around 0 and 180 in OpenCV Hue (0-179 scale)
-    # ------------------------------------------------------------------
-    if (0 <= h < 10) or (165 <= h <= 180):
-        if v < 80:
-            return "Maroon / Dark Red"
+    # 2. Chromatic / Vivid Paint Detection
+    # Red & Maroon: wrap around 0 and 180
+    if (0 <= h <= 12) or (162 <= h <= 180):
+        if v < 110 or mean_val < 95:
+            return "Maroon"
         return "Red"
-    elif 10 <= h < 22:
+    elif 12 < h <= 25:
         if v < 95 and s < 130:
             return "Brown"
         return "Orange"
-    elif 22 <= h < 38:
+    elif 25 < h <= 38:
         if v < 115 and s < 110:
-            return "Gold / Bronze"
+            return "Brown"
         return "Yellow"
-    elif 38 <= h < 85:
-        # Dark green (olive, forest) vs vivid green
-        if v < 90:
-            return "Dark Green"
+    elif 38 < h <= 85:
         return "Green"
-    elif 85 <= h < 135:
-        # True chromatic blue — not sky reflection (filtered above by S >= 40)
-        if v < 90:
-            return "Dark Blue"
-        return "Blue"
-    elif 135 <= h < 165:
-        return "Purple / Violet"
+    elif 85 < h <= 135:
+        # Require stronger saturation/channel delta for blue to differentiate from sky reflections
+        if s >= 45 and (b > r + 15):
+            return "Blue"
+        if v > 155:
+            return "White"
+        elif v < 70:
+            return "Black"
+        return "Silver / Gray"
+    elif 135 < h < 162:
+        return "Other"
 
     # Fallback by luminance
-    if v > 155 or mean_val > 155:
+    if v > 160:
         return "White"
-    elif v < 72 or mean_val < 72:
+    elif v < 68:
         return "Black"
     return "Silver / Gray"
 
 
 def _extract_dominant_color(
     image_bgr: np.ndarray,
-    plate_box: Tuple[int, int, int, int],
+    plate_box: Optional[Tuple[int, int, int, int]] = None,
     vehicle_box: Optional[Tuple[int, int, int, int]] = None,
-) -> Optional[str]:
+) -> str:
     """
-    Extract dominant body paint color from targeted vehicle body patches.
-
-    Sampling strategy:
-    - A: Above license plate  (bumper / trunk lid)
-    - B: Left of license plate (body panel)
-    - C: Right of license plate (body panel)
-    - D: Below license plate (rear bumper / valance) — only if not touching road
-    - E: Vehicle central hood/body (if vehicle bbox detected by YOLO)
-
-    K-means (K=5) is used to separate paint color from road, sky, and
-    shadow clusters. Only non-shadow, non-specular clusters are considered.
-    The largest qualifying paint cluster by pixel count wins.
+    Extract vehicle color estimated STRICTLY from the vehicle body region,
+    while excluding license plate, windshield, windows, tires, road, sky, and specular glare.
+    Prefers body panels: hood, doors, fenders, side body, front/rear bumper panels.
     """
+    if image_bgr is None or image_bgr.size == 0:
+        return "Unknown"
+
     try:
         img_h, img_w = image_bgr.shape[:2]
-        px1, py1, px2, py2 = plate_box
-        plate_w = max(px2 - px1, 1)
-        plate_h = max(py2 - py1, 1)
 
-        patches: List[np.ndarray] = []
+        # Handle argument inversion if called with (img, vehicle_box, plate_box)
+        if vehicle_box is None and plate_box is not None:
+            # Check if plate_box is actually vehicle-sized
+            pw = plate_box[2] - plate_box[0]
+            ph = plate_box[3] - plate_box[1]
+            if pw > img_w * 0.25 and ph > img_h * 0.20:
+                vehicle_box = plate_box
+                plate_box = None
 
-        # Patch A: Directly above license plate (bumper / trunk lid)
-        top_y1 = max(0, py1 - int(plate_h * 2.0))
-        top_y2 = max(0, py1 - 2)
-        top_x1 = max(0, px1 - int(plate_w * 0.2))
-        top_x2 = min(img_w, px2 + int(plate_w * 0.2))
-        if top_y2 > top_y1 and top_x2 > top_x1:
-            p_top = image_bgr[top_y1:top_y2, top_x1:top_x2]
-            if p_top.size > 0:
-                patches.append(p_top)
+        if vehicle_box is None:
+            return "Unknown"
 
-        # Patch B: Directly to the left of the license plate (body panel)
-        left_x1 = max(0, px1 - int(plate_w * 0.8))
-        left_x2 = max(0, px1 - 2)
-        if left_x2 > left_x1 and py2 > py1:
-            p_left = image_bgr[py1:py2, left_x1:left_x2]
-            if p_left.size > 0:
-                patches.append(p_left)
+        vx1, vy1, vx2, vy2 = vehicle_box
+        vx1 = max(0, min(img_w - 1, int(vx1)))
+        vy1 = max(0, min(img_h - 1, int(vy1)))
+        vx2 = max(vx1 + 1, min(img_w, int(vx2)))
+        vy2 = max(vy1 + 1, min(img_h, int(vy2)))
 
-        # Patch C: Directly to the right of the license plate (body panel)
-        right_x1 = min(img_w, px2 + 2)
-        right_x2 = min(img_w, px2 + int(plate_w * 0.8))
-        if right_x2 > right_x1 and py2 > py1:
-            p_right = image_bgr[py1:py2, right_x1:right_x2]
-            if p_right.size > 0:
-                patches.append(p_right)
+        vw = vx2 - vx1
+        vh = vy2 - vy1
+        if vw < 25 or vh < 25:
+            return "Unknown"
 
-        # Patch D: Directly below the license plate (rear bumper)
-        # Skip if vehicle bbox is known and bottom extends past lower 15% (likely asphalt)
-        can_sample_below = True
-        if vehicle_box:
-            vx1, vy1, vx2, vy2 = vehicle_box
-            if py2 >= vy2 - int((vy2 - vy1) * 0.18):
-                can_sample_below = False
+        veh_crop = image_bgr[vy1:vy2, vx1:vx2]
+        hsv_crop = cv2.cvtColor(veh_crop, cv2.COLOR_BGR2HSV)
 
-        if can_sample_below:
-            bot_y1 = min(img_h, py2 + 2)
-            bot_y2 = min(img_h, py2 + int(plate_h * 1.2))
-            bot_x1 = max(0, px1 - int(plate_w * 0.1))
-            bot_x2 = min(img_w, px2 + int(plate_w * 0.1))
-            if bot_y2 > bot_y1 and bot_x2 > bot_x1:
-                p_bot = image_bgr[bot_y1:bot_y2, bot_x1:bot_x2]
-                if p_bot.size > 0:
-                    patches.append(p_bot)
+        # 1. Build vehicle body mask:
+        body_mask = np.zeros((vh, vw), dtype=np.uint8)
 
-        # Patch E: Vehicle central body / hood (if vehicle bbox available)
-        # Double-weighted because vehicle body is the most reliable paint source
-        if vehicle_box:
-            vx1, vy1, vx2, vy2 = vehicle_box
-            vw = max(vx2 - vx1, 1)
-            vh = max(vy2 - vy1, 1)
-            # Central hood: 40%-72% height, 20%-80% width
-            hood_y1 = max(0, vy1 + int(vh * 0.40))
-            hood_y2 = min(img_h, vy1 + int(vh * 0.72))
-            hood_x1 = max(0, vx1 + int(vw * 0.20))
-            hood_x2 = min(img_w, vx1 + int(vw * 0.80))
-            if hood_y2 > hood_y1 and hood_x2 > hood_x1:
-                p_hood = image_bgr[hood_y1:hood_y2, hood_x1:hood_x2]
-                if p_hood.size > 0:
-                    patches.append(p_hood)
-                    patches.append(p_hood)  # Weight hood higher than bumper edges
+        # Hood & central front/rear body (vertical 35% to 65%, horizontal 20% to 80%)
+        body_mask[int(vh * 0.35):int(vh * 0.65), int(vw * 0.20):int(vw * 0.80)] = 255
 
-        if not patches:
-            return None
+        # Side panels, doors & fenders (vertical 25% to 85%, horizontal flanks 0-25% and 75-100%)
+        body_mask[int(vh * 0.25):int(vh * 0.85), 0:int(vw * 0.25)] = 255
+        body_mask[int(vh * 0.25):int(vh * 0.85), int(vw * 0.75):vw] = 255
 
-        # Aggregate samples from all body patches (resize each to 32x32)
-        sampled_pixels = []
-        for patch in patches:
-            small = cv2.resize(patch, (32, 32), interpolation=cv2.INTER_AREA)
-            sampled_pixels.append(small.reshape(-1, 3))
+        # Lower bumper painted regions (vertical 65% to 85%, horizontal 15% to 85%)
+        body_mask[int(vh * 0.65):int(vh * 0.85), int(vw * 0.15):int(vw * 0.85)] = 255
 
-        all_bgr = np.vstack(sampled_pixels).astype(np.float32)
+        # 2. Exclude license plate and black frame / grille surrounding
+        if plate_box is not None:
+            px1, py1, px2, py2 = plate_box
+            lx1 = max(0, px1 - vx1 - 15)
+            ly1 = max(0, py1 - vy1 - 20)
+            lx2 = min(vw, px2 - vx1 + 15)
+            ly2 = min(vh, py2 - vy1 + 15)
+            body_mask[ly1:ly2, lx1:lx2] = 0
 
-        # Convert to HSV for filtering
-        hsv_all = cv2.cvtColor(
-            all_bgr.reshape(-1, 1, 3).astype(np.uint8), cv2.COLOR_BGR2HSV
-        ).reshape(-1, 3).astype(np.float32)
+        # 3. Exclude deep chassis/tire shadows and blown-out specular highlights
+        v_chan = hsv_crop[:, :, 2]
+        s_chan = hsv_crop[:, :, 1]
+        body_mask[(v_chan < 22) | ((v_chan > 242) & (s_chan < 16))] = 0
 
-        # Valid paint mask:
-        #   - Not deep shadow (V >= 20)
-        #   - Not blown-out specular white (V > 252 AND S < 10)
-        valid_mask = (hsv_all[:, 2] >= 20) & ~(
-            (hsv_all[:, 2] > 252) & (hsv_all[:, 1] < 10)
-        )
-        valid_bgr = all_bgr[valid_mask]
-        valid_hsv = hsv_all[valid_mask]
+        valid_bgr = veh_crop[body_mask > 0]
+        valid_hsv = hsv_crop[body_mask > 0]
 
-        if len(valid_bgr) < 20:
-            # If filtering removed too many pixels, relax mask
-            valid_bgr = all_bgr
-            valid_hsv = hsv_all
+        if len(valid_bgr) < 25:
+            # Relax mask if too aggressive
+            body_mask = np.zeros((vh, vw), dtype=np.uint8)
+            body_mask[int(vh * 0.30):int(vh * 0.75), int(vw * 0.15):int(vw * 0.85)] = 255
+            body_mask[(v_chan < 20) | (v_chan > 248)] = 0
+            valid_bgr = veh_crop[body_mask > 0]
+            valid_hsv = hsv_crop[body_mask > 0]
+            if len(valid_bgr) < 20:
+                return "Unknown"
 
-        # K-Means clustering (K=5) for better paint color isolation
-        # More clusters → better separation of sky/road/paint/shadow/glare
-        k = min(5, max(1, len(valid_bgr) // 10))
-        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 15, 1.0)
-        _, labels, centers = cv2.kmeans(
-            valid_bgr,
-            K=k,
-            bestLabels=None,
-            criteria=criteria,
-            attempts=5,
-            flags=cv2.KMEANS_PP_CENTERS,
-        )
+        b = valid_bgr[:, 0].astype(float)
+        g = valid_bgr[:, 1].astype(float)
+        r = valid_bgr[:, 2].astype(float)
+        h = valid_hsv[:, 0].astype(float)
+        s = valid_hsv[:, 1].astype(float)
+        v = valid_hsv[:, 2].astype(float)
 
-        unique_labels, counts = np.unique(labels, return_counts=True)
-        # Sort by count descending (most-represented cluster first)
-        sorted_indices = np.argsort(-counts)
+        # 4. Check chromatic paint signals:
+        # Red / Maroon: R > B and R > G with delta >= 8, or Hue in red range with S >= 25
+        red_maroon_mask = ((r > b + 8) & (r > g + 8)) | (((h <= 14) | (h >= 160)) & (s >= 25) & (r > b))
+        red_maroon_count = int(np.sum(red_maroon_mask))
 
-        # Iterate clusters from largest to smallest, skip shadow and glare
-        chosen_bgr = None
-        for ci in sorted_indices:
-            candidate = centers[ci]
-            c_b, c_g, c_r = candidate[0], candidate[1], candidate[2]
-            c_mean = (c_b + c_g + c_r) / 3.0
+        # True Blue: require high saturation and B significantly above R to filter out daylight sky reflections
+        blue_mask = (b > r + 30) & (b > g + 15) & (h >= 85) & (h <= 135) & (s >= 65)
+        blue_count = int(np.sum(blue_mask))
 
-            # Skip deep shadow clusters (likely road / wheel well)
-            if c_mean < 25:
-                continue
+        # Green
+        green_mask = (g > r + 15) & (g > b + 15) & (h >= 38) & (h <= 85) & (s >= 35)
+        green_count = int(np.sum(green_mask))
 
-            # Convert candidate to HSV to detect sky/glare
-            c_hsv = cv2.cvtColor(
-                np.uint8([[[int(c_b), int(c_g), int(c_r)]]]), cv2.COLOR_BGR2HSV
-            )[0][0]
-            c_s, c_v = float(c_hsv[1]), float(c_hsv[2])
+        # Yellow
+        yellow_mask = (r > b + 25) & (g > b + 20) & (h >= 22) & (h <= 38) & (s >= 40)
+        yellow_count = int(np.sum(yellow_mask))
 
-            # Skip near-white specular glare clusters (V > 245, S < 8)
-            if c_v > 245 and c_s < 8:
-                continue
+        # Orange / Brown
+        orange_mask = (r > b + 20) & (r > g + 10) & (h >= 12) & (h <= 24) & (s >= 35)
+        orange_count = int(np.sum(orange_mask))
 
-            chosen_bgr = candidate
-            break
+        total_valid = len(valid_bgr)
+        chromatic_thresh = max(35, int(total_valid * 0.025))
 
-        # Fallback to largest cluster if all were filtered out
-        if chosen_bgr is None:
-            chosen_bgr = centers[sorted_indices[0]]
+        if red_maroon_count >= chromatic_thresh and red_maroon_count >= blue_count:
+            rm_v = v[red_maroon_mask]
+            mean_v = float(np.mean(rm_v))
+            return "Maroon" if mean_v < 115 else "Red"
+        elif blue_count >= chromatic_thresh and blue_count >= red_maroon_count:
+            return "Blue"
+        elif green_count >= chromatic_thresh:
+            return "Green"
+        elif yellow_count >= chromatic_thresh:
+            return "Yellow"
+        elif orange_count >= chromatic_thresh:
+            rm_v = v[orange_mask]
+            return "Brown" if float(np.mean(rm_v)) < 95 else "Orange"
 
-        dom_b, dom_g, dom_r = chosen_bgr[0], chosen_bgr[1], chosen_bgr[2]
-        return _classify_bgr_hsv_color(dom_b, dom_g, dom_r)
+        # 5. Achromatic classification:
+        median_v = float(np.median(v))
+        if median_v > 165:
+            return "White"
+        elif median_v < 68:
+            return "Black"
+        else:
+            return "Silver / Gray"
 
     except Exception as e:
-        logger.warning(f"Failed to extract vehicle color: {e}")
-        return None
+        logger.warning(f"Failed to extract vehicle body color: {e}")
+        return "Unknown"
 
 
 def detect_vehicle_attributes(

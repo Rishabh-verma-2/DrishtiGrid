@@ -90,6 +90,44 @@ TILE_OVERLAP = 0.50
 _yolo_model = None
 _coco_model = None   # separate COCO model for vehicle cascade (Pass 3)
 
+# Diagnostics state for LP model
+LP_MODEL_DIAGNOSTICS: Dict[str, Any] = {
+    "lp_model_available": False,
+    "lp_model_path": None,
+    "lp_model_classes": [],
+    "is_dedicated": False,
+}
+
+
+def validate_lp_model(model: Any) -> Tuple[bool, List[str]]:
+    """
+    Verify that the loaded YOLO model actually contains a license-plate class.
+    Accepts class names such as:
+      license plate, licence plate, number plate, numberplate,
+      plate, lp, registration plate, vehicle plate, reg plate.
+    Returns:
+      (is_valid, matched_classes)
+    """
+    if model is None:
+        return False, []
+    names = getattr(model, "names", None)
+    if not names:
+        return False, []
+    if isinstance(names, dict):
+        class_list = [str(v).lower().strip() for v in names.values()]
+    elif isinstance(names, (list, tuple)):
+        class_list = [str(v).lower().strip() for v in names]
+    else:
+        class_list = [str(names).lower().strip()]
+
+    matched = [c for c in class_list if any(syn in c for syn in LP_CLASS_NAMES)]
+    return len(matched) > 0, matched
+
+
+def get_lp_model_diagnostics() -> Dict[str, Any]:
+    global LP_MODEL_DIAGNOSTICS
+    return dict(LP_MODEL_DIAGNOSTICS)
+
 
 # ---------------------------------------------------------------------------
 # Model loading
@@ -97,10 +135,11 @@ _coco_model = None   # separate COCO model for vehicle cascade (Pass 3)
 
 def load_yolo_model():
     """
-    Load the primary LP detection model (preferred: dedicated LP weights).
-    Falls back to COCO YOLOv8n, then auto-downloads yolov8n.pt.
+    Load the primary LP detection model (strictly prefers dedicated LP weights).
+    Validates that the model actually contains license-plate classes.
+    If missing or invalid, logs an explicit warning and does NOT pretend COCO is an LP detector.
     """
-    global _yolo_model
+    global _yolo_model, LP_MODEL_DIAGNOSTICS
 
     try:
         from ultralytics import YOLO
@@ -108,28 +147,59 @@ def load_yolo_model():
         logger.error("ultralytics not installed. Run: pip install ultralytics")
         return None
 
-    preference = MODEL_CONFIG.get("YOLO_MODEL_PREFERENCE", "lp")
-    lp_path    = Path(MODEL_CONFIG["YOLO_LP_MODEL_PATH"])
-    coco_path  = Path(MODEL_CONFIG["YOLO_MODEL_PATH"])
+    lp_candidate_paths = [
+        Path(MODEL_CONFIG.get("YOLO_LP_MODEL_PATH", "model_weights/license_plate_detector.pt")),
+        Path("model_weights/license_plate_detector.pt"),
+        Path(__file__).resolve().parent.parent.parent / "model_weights" / "license_plate_detector.pt",
+    ]
+    lp_path = None
+    for p in lp_candidate_paths:
+        if p.is_file():
+            lp_path = p
+            break
 
-    if preference == "lp" and lp_path.exists():
-        model_path = str(lp_path)
-        logger.info(f"Loading dedicated LP model: {model_path}")
-    elif coco_path.exists():
-        model_path = str(coco_path)
-        logger.info(f"Loading YOLO model: {model_path}")
-    else:
-        model_path = "yolov8n.pt"
-        logger.info("No local weights — downloading yolov8n.pt")
+    coco_path = Path(MODEL_CONFIG.get("YOLO_MODEL_PATH", "model_weights/yolov8n.pt"))
 
+    if lp_path is not None:
+        logger.info(f"Attempting to load dedicated LP model from: {lp_path}")
+        try:
+            m = YOLO(str(lp_path))
+            dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+            m(dummy, verbose=False)
+            is_valid, matched_classes = validate_lp_model(m)
+            if is_valid:
+                _yolo_model = m
+                loaded_path = str(lp_path)
+                LP_MODEL_DIAGNOSTICS["lp_model_available"] = True
+                LP_MODEL_DIAGNOSTICS["lp_model_path"] = loaded_path
+                LP_MODEL_DIAGNOSTICS["lp_model_classes"] = matched_classes
+                LP_MODEL_DIAGNOSTICS["is_dedicated"] = True
+                logger.info(f"DEDICATED LP MODEL LOADED: {loaded_path} (classes: {matched_classes})")
+                return _yolo_model
+            else:
+                logger.warning(f"Model at {lp_path} has no LP classes ({m.names}).")
+        except Exception as e:
+            logger.error(f"Failed to load dedicated LP model from {lp_path}: {e}")
+
+    # Fallback path if dedicated LP model is missing or invalid:
+    logger.warning("DEDICATED LP MODEL NOT FOUND — PLATE DETECTION QUALITY WILL BE LIMITED")
+    LP_MODEL_DIAGNOSTICS["lp_model_available"] = False
+    LP_MODEL_DIAGNOSTICS["is_dedicated"] = False
+
+    fallback_path = str(coco_path) if coco_path.exists() else "yolov8n.pt"
     try:
-        _yolo_model = YOLO(model_path)
+        _yolo_model = YOLO(fallback_path)
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
         _yolo_model(dummy, verbose=False)
-        logger.info(f"Primary YOLO model ready: {model_path}  classes={_yolo_model.names}")
+        is_valid, matched_classes = validate_lp_model(_yolo_model)
+        LP_MODEL_DIAGNOSTICS["lp_model_path"] = fallback_path
+        LP_MODEL_DIAGNOSTICS["lp_model_classes"] = matched_classes
+        LP_MODEL_DIAGNOSTICS["lp_model_available"] = is_valid
+        if not is_valid:
+            logger.info(f"Loaded COCO fallback model for vehicle detection: {fallback_path}. Generic COCO detections will NOT be treated as plates.")
         return _yolo_model
     except Exception as e:
-        logger.error(f"Failed to load YOLO from {model_path}: {e}")
+        logger.error(f"Failed to load fallback YOLO from {fallback_path}: {e}")
         return None
 
 
@@ -576,95 +646,296 @@ def detect_plates_in_vehicle_roi(
 
     local_candidates: List[Dict] = []
 
-    # 2. Orientation-Aware Multi-Scale Inference on Vehicle ROI
-    if lp_model is not None:
-        target_w = max(roi_w, 320)
-        up_scale = target_w / float(roi_w)
-        up_h = int(roi_h * up_scale)
-        try:
-            roi_up = cv2.resize(roi, (target_w, up_h), interpolation=cv2.INTER_LANCZOS4)
-        except Exception:
-            roi_up = roi
-            up_scale = 1.0
+def _propose_plate_regions_opencv(
+    vehicle_roi: np.ndarray,
+    offset_x: int = 0,
+    offset_y: int = 0,
+    img_w: int = 0,
+    img_h: int = 0,
+    max_proposals: int = 6,
+) -> List[Dict]:
+    """
+    Generate candidate plate regions using OpenCV morphology and contour detection.
+    Pipeline:
+      - Grayscale
+      - Bilateral filter (edge preserving)
+      - CLAHE contrast enhancement
+      - Blackhat morphology (highlights dark characters on light background)
+      - Sobel X gradient (vertical edge density characteristic of text)
+      - Otsu threshold + Morphological closing into candidate rectangles
+      - Geometric scoring (aspect ratio 1.2-7.0, area 0.2%-30% of vehicle)
+    """
+    if vehicle_roi is None or vehicle_roi.size == 0:
+        return []
 
-        res_full = _run_yolo_inference(lp_model, roi_up, conf=max(CONF_FLOOR, conf - 0.06), iou=iou)
-        cands_full = _extract_lp_boxes(
-            res_full, img_w, img_h,
-            scale_x=up_scale, scale_y=up_scale,
-            offset_x=roi_x1, offset_y=roi_y1,
-            source_tag="vehicle_roi_full",
-        )
-        for c in cands_full:
-            c["vehicle_id"] = v_id
-            c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
-            c["vehicle_type"] = v_type
-        local_candidates.extend(cands_full)
+    vh, vw = vehicle_roi.shape[:2]
+    img_w = img_w or (offset_x + vw)
+    img_h = img_h or (offset_y + vh)
+    total_area = float(vh * vw)
+    proposals: List[Dict] = []
 
-        # For tall/heavy vehicles (bus, truck), also scan bumper and mid grille bands
-        if vh > 180 or vw > 250:
-            sub_y1 = int(roi_h * 0.45)
-            sub_roi = roi[sub_y1:roi_h, :]
-            if sub_roi.size > 0:
-                s_h, s_w = sub_roi.shape[:2]
-                stgt_w = max(s_w, 400)
-                s_scale = stgt_w / float(s_w)
+    try:
+        gray = cv2.cvtColor(vehicle_roi, cv2.COLOR_BGR2GRAY) if len(vehicle_roi.shape) == 3 else vehicle_roi
+        filtered = cv2.bilateralFilter(gray, 9, 75, 75)
+        clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
+        enhanced = clahe.apply(filtered)
+
+        # Blackhat morphology emphasizes dark text on bright plate background
+        rect_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (17, 5))
+        blackhat = cv2.morphologyEx(enhanced, cv2.MORPH_BLACKHAT, rect_kernel)
+
+        # Sobel X gradient
+        grad_x = cv2.Sobel(blackhat, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=-1)
+        grad_x = np.absolute(grad_x)
+        min_v, max_v = np.min(grad_x), np.max(grad_x)
+        if max_v > min_v:
+            grad_x = (255 * ((grad_x - min_v) / (max_v - min_v))).astype(np.uint8)
+        else:
+            grad_x = np.zeros_like(gray)
+
+        # Gaussian blur + Otsu threshold
+        grad_x = cv2.GaussianBlur(grad_x, (5, 5), 0)
+        thresh = cv2.threshold(grad_x, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+
+        # Morphological close to bridge individual characters into plate bounding boxes
+        close_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 7))
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, close_kernel)
+
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        scored: List[Tuple[float, Tuple[int, int, int, int]]] = []
+
+        for cnt in contours:
+            rx, ry, rw, rh = cv2.boundingRect(cnt)
+            if rw < 18 or rh < 6:
+                continue
+            aspect = rw / float(rh)
+            area = rw * rh
+
+            if (1.2 <= aspect <= 7.0) and (0.002 * total_area <= area <= 0.30 * total_area):
+                cy = ry + rh / 2.0
+                cx = rx + rw / 2.0
+                y_prior = 1.3 if cy >= 0.35 * vh else 0.7
+                x_prior = 1.2 if 0.12 * vw <= cx <= 0.88 * vw else 0.8
+                aspect_score = 1.0 - min(abs(aspect - 3.8) / 3.8, 0.8)
+                score = aspect_score * y_prior * x_prior * (area / total_area)
+                scored.append((score, (rx, ry, rw, rh)))
+
+        scored.sort(key=lambda s: s[0], reverse=True)
+
+        for score, (rx, ry, rw, rh) in scored[:max_proposals]:
+            abs_x1 = max(0, offset_x + rx)
+            abs_y1 = max(0, offset_y + ry)
+            abs_x2 = min(img_w, offset_x + rx + rw)
+            abs_y2 = min(img_h, offset_y + ry + rh)
+            cw = abs_x2 - abs_x1
+            ch = abs_y2 - abs_y1
+            if cw <= 0 or ch <= 0:
+                continue
+            crop = safe_crop(vehicle_roi, rx, ry, rw, rh, pad=4)
+            if crop.size > 0:
+                proposals.append({
+                    "box": (abs_x1, abs_y1, abs_x2, abs_y2),
+                    "bbox": {"x": abs_x1, "y": abs_y1, "width": cw, "height": ch},
+                    "conf": min(0.65, round(0.40 + score * 0.5, 3)),
+                    "crop": crop,
+                    "source": "opencv_plate_proposal",
+                })
+    except Exception as e:
+        logger.debug(f"OpenCV plate proposal error: {e}")
+
+    return proposals
+
+
+def detect_plates_in_vehicle_roi(
+    image: np.ndarray,
+    vehicle: Dict[str, Any],
+    lp_model: Any = None,
+    conf: float = 0.20,
+    iou: float = 0.35,
+    padding_ratio: float = 0.10,
+) -> Dict[str, Any]:
+    """
+    Detect license plates specifically inside an individual vehicle ROI.
+    Orientation-aware: scans full vehicle body without assuming plate is strictly lower 40%.
+    Converts all plate coordinates back to original image space.
+    Performs vehicle-local candidate fusion and returns ONE primary candidate (or None).
+    """
+    img_h, img_w = image.shape[:2]
+    vx1, vy1, vx2, vy2 = vehicle["bbox"]
+    vw = max(1, vx2 - vx1)
+    vh = max(1, vy2 - vy1)
+    v_type = vehicle.get("class") or vehicle.get("vehicle_type", "car")
+    v_id = vehicle.get("vehicle_id", "veh_1")
+
+    # 1. Configurable padding around vehicle bbox (8-15%, default 10%)
+    pad_x = max(6, int(vw * padding_ratio))
+    pad_y = max(6, int(vh * padding_ratio))
+    roi_x1 = max(0, vx1 - pad_x)
+    roi_y1 = max(0, vy1 - pad_y)
+    roi_x2 = min(img_w, vx2 + pad_x)
+    roi_y2 = min(img_h, vy2 + pad_y)
+
+    roi = image[roi_y1:roi_y2, roi_x1:roi_x2]
+    if roi.size == 0:
+        return {
+            "vehicle_id": v_id,
+            "primary_candidate": None,
+            "secondary_candidates": [],
+            "all_candidates": [],
+            "has_plate": False,
+        }
+
+    roi_h, roi_w = roi.shape[:2]
+    if lp_model is None:
+        lp_model = get_yolo_model()
+
+    local_candidates: List[Dict] = []
+
+    # 2. Multi-Zone and Multi-Scale Search on Vehicle ROI
+    has_dedicated_lp = LP_MODEL_DIAGNOSTICS.get("lp_model_available", False)
+    if lp_model is not None and has_dedicated_lp:
+        # Define candidate search zones based on vehicle type
+        zones: List[Tuple[str, int, int, int, int]] = []
+        # Zone A: Full vehicle ROI
+        zones.append(("zone_a_full", 0, 0, roi_w, roi_h))
+        # Zone B: Lower 60%
+        zones.append(("zone_b_lower60", 0, int(roi_h * 0.40), roi_w, roi_h))
+        # Zone C: Lower 45%
+        zones.append(("zone_c_lower45", 0, int(roi_h * 0.55), roi_w, roi_h))
+        # Zone D: Lower-center region
+        zones.append(("zone_d_lower_center", int(roi_w * 0.15), int(roi_h * 0.45), int(roi_w * 0.85), roi_h))
+        # Zone E: Front/rear bumper
+        zones.append(("zone_e_bumper", 0, int(roi_h * 0.65), roi_w, roi_h))
+        # Zone F: Grille region
+        zones.append(("zone_f_grille", int(roi_w * 0.15), int(roi_h * 0.40), int(roi_w * 0.85), int(roi_h * 0.75)))
+
+        # Determine multi-scale factors
+        scales = [1.0]
+        if roi_w < 350 or roi_h < 250:
+            scales.append(1.5)
+        if roi_w < 200 or roi_h < 150:
+            scales.append(2.0)
+        if roi_w < 100 or roi_h < 80:
+            scales.append(3.0)
+
+        # Run multi-zone / multi-scale search
+        for z_name, zx1, zy1, zx2, zy2 in zones:
+            if zx2 <= zx1 or zy2 <= zy1:
+                continue
+            z_crop = roi[zy1:zy2, zx1:zx2]
+            if z_crop.size == 0:
+                continue
+
+            for sc in scales:
+                sw = int(z_crop.shape[1] * sc)
+                sh = int(z_crop.shape[0] * sc)
+                if sw <= 0 or sh <= 0:
+                    continue
                 try:
-                    sub_up = cv2.resize(sub_roi, (stgt_w, int(s_h * s_scale)), interpolation=cv2.INTER_LANCZOS4)
-                    res_sub = _run_yolo_inference(lp_model, sub_up, conf=max(CONF_FLOOR, conf - 0.05), iou=iou)
-                    cands_sub = _extract_lp_boxes(
-                        res_sub, img_w, img_h,
-                        scale_x=s_scale, scale_y=s_scale,
-                        offset_x=roi_x1, offset_y=roi_y1 + sub_y1,
-                        source_tag="vehicle_roi_bumper",
-                    )
-                    for c in cands_sub:
-                        c["vehicle_id"] = v_id
-                        c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
-                        c["vehicle_type"] = v_type
-                    local_candidates.extend(cands_sub)
+                    if sc != 1.0:
+                        z_scaled = cv2.resize(z_crop, (sw, sh), interpolation=cv2.INTER_LANCZOS4)
+                    else:
+                        z_scaled = z_crop
                 except Exception:
-                    pass
+                    z_scaled = z_crop
+                    sc = 1.0
 
-    # 3. Vehicle-Local OCR Fallback (if no YOLO candidates found)
-    if not local_candidates and (vw >= 40 and vh >= 30):
+                res = _run_yolo_inference(lp_model, z_scaled, conf=max(CONF_FLOOR, conf - 0.08), iou=iou)
+                cands = _extract_lp_boxes(
+                    res, img_w, img_h,
+                    scale_x=sc, scale_y=sc,
+                    offset_x=roi_x1 + zx1, offset_y=roi_y1 + zy1,
+                    source_tag=f"vehicle_roi_{z_name}_{sc}x",
+                )
+                for c in cands:
+                    c["vehicle_id"] = v_id
+                    c["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
+                    c["vehicle_type"] = v_type
+                local_candidates.extend(cands)
+
+    # 3. OpenCV Plate Region Proposals (Fallback when YOLO finds no candidates)
+    if not local_candidates and (vw >= 35 and vh >= 25):
+        proposals = _propose_plate_regions_opencv(
+            roi, offset_x=roi_x1, offset_y=roi_y1, img_w=img_w, img_h=img_h, max_proposals=6
+        )
+        if proposals:
+            try:
+                from app.ocr.paddle_ocr import get_ocr_engine
+                from app.validation.indian_plate import normalize_plate_text, validate_indian_plate
+                engine = get_ocr_engine()
+                for p in proposals:
+                    pcrop = p.get("crop")
+                    if pcrop is None or pcrop.size == 0:
+                        continue
+                    ph, pw = pcrop.shape[:2]
+                    if ph < 48:
+                        up_f = 48.0 / max(ph, 1)
+                        pcrop_up = cv2.resize(pcrop, (int(pw * up_f), 48), interpolation=cv2.INTER_CUBIC)
+                    else:
+                        pcrop_up = pcrop
+
+                    rgb_p = cv2.cvtColor(pcrop_up, cv2.COLOR_BGR2RGB)
+                    ocr_res = engine.ocr(rgb_p, cls=True)
+                    if ocr_res and ocr_res[0]:
+                        for line in ocr_res[0]:
+                            if not line:
+                                continue
+                            txt = line[1][0]
+                            ocr_c = float(line[1][1])
+                            norm = normalize_plate_text(txt)
+                            status, _ = validate_indian_plate(norm)
+                            if status in ("VALID_FORMAT", "POSSIBLE_FORMAT") or (len(norm) >= 5 and ocr_c >= 0.60):
+                                p["conf"] = min(0.95, ocr_c + (0.30 if status == "VALID_FORMAT" else 0.15))
+                                p["source"] = "opencv_proposal_ocr_validated"
+                                p["vehicle_id"] = v_id
+                                p["vehicle_bbox"] = {"x": vx1, "y": vy1, "width": vw, "height": vh}
+                                p["vehicle_type"] = v_type
+                                p["raw_ocr"] = txt
+                                local_candidates.append(p)
+                                break
+            except Exception as e:
+                logger.debug(f"Targeted OCR on proposals error: {e}")
+
+    # 4. Full vehicle ROI OCR fallback (last resort diagnostic path)
+    if not local_candidates and (vw >= 45 and vh >= 30):
         try:
             from app.ocr.paddle_ocr import get_ocr_engine
             from app.validation.indian_plate import normalize_plate_text, validate_indian_plate
             import re
             engine = get_ocr_engine()
             if engine is not None and roi.size > 0:
-                rgb_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
-                ocr_out = engine.ocr(rgb_roi, cls=True)
+                sub_y1 = int(roi_h * 0.35)
+                sub_roi = roi[sub_y1:roi_h, :]
+                rgb_sub = cv2.cvtColor(sub_roi, cv2.COLOR_BGR2RGB)
+                ocr_out = engine.ocr(rgb_sub, cls=True)
                 if ocr_out and ocr_out[0]:
                     for line in ocr_out[0]:
                         if not line:
                             continue
                         pts, (txt, ocr_c) = line
                         clean = re.sub(r"[^A-Z0-9]", "", txt.upper())
-                        if len(clean) >= 3:
+                        if len(clean) >= 4:
                             xs = [p[0] for p in pts]
                             ys = [p[1] for p in pts]
                             px1 = max(0, int(roi_x1 + min(xs)))
-                            py1 = max(0, int(roi_y1 + min(ys)))
+                            py1 = max(0, int(roi_y1 + sub_y1 + min(ys)))
                             px2 = min(img_w, int(roi_x1 + max(xs)))
-                            py2 = min(img_h, int(roi_y1 + max(ys)))
+                            py2 = min(img_h, int(roi_y1 + sub_y1 + max(ys)))
                             pw = px2 - px1
                             ph = py2 - py1
-                            if ph > 0 and (pw / ph) >= 0.75:
+                            if ph > 0 and (pw / ph) >= 0.8:
                                 pad_c_x = max(6, int(pw * 0.15))
                                 pad_c_y = max(4, int(ph * 0.25))
                                 cx1 = max(0, px1 - pad_c_x)
                                 cy1 = max(0, py1 - pad_c_y)
                                 cx2 = min(img_w, px2 + pad_c_x)
                                 cy2 = min(img_h, py2 + pad_c_y)
-                                cw = cx2 - cx1
-                                ch = cy2 - cy1
                                 norm = normalize_plate_text(clean)
                                 status, _ = validate_indian_plate(norm)
                                 conf_score = min(0.99, float(ocr_c) + (0.35 if status == "VALID_FORMAT" else 0.15 if status == "POSSIBLE_FORMAT" else 0.05))
                                 local_candidates.append({
                                     "box": (cx1, cy1, cx2, cy2),
-                                    "bbox": {"x": cx1, "y": cy1, "width": cw, "height": ch},
+                                    "bbox": {"x": cx1, "y": cy1, "width": cx2 - cx1, "height": cy2 - cy1},
                                     "conf": conf_score,
                                     "crop": image[cy1:cy2, cx1:cx2].copy(),
                                     "source": "vehicle_roi_ocr_fallback",
@@ -673,9 +944,9 @@ def detect_plates_in_vehicle_roi(
                                     "vehicle_type": v_type,
                                 })
         except Exception as e:
-            logger.debug("Vehicle ROI OCR fallback error: %s", e)
+            logger.debug("Vehicle ROI full OCR fallback error: %s", e)
 
-    # 4. Vehicle-Local Contour Fallback (if still 0 candidates)
+    # 5. Vehicle-Local Contour Fallback (if still 0 candidates)
     if not local_candidates and (vw >= 50 and vh >= 40):
         try:
             h_cands = _heuristic_plate_regions(roi, offset_x=roi_x1, offset_y=roi_y1, img_w=img_w, img_h=img_h, max_results=2)

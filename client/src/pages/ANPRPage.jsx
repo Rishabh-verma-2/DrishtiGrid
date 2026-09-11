@@ -5,7 +5,7 @@ import { useThemeStore } from '../store/themeStore';
 import { useANPRStore } from '../store/anprStore';
 import {
   Car, Shield, AlertTriangle, CheckCircle, Search, Plus, RefreshCw,
-  UploadCloud, FileText, Activity, Image as ImageIcon, Sparkles, Filter,
+  UploadCloud, FileText, Activity, Image as ImageIcon, ScanEye, Cpu, Filter,
   CheckCircle2, XCircle, AlertCircle, Eye, Trash2, Edit, Radio, Clock,
   Video, Layers, Maximize2, ZoomIn, ZoomOut, Database, Crosshair, Columns2
 } from 'lucide-react';
@@ -380,7 +380,7 @@ export default function ANPRPage() {
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Sparkles className="w-4 h-4" />
+          <ScanEye className="w-4 h-4" />
           <span>Plate Verification &amp; Scanner</span>
         </button>
 
@@ -549,7 +549,7 @@ export default function ANPRPage() {
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4" />
+                        <ScanEye className="w-4 h-4" />
                         Run AI License Plate Scan ({selectedFiles.length})
                       </>
                     )}
@@ -781,7 +781,7 @@ export default function ANPRPage() {
 
                             <div className="absolute bottom-2 inset-x-2 z-10 bg-black/75 backdrop-blur-sm px-2.5 py-1.5 rounded-xl border border-white/10 flex items-center justify-between text-[10px] text-white opacity-90 group-hover:opacity-100 transition-opacity">
                               <span className="font-mono text-slate-300 truncate max-w-[200px]">{imgRes.image_name}</span>
-                              <span className="text-cyan-400 font-bold flex items-center gap-1">
+                              <span className="text-blue-400 font-bold flex items-center gap-1">
                                 <Maximize2 className="w-3 h-3" /> Click to Inspect
                               </span>
                             </div>
@@ -794,7 +794,7 @@ export default function ANPRPage() {
                             <span className={`text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
                               isLight ? 'text-blue-700' : 'text-blue-400'
                             }`}>
-                              <Sparkles className="w-3.5 h-3.5 text-blue-500" />
+                              <Cpu className="w-3.5 h-3.5 text-blue-500" />
                               <span>Analyzed AI Detection</span>
                             </span>
                             <div className="flex items-center gap-1.5">
@@ -828,10 +828,10 @@ export default function ANPRPage() {
                                 : 'bg-[#0a0d16] border-blue-500/30 hover:border-blue-400 shadow-md'
                             }`}
                           >
-                            <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-cyan-400 pointer-events-none z-10" />
-                            <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-cyan-400 pointer-events-none z-10" />
-                            <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-cyan-400 pointer-events-none z-10" />
-                            <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-cyan-400 pointer-events-none z-10" />
+                            <div className="absolute top-2.5 left-2.5 w-3 h-3 border-t-2 border-blue-400 pointer-events-none z-10" />
+                            <div className="absolute top-2.5 right-2.5 w-3 h-3 border-t-2 border-r-2 border-blue-400 pointer-events-none z-10" />
+                            <div className="absolute bottom-2.5 left-2.5 w-3 h-3 border-b-2 border-l-2 border-blue-400 pointer-events-none z-10" />
+                            <div className="absolute bottom-2.5 right-2.5 w-3 h-3 border-b-2 border-r-2 border-blue-400 pointer-events-none z-10" />
 
                             <img
                               src={imgRes.processed_image || imgRes.original_image}
@@ -846,7 +846,7 @@ export default function ANPRPage() {
                                 className="absolute top-2 inset-x-2 z-20 bg-blue-600/90 backdrop-blur-md text-white px-3 py-1.5 rounded-xl border border-blue-400/50 flex items-center justify-between text-xs shadow-lg"
                               >
                                 <span className="font-bold flex items-center gap-1.5">
-                                  <Car className="w-3.5 h-3.5 text-cyan-300" />
+                                  <Car className="w-3.5 h-3.5 text-white" />
                                   <span>Focused: Vehicle #{selectedVehicle.vehicle.vehicle_index || selectedVehicle.vehicleIndex + 1}</span>
                                   <span className="opacity-80 font-normal">({selectedVehicle.vehicle.vehicle_type || 'Vehicle'} • {selectedVehicle.vehicle.vehicle_color || 'Unknown'})</span>
                                 </span>
@@ -879,7 +879,7 @@ export default function ANPRPage() {
                                   <span className="text-slate-400 text-[10px]">No plates</span>
                                 )}
                               </div>
-                              <span className="text-cyan-400 font-bold flex items-center gap-1 shrink-0">
+                              <span className="text-blue-400 font-bold flex items-center gap-1 shrink-0">
                                 <Maximize2 className="w-3 h-3" /> Fullscreen
                               </span>
                             </div>
@@ -888,24 +888,31 @@ export default function ANPRPage() {
                       </div>
                     )}
 
-                    {/* Analyzed Vehicles Summary Section */}
+                    {/* Successful ANPR Detections Table Section */}
                     {(() => {
-                      const detectedVehicles = (imgRes.vehicle_results && imgRes.vehicle_results.length > 0)
-                        ? imgRes.vehicle_results
-                        : (imgRes.plates || []).map((p, pIdx) => ({
-                            vehicle_index: pIdx + 1,
-                            vehicle_id: p.vehicle_id || `veh_${pIdx + 1}`,
-                            vehicle_type: p.vehicle_type || 'Car',
-                            vehicle_color: p.car_color || 'Unknown',
-                            vehicle_confidence: p.detector_confidence || 0.9,
-                            vehicle_bbox: p.vehicle_bbox || p.bbox || [0, 0, 0, 0],
-                            plate: p,
-                            status: p.plate_status === 'UNREADABLE' ? 'PLATE_DETECTED_OCR_UNREADABLE' : 'RECOGNIZED',
-                          }));
+                      // Only consume successful_anpr_results for the primary ANPR detections table
+                      const successfulResults = (imgRes.successful_anpr_results && imgRes.successful_anpr_results.length > 0)
+                        ? imgRes.successful_anpr_results
+                        : (imgRes.plates || [])
+                            .filter(p => p.normalized_plate && p.normalized_plate !== 'UNREADABLE')
+                            .map((p, pIdx) => ({
+                              vehicle_number: pIdx + 1,
+                              vehicle_id: p.vehicle_id || `veh_${pIdx + 1}`,
+                              number_plate: p.corrected_plate || p.normalized_plate || p.raw_ocr,
+                              vehicle_type: p.vehicle_type || 'Car',
+                              vehicle_color: p.car_color || 'Unknown',
+                              plate_confidence: Math.round((p.detection_confidence || 0.9) * 100),
+                              overall_confidence: Math.round((p.overall_confidence || p.ocr_confidence || 0.85) * 100),
+                              status: p.result_state || 'VERIFIED',
+                              plate_bbox: p.bbox,
+                              vehicle_bbox: p.vehicle_bbox,
+                              plate: p,
+                            }));
 
                       const getColorHex = (cName) => {
                         if (!cName) return '#94a3b8';
                         const c = cName.toLowerCase();
+                        if (c.includes('maroon')) return '#800000';
                         if (c.includes('white')) return '#ffffff';
                         if (c.includes('black')) return '#0f172a';
                         if (c.includes('red')) return '#ef4444';
@@ -924,14 +931,14 @@ export default function ANPRPage() {
                             <div className="flex items-center gap-2">
                               <Car className="w-4 h-4 text-blue-500" />
                               <h4 className={`text-xs font-bold uppercase tracking-wider ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                                Analyzed Vehicles ({detectedVehicles.length})
+                                SUCCESSFUL ANPR DETECTIONS ({successfulResults.length})
                               </h4>
                             </div>
                             <div className="flex items-center gap-2 text-[11px]">
                               <span className={`px-2 py-0.5 rounded-full border ${
                                 isLight ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
                               }`}>
-                                {imgRes.plates_detected || imgRes.plates?.length || 0} Plates Detected
+                                {successfulResults.length} Plates Detected
                               </span>
                               {selectedVehicle && selectedVehicle.imgIndex === idx && (
                                 <button
@@ -945,11 +952,11 @@ export default function ANPRPage() {
                             </div>
                           </div>
 
-                          {detectedVehicles.length === 0 ? (
+                          {successfulResults.length === 0 ? (
                             <div className={`p-4 rounded-xl text-center border ${
                               isLight ? 'bg-slate-50 border-slate-200 text-slate-500' : 'bg-white/5 border-white/10 text-slate-400'
                             }`}>
-                              <p className="text-xs italic">No vehicles or license plates detected in this frame.</p>
+                              <p className="text-xs italic">No readable license plates detected.</p>
                             </div>
                           ) : (
                             <>
@@ -961,110 +968,83 @@ export default function ANPRPage() {
                                       isLight ? 'bg-slate-100/80 border-slate-200 text-slate-600' : 'bg-white/5 border-white/10 text-slate-400'
                                     }`}>
                                       <th className="py-2.5 px-3">#</th>
-                                      <th className="py-2.5 px-3">Vehicle Type</th>
-                                      <th className="py-2.5 px-3">Color</th>
-                                      <th className="py-2.5 px-3">Number Plate</th>
-                                      <th className="py-2.5 px-3 text-center">Plate Conf</th>
-                                      <th className="py-2.5 px-3 text-center">Overall Conf</th>
-                                      <th className="py-2.5 px-3 text-right">Status</th>
+                                      <th className="py-2.5 px-3">NUMBER PLATE</th>
+                                      <th className="py-2.5 px-3">VEHICLE TYPE</th>
+                                      <th className="py-2.5 px-3">COLOR</th>
+                                      <th className="py-2.5 px-3 text-center">PLATE CONF</th>
+                                      <th className="py-2.5 px-3 text-center">OVERALL CONF</th>
+                                      <th className="py-2.5 px-3 text-right">STATUS</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-white/5 font-sans">
-                                    {detectedVehicles.map((veh, vIdx) => {
+                                    {successfulResults.map((item, vIdx) => {
                                       const isSelected = selectedVehicle && selectedVehicle.imgIndex === idx && selectedVehicle.vehicleIndex === vIdx;
-                                      const plate = veh.plate;
+                                      const plate = item.plate || item;
                                       const isMatch = plate && (plate.match_status === 'MATCH_FOUND' || plate.match_status === 'POSSIBLE_MATCH');
-                                      const isUnreadable = veh.status === 'PLATE_DETECTED_OCR_UNREADABLE' || (plate && plate.plate_status === 'UNREADABLE');
-                                      const hasPlate = plate && !isUnreadable && (plate.normalized_plate || plate.raw_ocr);
 
                                       return (
                                         <tr
                                           key={vIdx}
-                                          onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
-                                          onMouseEnter={() => setSelectedVehicle({ imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
+                                          onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: item })}
+                                          onMouseEnter={() => setSelectedVehicle({ imgIndex: idx, vehicleIndex: vIdx, vehicle: item })}
                                           className={`cursor-pointer transition-colors ${
                                             isSelected
                                               ? (isLight ? 'bg-blue-50/90 ring-1 ring-blue-400' : 'bg-blue-950/40 ring-1 ring-blue-500')
                                               : (isLight ? 'hover:bg-slate-50' : 'hover:bg-white/[0.03]')
                                           }`}
                                         >
-                                          {/* Vehicle # */}
+                                          {/* # */}
                                           <td className="py-3 px-3 font-semibold text-slate-300">
                                             <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-[11px] font-bold ${
                                               isSelected ? 'bg-blue-600 text-white' : isLight ? 'bg-slate-200 text-slate-700' : 'bg-white/10 text-slate-300'
                                             }`}>
-                                              {veh.vehicle_index || vIdx + 1}
+                                              {item.vehicle_number || vIdx + 1}
                                             </span>
                                           </td>
 
-                                          {/* Vehicle Type */}
-                                          <td className="py-3 px-3 font-medium">
-                                            <span className="capitalize">{veh.vehicle_type || 'Car'}</span>
+                                          {/* NUMBER PLATE */}
+                                          <td className="py-3 px-3 font-mono">
+                                            <div className="inline-flex items-center rounded overflow-hidden border border-slate-800 shadow-xs text-xs">
+                                              <span className="bg-[#003399] text-white text-[9px] px-1.5 py-0.5 font-sans font-black">
+                                                IND
+                                              </span>
+                                              <span className="bg-white text-slate-950 px-2 py-0.5 font-extrabold tracking-wider">
+                                                {item.number_plate}
+                                              </span>
+                                            </div>
                                           </td>
 
-                                          {/* Color */}
+                                          {/* VEHICLE TYPE */}
+                                          <td className="py-3 px-3 font-medium">
+                                            <span className="capitalize">{item.vehicle_type || 'Car'}</span>
+                                          </td>
+
+                                          {/* COLOR */}
                                           <td className="py-3 px-3">
                                             <div className="flex items-center gap-1.5">
                                               <span
                                                 className="w-3 h-3 rounded-full border border-black/20 shadow-xs shrink-0"
-                                                style={{ backgroundColor: getColorHex(veh.vehicle_color || veh.car_color) }}
+                                                style={{ backgroundColor: getColorHex(item.vehicle_color || item.car_color) }}
                                               />
-                                              <span className="capitalize">{veh.vehicle_color || veh.car_color || 'Unknown'}</span>
+                                              <span className="capitalize">{item.vehicle_color || item.car_color || 'Unknown'}</span>
                                             </div>
                                           </td>
 
-                                          {/* Number Plate */}
-                                          <td className="py-3 px-3 font-mono">
-                                            {hasPlate ? (
-                                              <div className="inline-flex items-center rounded overflow-hidden border border-slate-800 shadow-xs text-xs">
-                                                <span className="bg-[#003399] text-white text-[9px] px-1.5 py-0.5 font-sans font-black">
-                                                  IND
-                                                </span>
-                                                <span className="bg-white text-slate-950 px-2 py-0.5 font-extrabold tracking-wider">
-                                                  {plate.normalized_plate || plate.raw_ocr}
-                                                </span>
-                                              </div>
-                                            ) : isUnreadable ? (
-                                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                                isLight ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                              }`}>
-                                                <AlertTriangle className="w-3 h-3 text-amber-500" />
-                                                <span>OCR UNREADABLE</span>
-                                              </span>
-                                            ) : (
-                                              <span className="text-[11px] text-slate-400 italic font-sans">
-                                                No plate detected
-                                              </span>
-                                            )}
-                                          </td>
-
-                                          {/* Plate Confidence */}
+                                          {/* PLATE CONF */}
                                           <td className="py-3 px-3 text-center font-mono">
-                                            {plate?.detector_confidence != null ? (
-                                              <span className="font-semibold text-slate-200">
-                                                {Math.round(plate.detector_confidence * 100)}%
-                                              </span>
-                                            ) : (
-                                              <span className="text-slate-500">—</span>
-                                            )}
+                                            <span className="font-semibold text-slate-200">
+                                              {item.plate_confidence != null ? `${item.plate_confidence}%` : '—'}
+                                            </span>
                                           </td>
 
-                                          {/* Overall Confidence */}
+                                          {/* OVERALL CONF */}
                                           <td className="py-3 px-3 text-center font-mono">
-                                            {plate?.overall_confidence != null ? (
-                                              <span className="font-semibold text-blue-400">
-                                                {Math.round(plate.overall_confidence * 100)}%
-                                              </span>
-                                            ) : plate?.ocr_confidence != null ? (
-                                              <span className="font-semibold text-blue-400">
-                                                {Math.round(plate.ocr_confidence * 100)}%
-                                              </span>
-                                            ) : (
-                                              <span className="text-slate-500">—</span>
-                                            )}
+                                            <span className="font-semibold text-blue-400">
+                                              {item.overall_confidence != null ? `${item.overall_confidence}%` : '—'}
+                                            </span>
                                           </td>
 
-                                          {/* Status */}
+                                          {/* STATUS */}
                                           <td className="py-3 px-3 text-right">
                                             {isMatch ? (
                                               <div className="inline-flex items-center gap-1.5 justify-end">
@@ -1084,23 +1064,13 @@ export default function ANPRPage() {
                                                   </button>
                                                 )}
                                               </div>
-                                            ) : isUnreadable ? (
-                                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                                                isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                              }`}>
-                                                UNREADABLE
-                                              </span>
-                                            ) : !hasPlate ? (
-                                              <span className={`px-2 py-0.5 rounded text-[10px] font-medium border ${
-                                                isLight ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-white/5 text-slate-400 border-white/10'
-                                              }`}>
-                                                NO PLATE
-                                              </span>
                                             ) : (
                                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border ${
-                                                isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                                item.status === 'VERIFIED'
+                                                  ? (isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30')
+                                                  : (isLight ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-500/15 text-blue-400 border-blue-500/30')
                                               }`}>
-                                                CLEAR
+                                                {item.status || 'VERIFIED'}
                                               </span>
                                             )}
                                           </td>
@@ -1113,17 +1083,15 @@ export default function ANPRPage() {
 
                               {/* Mobile Cards View */}
                               <div className="block md:hidden space-y-2">
-                                {detectedVehicles.map((veh, vIdx) => {
+                                {successfulResults.map((item, vIdx) => {
                                   const isSelected = selectedVehicle && selectedVehicle.imgIndex === idx && selectedVehicle.vehicleIndex === vIdx;
-                                  const plate = veh.plate;
+                                  const plate = item.plate || item;
                                   const isMatch = plate && (plate.match_status === 'MATCH_FOUND' || plate.match_status === 'POSSIBLE_MATCH');
-                                  const isUnreadable = veh.status === 'PLATE_DETECTED_OCR_UNREADABLE' || (plate && plate.plate_status === 'UNREADABLE');
-                                  const hasPlate = plate && !isUnreadable && (plate.normalized_plate || plate.raw_ocr);
 
                                   return (
                                     <div
                                       key={vIdx}
-                                      onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: veh })}
+                                      onClick={() => setSelectedVehicle(isSelected ? null : { imgIndex: idx, vehicleIndex: vIdx, vehicle: item })}
                                       className={`p-3 rounded-xl border transition-all ${
                                         isSelected
                                           ? (isLight ? 'bg-blue-50/90 border-blue-400 shadow-sm' : 'bg-blue-950/40 border-blue-500')
@@ -1133,15 +1101,15 @@ export default function ANPRPage() {
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
                                           <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                                            {veh.vehicle_index || vIdx + 1}
+                                            {item.vehicle_number || vIdx + 1}
                                           </span>
-                                          <span className="text-xs font-bold capitalize">{veh.vehicle_type || 'Car'}</span>
+                                          <span className="text-xs font-bold capitalize">{item.vehicle_type || 'Car'}</span>
                                           <div className="flex items-center gap-1 text-[11px] text-slate-400">
                                             <span
                                               className="w-2 h-2 rounded-full border border-black/20"
-                                              style={{ backgroundColor: getColorHex(veh.vehicle_color || veh.car_color) }}
+                                              style={{ backgroundColor: getColorHex(item.vehicle_color || item.car_color) }}
                                             />
-                                            <span className="capitalize">{veh.vehicle_color || veh.car_color || 'Unknown'}</span>
+                                            <span className="capitalize">{item.vehicle_color || item.car_color || 'Unknown'}</span>
                                           </div>
                                         </div>
 
@@ -1149,47 +1117,22 @@ export default function ANPRPage() {
                                           <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-red-600 text-white animate-pulse">
                                             MATCH
                                           </span>
-                                        ) : isUnreadable ? (
-                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                            UNREADABLE
-                                          </span>
-                                        ) : !hasPlate ? (
-                                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-white/5 text-slate-400 border border-white/10">
-                                            NO PLATE
-                                          </span>
                                         ) : (
-                                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                                            CLEAR
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                            isLight ? 'bg-emerald-50 text-emerald-700' : 'bg-emerald-500/20 text-emerald-300'
+                                          }`}>
+                                            {item.status || 'VERIFIED'}
                                           </span>
                                         )}
                                       </div>
 
                                       <div className="flex items-center justify-between gap-2 mt-2">
-                                        <div>
-                                          {hasPlate ? (
-                                            <div className="inline-flex items-center rounded overflow-hidden border border-slate-800 text-xs">
-                                              <span className="bg-[#003399] text-white text-[9px] px-1.5 py-0.5 font-bold">
-                                                IND
-                                              </span>
-                                              <span className="bg-white text-slate-950 px-2 py-0.5 font-black tracking-wider">
-                                                {plate.normalized_plate || plate.raw_ocr}
-                                              </span>
-                                            </div>
-                                          ) : (
-                                            <span className="text-[11px] text-slate-400 italic">
-                                              {isUnreadable ? 'Plate detected, text unreadable' : 'No plate detected'}
-                                            </span>
-                                          )}
+                                        <div className="font-mono text-sm font-bold tracking-wider">
+                                          {item.number_plate || plate?.plate_number || item.plate_number || 'UNKNOWN'}
                                         </div>
-
-                                        {plate && (
-                                          <div className="text-right text-[11px] font-mono">
-                                            <span className="text-slate-400">Conf: </span>
-                                            <span className="font-bold text-blue-400">
-                                              {Math.round((plate.overall_confidence || plate.ocr_confidence || plate.detector_confidence || 0.9) * 100)}%
-                                            </span>
-                                          </div>
-                                        )}
+                                        <span className="text-[11px] text-slate-400 font-mono">
+                                          {Math.round((plate?.confidence ?? item.confidence ?? 0) * 100)}%
+                                        </span>
                                       </div>
                                     </div>
                                   );
@@ -1304,7 +1247,7 @@ export default function ANPRPage() {
                                       <p className={`text-[9px] font-bold mb-1 flex items-center justify-center gap-1 ${
                                         isLight ? 'text-blue-700' : 'text-blue-400'
                                       }`}>
-                                        <Sparkles className="w-2.5 h-2.5 text-blue-500" />
+                                        <Cpu className="w-2.5 h-2.5 text-blue-500" />
                                         <span>Enhanced Plate</span>
                                       </p>
                                       <div className={`h-16 flex items-center justify-center rounded-lg p-1 overflow-hidden ${
@@ -1801,7 +1744,7 @@ export default function ANPRPage() {
                         : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <Sparkles className="w-3 h-3" />
+                    <ScanEye className="w-3 h-3" />
                     <span>AI Annotated</span>
                   </button>
                   <button

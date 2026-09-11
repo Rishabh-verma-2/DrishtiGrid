@@ -425,6 +425,10 @@ const analyzeVehicleImages = async (req, res) => {
         processed_image: processedImage,
         plates: enrichedPlates,
         vehicle_results: vehicleResults,
+        vehicles: aiData.vehicles || vehicleResults,
+        successful_anpr_results: (aiData.successful_anpr_results && aiData.successful_anpr_results.length > 0)
+          ? aiData.successful_anpr_results
+          : vehicleResults.filter(v => v.has_plate && v.number_plate && v.number_plate !== 'UNREADABLE'),
         simulated: aiData.simulated || false,
         timings: {
           ...aiData.timings,

@@ -19,10 +19,14 @@ ultralytics==8.2.18
 realesrgan==0.3.0
 basicsr==1.4.2
 
-# OCR
-paddlepaddle==2.6.2
-paddleocr==2.8.1
+# OCR (Primary: PaddleOCR, Supported Fallback: EasyOCR)
+paddlepaddle>=2.6.0
+paddleocr>=2.8.0
+easyocr>=1.7.0
+
+# Scientific & Math
+scipy>=1.11.0
 
 # Utilities
 python-dotenv==1.0.1
-aiofiles==23.2.1
+aiofiles>=23.2.1

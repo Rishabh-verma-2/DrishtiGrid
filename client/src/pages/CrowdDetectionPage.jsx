@@ -138,7 +138,7 @@ export default function CrowdDetectionPage() {
                 : 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <ImageIcon className="w-3.5 h-3.5 text-blue-500" />
             <span>Try Sample Photo</span>
           </button>
 
@@ -147,11 +147,7 @@ export default function CrowdDetectionPage() {
               type="button"
               onClick={() => analyzeMutation.mutate({ file: selectedFile })}
               disabled={analyzeMutation.isPending}
-              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 shadow-lg transition-all ${
-                isLight
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)]'
-              }`}
+              className="px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-colors"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${analyzeMutation.isPending ? 'animate-spin' : ''}`} />
               <span>{analyzeMutation.isPending ? 'Counting People...' : 'Re-count'}</span>

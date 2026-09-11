@@ -296,8 +296,8 @@ export default function CrowdFrameViewer({
         }`}
       >
         <div className="flex items-center gap-3">
-          <span className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-blue-700' : 'text-cyan-400'}`}>
-            <Sparkles className="w-3 h-3" />
+          <span className={`flex items-center gap-1.5 font-bold ${isLight ? 'text-blue-700' : 'text-blue-400'}`}>
+            <Eye className="w-3 h-3 text-blue-500" />
             Gujarat Police Netram Vision
           </span>
           <span>•</span>

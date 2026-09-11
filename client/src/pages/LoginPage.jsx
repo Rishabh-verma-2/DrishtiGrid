@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Shield, AlertCircle, Loader2, Lock, Mail } from 'lucide-react';
+import { Shield, Eye, EyeOff, AlertCircle, Loader2, Lock, Mail, Users, Sun, Moon } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
+import GovernmentLogo from '../components/common/GovernmentLogo';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const isLight = theme === 'light';
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
@@ -36,56 +40,80 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050810] flex items-center justify-center relative overflow-hidden">
+    <div
+      className={`min-h-screen flex items-center justify-center relative overflow-hidden transition-colors duration-200 ${
+        isLight ? 'bg-slate-100 text-slate-900' : 'bg-[#080c16] text-slate-100'
+      }`}
+    >
+      {/* Subtle national tricolor bar at very top */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-[#ff9933] via-white to-[#138808] z-30" />
 
-      {/* Animated grid background */}
-      <div className="absolute inset-0 bg-grid opacity-60 [mask-image:radial-gradient(ellipse_80%_80%_at_50%_50%,black_0%,transparent_100%)]" />
+      {/* Top right theme toggle */}
+      <div className="absolute top-4 right-4 z-30">
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className={`p-2.5 rounded-xl border flex items-center gap-2 text-xs font-bold transition-all shadow-xs cursor-pointer ${
+            isLight
+              ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+              : 'bg-white/5 border-white/10 text-slate-200 hover:bg-white/10'
+          }`}
+          title={isLight ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+        >
+          {isLight ? <Moon className="w-4 h-4 text-slate-700" /> : <Sun className="w-4 h-4 text-amber-300" />}
+          <span className="hidden sm:inline font-mono">{isLight ? 'Dark Mode' : 'Light Mode'}</span>
+        </button>
+      </div>
 
-      {/* Glow orbs */}
-      <div className="absolute -top-48 -left-24 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px] animate-pulse" />
-      <div className="absolute -bottom-40 -right-20 w-[400px] h-[400px] bg-cyan-500/8 rounded-full blur-[80px] animate-pulse [animation-delay:4s]" />
+      {/* Subtle geometric background grid */}
+      <div className="absolute inset-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] dark:bg-[radial-gradient(#334155_1px,transparent_1px)] opacity-20 [background-size:16px_16px] pointer-events-none" />
 
       {/* Card */}
-      <div className="relative z-10 w-full max-w-[440px] mx-4">
-        <div className="bg-[#0e1220]/90 border border-blue-500/15 rounded-2xl p-10 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_40px_rgba(59,130,246,0.07)] backdrop-blur-xl">
-
-          {/* Logo */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.5)] shrink-0">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-[22px] font-black gradient-text leading-tight tracking-tight">DrishtiGrid</h1>
-              <p className="text-[11px] text-slate-500 font-medium tracking-wide uppercase mt-0.5">Gujarat Surveillance Platform</p>
-            </div>
-          </div>
-
-          {/* Gov badge */}
-          <div className="inline-flex items-center gap-2 bg-blue-500/8 border border-blue-500/20 rounded-full px-3 py-1 mt-4 mb-7">
-            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-[0_0_6px_#34d399] animate-pulse-dot" />
-            <span className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider">Gujarat Home Department · Secure Portal</span>
+      <div className="relative z-10 w-full max-w-[440px] mx-4 my-8">
+        <div
+          className={`border rounded-2xl p-8 md:p-10 transition-all duration-200 ${
+            isLight
+              ? 'bg-white border-slate-200 shadow-xl shadow-slate-200/60'
+              : 'bg-[#0b101d] border-slate-800 shadow-2xl'
+          }`}
+        >
+          {/* Official Government Logo */}
+          <div className="mb-6">
+            <GovernmentLogo
+              size="lg"
+              department="Gujarat Home Department · Secure Portal"
+              forceTheme={isLight ? 'light' : 'dark'}
+            />
           </div>
 
           {/* Heading */}
-          <h2 className="text-xl font-bold text-slate-100 mb-1">Sign In</h2>
-          <p className="text-sm text-slate-500 mb-7">Enter your credentials to access the command center</p>
+          <h2 className={`text-xl font-black tracking-tight mb-1 ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
+            Sign In
+          </h2>
+          <p className={`text-sm mb-7 ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+            Enter your credentials to access the command center
+          </p>
 
           {/* Server error */}
           {error && (
             <div className="flex items-center gap-2.5 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-5">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-              <p className="text-sm text-red-300">{error}</p>
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-sm text-red-600 dark:text-red-300">{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} noValidate>
             {/* Email */}
             <div className="mb-4">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-2 ${
+                isLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
                 Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                  isLight ? 'text-slate-400' : 'text-slate-500'
+                }`} />
                 <input
                   id="email"
                   type="email"
@@ -94,15 +122,15 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="adminuser@gov.in"
                   autoComplete="email"
-                  className={`w-full bg-white/4 border rounded-xl text-slate-100 text-sm pl-10 pr-4 py-3 outline-none transition-all placeholder:text-slate-600
-                    ${fieldErrors.email
-                      ? 'border-red-500/60 focus:ring-2 focus:ring-red-500/20'
-                      : 'border-white/8 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 focus:bg-blue-500/5'
-                    }`}
+                  className={`w-full border rounded-xl text-sm pl-10 pr-4 py-3 outline-none transition-all ${
+                    isLight
+                      ? 'bg-slate-50/70 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15'
+                      : 'bg-white/5 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                  } ${fieldErrors.email ? 'border-red-500! focus:ring-red-500/20!' : ''}`}
                 />
               </div>
               {fieldErrors.email && (
-                <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />{fieldErrors.email}
                 </p>
               )}
@@ -110,11 +138,15 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="mb-6">
-              <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <label className={`block text-[11px] font-bold uppercase tracking-wider mb-2 ${
+                isLight ? 'text-slate-700' : 'text-slate-300'
+              }`}>
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none ${
+                  isLight ? 'text-slate-400' : 'text-slate-500'
+                }`} />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
@@ -123,22 +155,24 @@ export default function LoginPage() {
                   onChange={handleChange}
                   placeholder="••••••••"
                   autoComplete="current-password"
-                  className={`w-full bg-white/4 border rounded-xl text-slate-100 text-sm pl-10 pr-11 py-3 outline-none transition-all placeholder:text-slate-600
-                    ${fieldErrors.password
-                      ? 'border-red-500/60 focus:ring-2 focus:ring-red-500/20'
-                      : 'border-white/8 focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 focus:bg-blue-500/5'
-                    }`}
+                  className={`w-full border rounded-xl text-sm pl-10 pr-11 py-3 outline-none transition-all ${
+                    isLight
+                      ? 'bg-slate-50/70 border-slate-300 text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15'
+                      : 'bg-white/5 border-slate-700 text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                  } ${fieldErrors.password ? 'border-red-500! focus:ring-red-500/20!' : ''}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors p-1"
+                  className={`absolute right-3.5 top-1/2 -translate-y-1/2 p-1 transition-colors cursor-pointer ${
+                    isLight ? 'text-slate-400 hover:text-slate-600' : 'text-slate-500 hover:text-slate-300'
+                  }`}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {fieldErrors.password && (
-                <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-red-500 mt-1.5 flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />{fieldErrors.password}
                 </p>
               )}
@@ -149,23 +183,31 @@ export default function LoginPage() {
               id="login-submit-btn"
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-cyan-500 text-white font-bold text-sm rounded-xl py-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_rgba(59,130,246,0.5)] disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm rounded-xl py-3.5 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isLoading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" />Authenticating…</>
+                <><Loader2 className="w-4 h-4 animate-spin text-white" />Authenticating…</>
               ) : (
-                <><Shield className="w-4 h-4" />Access Command Center</>
+                <><Shield className="w-4 h-4 text-white" />Access Command Center</>
               )}
             </button>
           </form>
 
           {/* Prototype RBAC Quick-Fill Buttons */}
-          <div className="mt-6 p-4 bg-white/3 border border-white/8 rounded-2xl space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-widest">
+          <div
+            className={`mt-6 p-4 rounded-2xl border transition-colors ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/3 border-slate-800'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2.5">
+              <p className={`text-[10px] font-mono font-bold uppercase tracking-widest ${
+                isLight ? 'text-slate-500' : 'text-slate-400'
+              }`}>
                 Prototype RBAC Test Accounts
               </p>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border ${
+                isLight ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+              }`}>
                 1-CLICK FILL
               </span>
             </div>
@@ -178,7 +220,11 @@ export default function LoginPage() {
                   setFieldErrors({});
                   if (error) clearError();
                 }}
-                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30 text-purple-300"
+                className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all cursor-pointer ${
+                  isLight
+                    ? 'bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-800 shadow-xs'
+                    : 'bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-300'
+                }`}
               >
                 Admin
               </button>
@@ -190,7 +236,11 @@ export default function LoginPage() {
                   setFieldErrors({});
                   if (error) clearError();
                 }}
-                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30 text-blue-300"
+                className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all cursor-pointer ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-xs'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-slate-200'
+                }`}
               >
                 Police
               </button>
@@ -202,7 +252,11 @@ export default function LoginPage() {
                   setFieldErrors({});
                   if (error) clearError();
                 }}
-                className="py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300"
+                className={`py-2 px-2.5 rounded-xl border text-[11px] font-bold text-center transition-all cursor-pointer ${
+                  isLight
+                    ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800 shadow-xs'
+                    : 'bg-slate-800/80 hover:bg-slate-800 border-slate-700 text-slate-200'
+                }`}
               >
                 Traffic
               </button>
@@ -210,9 +264,13 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <p className="text-center text-[11px] text-slate-600 mt-5 leading-relaxed">
+          <p className={`text-center text-[11px] mt-6 leading-relaxed ${
+            isLight ? 'text-slate-500' : 'text-slate-500'
+          }`}>
             Unauthorized access is prohibited under<br />
-            <span className="text-slate-500 font-medium">IT Act 2000 · Government of Gujarat</span>
+            <span className={`font-semibold ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
+              IT Act 2000 · Government of Gujarat
+            </span>
           </p>
         </div>
       </div>

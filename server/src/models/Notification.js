@@ -11,6 +11,10 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       index: true,
     },
+    caseId: {
+      type: String,
+      index: true,
+    },
     recipientDepartment: {
       type: String,
       required: true,
@@ -61,6 +65,16 @@ const notificationSchema = new mongoose.Schema(
         'DEPT_REPORT_CREATED',
         'DEPT_REPORT_REPLY',
         'DEPT_REPORT_STATUS_CHANGED',
+        // FIR & Investigation Workflow types
+        'FIR_SUBMITTED',
+        'FIR_APPROVED',
+        'FIR_REJECTED',
+        'FIR_CORRECTION_REQUIRED',
+        'INVESTIGATION_ASSIGNED',
+        'INVESTIGATION_MATCH_FOUND',
+        'INVESTIGATION_RESULT_SUBMITTED',
+        'INVESTIGATION_RESULT_FORWARDED',
+        'INVESTIGATION_RESOLVED',
       ],
       required: true,
     },

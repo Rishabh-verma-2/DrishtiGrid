@@ -252,9 +252,9 @@ export default function ReportsPage() {
             <div className={`p-5 rounded-3xl border ${cardCls}`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-bold uppercase text-slate-400">Evidence Packages Dispatched</span>
-                <CheckCircle2 className="w-4 h-4 text-cyan-500" />
+                <CheckCircle2 className="w-4 h-4 text-blue-500" />
               </div>
-              <p className="text-2xl font-black font-mono text-cyan-500">{ticketStats?.dispatched || 0}</p>
+              <p className="text-2xl font-black font-mono text-blue-600 dark:text-blue-400">{ticketStats?.dispatched || 0}</p>
               <p className={`text-[11px] mt-1 ${mutedCls}`}>SHA-256 seal verified</p>
             </div>
           </div>

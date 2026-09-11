@@ -74,12 +74,19 @@ export const PERMISSION_DEFINITIONS = [
     description: 'Immutable SHA-256 tamper-evident logs for Section 65B Indian Evidence Act compliance.',
     defaultRoles: ['ADMIN'],
   },
+  {
+    key: 'investigation',
+    label: 'FIR Master Watchlist & Investigations',
+    category: 'Inter-Department Workflow',
+    description: 'FIR case submissions, Master Watchlist distribution, AI multi-camera search, and evidence chain of custody.',
+    defaultRoles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'],
+  },
 ];
 
 export const ROLE_DEFAULT_PERMISSIONS = {
   ADMIN: PERMISSION_DEFINITIONS.map((p) => p.key),
-  POLICE: ['gis_map', 'camera_monitoring', 'crowd', 'footage_requests', 'reports'],
-  TRAFFIC_POLICE: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports'],
+  POLICE: ['gis_map', 'camera_monitoring', 'crowd', 'footage_requests', 'reports', 'investigation'],
+  TRAFFIC_POLICE: ['gis_map', 'camera_monitoring', 'anpr', 'footage_requests', 'reports', 'investigation'],
 };
 
 /**

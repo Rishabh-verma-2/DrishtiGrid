@@ -94,10 +94,10 @@ export default function SystemHealthPage() {
           <div className="flex items-center justify-between mb-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${
               ai?.status === 'ONLINE'
-                ? 'bg-violet-500/10 text-violet-400 border-violet-500/20'
-                : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                : 'bg-slate-800 text-slate-400 border-slate-700'
             }`}>
-              <Sparkles className="w-5 h-5" />
+              <Cpu className="w-5 h-5" />
             </div>
             <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
               ai?.status === 'ONLINE'
@@ -186,7 +186,7 @@ export default function SystemHealthPage() {
         }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-violet-400" />
+              <Cpu className="w-5 h-5 text-blue-400" />
               <h3 className={`text-sm font-black tracking-tight ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
                 AI Computer Vision Pipeline
               </h3>

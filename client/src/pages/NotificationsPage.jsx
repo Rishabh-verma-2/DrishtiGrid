@@ -120,7 +120,7 @@ export default function NotificationsPage() {
   const getNotificationIcon = (type) => {
     const t = (type || '').toLowerCase();
     if (t.includes('requisition') || t.includes('footage')) return <FileText className="w-5 h-5 text-amber-500" />;
-    if (t.includes('report') || t.includes('department')) return <MessageSquare className="w-5 h-5 text-cyan-500" />;
+    if (t.includes('report') || t.includes('department')) return <MessageSquare className="w-5 h-5 text-blue-500" />;
     if (t.includes('alert') || t.includes('surge') || t.includes('plate')) return <ShieldAlert className="w-5 h-5 text-red-500" />;
     if (t.includes('health') || t.includes('camera')) return <Activity className="w-5 h-5 text-emerald-500" />;
     return <Bell className="w-5 h-5 text-blue-500" />;
@@ -281,11 +281,11 @@ export default function NotificationsPage() {
         }`}>
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Escalation Reports</span>
-            <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
               <MessageSquare className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl md:text-3xl font-black mt-2 text-cyan-500">{stats.deptCount}</p>
+          <p className="text-2xl md:text-3xl font-black mt-2 text-blue-600 dark:text-blue-400">{stats.deptCount}</p>
           <p className="text-[11px] text-slate-400 mt-1">Inter-agency escalations</p>
         </div>
 

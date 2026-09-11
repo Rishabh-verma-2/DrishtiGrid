@@ -35,11 +35,12 @@ from app.detection.yolo_detector import (
     detect_vehicles,
     detect_plates_in_vehicle_roi,
     detect_plates_vehicle_first,
+    get_lp_model_diagnostics,
 )
 from app.enhancement.clahe import apply_clahe
 from app.enhancement.zero_dce import enhance_with_zero_dce
 from app.ocr.ocr_fusion import fuse_ocr_variants
-from app.ocr.paddle_ocr import run_ocr_on_crop
+from app.ocr.paddle_ocr import run_ocr_on_crop, get_ocr_diagnostics
 from app.pipeline.confidence_scoring import (
     PlateResultState,
     compute_overall_confidence,
@@ -100,6 +101,76 @@ def _decode_image(image_input: Any) -> Optional[np.ndarray]:
     except Exception as e:
         logger.error(f"Image decode failed: {e}")
         return None
+
+
+# ---------------------------------------------------------------------------
+# Final Acceptance Gate
+# ---------------------------------------------------------------------------
+
+def accept_anpr_result(candidate: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Precision-first ANPR acceptance gate.
+    A vehicle becomes a successful ANPR result ONLY when:
+      1. Vehicle exists & is strongly associated (or high-confidence orphan with valid format)
+      2. Plate candidate is inside / strongly associated with vehicle
+      3. Plate crop is valid (non-empty, plausible dimensions)
+      4. Plate candidate passes geometry / quality checks
+      5. OCR returns usable text (non-empty, >= 4 characters)
+      6. Indian plate validation passes (VALID_FORMAT) OR strong possible-format evidence exists
+      7. OCR confidence passes threshold
+      8. Evidence consensus is sufficient (overall evidence >= 0.50)
+      9. Candidate is not known non-plate text (billboard / watermark)
+      10. Candidate is not an orphan false positive
+    """
+    if not candidate:
+        return False, "Candidate is None or empty"
+
+    # 9. Check non-plate keywords
+    raw = (candidate.get("raw_ocr") or "").strip()
+    norm = (candidate.get("corrected_plate") or candidate.get("normalized_plate") or "").strip()
+    cleaned = clean_ocr_text(raw)
+    if cleaned in NON_PLATE_KEYWORDS or norm in NON_PLATE_KEYWORDS:
+        return False, f"Keyword '{cleaned or norm}' matches non-plate billboard/watermark"
+
+    # 5. Must have usable text (at least 4 characters)
+    if not norm or norm == "UNREADABLE" or len(norm) < 4:
+        return False, "No readable plate text"
+
+    # State check
+    state = candidate.get("result_state", "")
+    if state == PlateResultState.REJECTED.value:
+        return False, "Marked as REJECTED by confidence scoring"
+    if state == PlateResultState.PLATE_DETECTED_OCR_UNREADABLE.value:
+        return False, "OCR text is unreadable"
+
+    # 4. Geometry check
+    bbox = candidate.get("bbox", {})
+    bw = bbox.get("width", 0)
+    bh = bbox.get("height", 0)
+    if bw < 18 or bh < 6:
+        return False, f"Invalid plate crop dimensions ({bw}x{bh})"
+
+    # 1, 2, 10. Vehicle association check
+    has_veh = candidate.get("vehicle_id") is not None
+    assoc_plaus = float(candidate.get("association_plausibility", 0.0))
+    val_status = candidate.get("validation_status", "UNCERTAIN")
+
+    if not has_veh and assoc_plaus < 0.35:
+        if val_status != "VALID_FORMAT" or candidate.get("overall_confidence", 0.0) < 0.70:
+            return False, "Orphan candidate lacking vehicle association and valid format"
+
+    # 6. Format check: Indian registration
+    has_state = bool(len(norm) >= 2 and norm[:2] in KNOWN_STATE_CODES)
+    if val_status not in ("VALID_FORMAT", "POSSIBLE_FORMAT"):
+        if not (has_state and len(norm) >= 8 and candidate.get("overall_confidence", 0.0) >= 0.70):
+            return False, f"Validation status '{val_status}' without strong Indian state syntax"
+
+    # 7, 8. Overall evidence confidence threshold
+    ov_conf = float(candidate.get("overall_confidence", 0.0))
+    if ov_conf < 0.50:
+        return False, f"Overall confidence ({ov_conf:.2f}) below acceptance threshold (0.50)"
+
+    return True, None
 
 
 # ---------------------------------------------------------------------------
@@ -427,7 +498,7 @@ def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
 
         matched_plate = plate_by_veh_id.get(vid)
 
-        # Vehicle Color detection
+        # Estimate vehicle body color using true body mask
         v_color = "Unknown"
         try:
             p_box = (
@@ -435,8 +506,8 @@ def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
                 matched_plate["bbox"]["y"],
                 matched_plate["bbox"]["x"] + matched_plate["bbox"]["width"],
                 matched_plate["bbox"]["y"] + matched_plate["bbox"]["height"],
-            ) if matched_plate else (vx1, vy1 + int(vh * 0.5), vx2, vy2)
-            detected_color = _extract_dominant_color(image, p_box, (vx1, vy1, vx2, vy2))
+            ) if matched_plate else None
+            detected_color = _extract_dominant_color(image, plate_box=p_box, vehicle_box=(vx1, vy1, vx2, vy2))
             if detected_color and str(detected_color).strip().lower() != "unknown":
                 v_color = detected_color
         except Exception:
@@ -483,39 +554,119 @@ def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
                 "plate_bbox": None,
             })
 
-    result["total_plates_detected"] = len(surviving_plates)
-    result["vehicles_detected"] = len(vehicles)
-    result["plates"] = surviving_plates
-    result["vehicle_results"] = vehicle_results
+    # --- Step 6: Final Acceptance Gate & Synthesis of successful_anpr_results ---
+    successful_anpr_results: List[Dict] = []
+    accepted_plates: List[Dict] = []
+    candidate_evidence: List[Dict] = []
 
-    # --- Step 6: Annotated Image Visualization ---
+    for idx, p in enumerate(surviving_plates, start=1):
+        is_accepted, rej_reason = accept_anpr_result(p)
+        vid = p.get("vehicle_id") or f"veh_{idx}"
+        v_type = (p.get("vehicle_type") or "car").capitalize()
+        v_color = p.get("car_color") or "Unknown"
+        p_text = p.get("corrected_plate") or p.get("normalized_plate", "")
+        p_conf_pct = int(round(float(p.get("detection_confidence", 0.0)) * 100))
+        ov_conf_pct = int(round(float(p.get("overall_confidence", 0.0)) * 100))
+
+        evidence_entry = {
+            "candidate_id": p.get("plate_id", idx),
+            "source": p.get("confidence_breakdown", {}).get("sources", ["detection"]),
+            "det_conf": p.get("detection_confidence", 0.0),
+            "quality": p.get("quality_assessment", {}).get("state", "UNKNOWN"),
+            "ocr_text": p_text,
+            "ocr_conf": p.get("ocr_confidence", 0.0),
+            "validation_status": p.get("validation_status", "UNCERTAIN"),
+            "association_plausibility": p.get("association_plausibility", 0.0),
+            "final_decision": "ACCEPTED" if is_accepted else "REJECTED",
+            "rejection_reason": rej_reason,
+        }
+        candidate_evidence.append(evidence_entry)
+
+        if is_accepted:
+            accepted_plates.append(p)
+            successful_anpr_results.append({
+                "vehicle_id": vid,
+                "vehicle_number": len(successful_anpr_results) + 1,
+                "number_plate": p_text,
+                "vehicle_type": v_type,
+                "vehicle_color": v_color,
+                "plate_confidence": p_conf_pct,
+                "overall_confidence": ov_conf_pct,
+                "status": p.get("result_state", "VERIFIED"),
+                "vehicle_bbox": p.get("vehicle_bbox"),
+                "plate_bbox": p.get("bbox"),
+                "plate_id": p.get("plate_id", idx),
+            })
+        else:
+            p["result_state"] = PlateResultState.REJECTED.value
+            p["rejection_reason"] = [rej_reason or "Failed final acceptance gate"]
+            rejected_candidates.append(p)
+
+    # --- Step 7: Model & Pipeline Diagnostics ---
+    lp_diag = get_lp_model_diagnostics()
+    ocr_diag = get_ocr_diagnostics()
+    model_diagnostics = {
+        "lp_model_loaded": bool(lp_diag.get("lp_model_available", False)),
+        "lp_model_path": str(lp_diag.get("lp_model_path", "")),
+        "lp_model_classes": list(lp_diag.get("lp_model_classes", [])),
+        "ocr_engine": str(ocr_diag.get("ocr_engine", "paddle")),
+        "ocr_available": bool(ocr_diag.get("ocr_available", True)),
+    }
+
+    pipeline_diagnostics = {
+        "vehicles_detected": len(vehicles),
+        "plate_candidates": len(plate_candidates),
+        "quality_passed": sum(1 for p in plate_results if p.get("quality_assessment", {}).get("state") != "UNREADABLE"),
+        "ocr_attempted": sum(1 for p in plate_results if "ocr_fusion" in p.get("stages_applied", [])),
+        "ocr_successful": sum(1 for p in plate_results if bool(p.get("raw_ocr", "").strip())),
+        "validated_plates": len(successful_anpr_results),
+        "rejected_candidates": len(rejected_candidates),
+    }
+
+    result["total_plates_detected"] = len(successful_anpr_results)
+    result["vehicles_detected"] = len(vehicles)
+    result["successful_anpr_results"] = successful_anpr_results
+    result["plates"] = accepted_plates
+    result["vehicle_results"] = vehicle_results
+    result["model_diagnostics"] = model_diagnostics
+    result["pipeline_diagnostics"] = pipeline_diagnostics
+
+    # --- Step 8: Clean Surveillance Visualization (Annotate ONLY successful ANPR detections) ---
     try:
-        annotated = draw_bounding_boxes(
-            image,
-            plates=[
-                {
-                    "plate_id": p["plate_id"],
-                    "bbox": p["bbox"],
-                    "detection_confidence": p["detection_confidence"],
-                    "overall_confidence": p["overall_confidence"],
-                    "normalized_plate": p.get("corrected_plate") or p.get("normalized_plate", ""),
-                    "validation_status": p.get("validation_status", "UNCERTAIN"),
-                    "result_state": p.get("result_state", "REVIEW"),
-                }
-                for p in surviving_plates
-            ],
-            vehicles=[
-                {
-                    "vehicle_bbox": vr["vehicle_bbox"],
-                    "vehicle_type": vr["vehicle_type"],
-                    "car_color": vr["car_color"],
-                    "has_plate": vr["has_plate"],
-                    "vehicle_id": vr["vehicle_id"],
-                }
-                for vr in vehicle_results
-            ],
-        )
-        result["processed_image_b64"] = numpy_to_base64(annotated)
+        annot_plates = [
+            {
+                "plate_id": r.get("plate_id", a_i + 1),
+                "bbox": r["plate_bbox"],
+                "detection_confidence": r["plate_confidence"] / 100.0,
+                "overall_confidence": r["overall_confidence"] / 100.0,
+                "normalized_plate": r["number_plate"],
+                "validation_status": "VALID_FORMAT",
+                "result_state": r["status"],
+            }
+            for a_i, r in enumerate(successful_anpr_results)
+            if r.get("plate_bbox")
+        ]
+        annot_vehicles = [
+            {
+                "vehicle_bbox": r["vehicle_bbox"],
+                "vehicle_type": r["vehicle_type"],
+                "car_color": r["vehicle_color"],
+                "has_plate": True,
+                "vehicle_id": r["vehicle_id"],
+            }
+            for r in successful_anpr_results
+            if r.get("vehicle_bbox")
+        ]
+
+        if annot_plates or annot_vehicles:
+            annotated = draw_bounding_boxes(
+                image,
+                plates=annot_plates,
+                vehicles=annot_vehicles,
+            )
+            result["processed_image_b64"] = numpy_to_base64(annotated)
+        else:
+            result["processed_image_b64"] = result["original_image_b64"]
     except Exception as e:
         logger.warning(f"Failed to draw bounding boxes: {e}")
         result["processed_image_b64"] = result["original_image_b64"]
@@ -524,8 +675,11 @@ def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
     if debug:
         result["debug_info"] = {
             "vehicles_detected_count": len(vehicles),
-            "surviving_plates_count": len(surviving_plates),
+            "surviving_plates_count": len(accepted_plates),
             "rejected_candidates_count": len(rejected_candidates),
+            "candidate_evidence": candidate_evidence,
+            "model_diagnostics": model_diagnostics,
+            "pipeline_diagnostics": pipeline_diagnostics,
             "vehicle_results": vehicle_results,
             "vf_debug": vf_debug,
             "rejected_candidates": [
@@ -546,7 +700,7 @@ def run_pipeline(image_bytes: bytes, debug: bool = False) -> Dict[str, Any]:
     result["timings"]["total"] = round(time.perf_counter() - pipeline_start, 3)
 
     logger.info(
-        f"Vehicle-First Pipeline complete — {len(surviving_plates)} plate(s) across {len(vehicles)} vehicle(s) in "
-        f"{result['timings']['total']:.2f}s"
+        f"Vehicle-First Pipeline complete — {len(successful_anpr_results)} successful ANPR detection(s) across "
+        f"{len(vehicles)} vehicle(s) in {result['timings']['total']:.2f}s"
     )
     return result

@@ -82,6 +82,28 @@ def compute_center_distance_ratio(boxA: List[float], boxB: List[float]) -> float
     return float(dist / avg_diag)
 
 
+def _normalize_box(cand_or_box: Any) -> List[float]:
+    if isinstance(cand_or_box, dict):
+        if "box" in cand_or_box and isinstance(cand_or_box["box"], (list, tuple)) and len(cand_or_box["box"]) >= 4:
+            return [float(v) for v in cand_or_box["box"][:4]]
+        if "bbox" in cand_or_box:
+            b = cand_or_box["bbox"]
+            if isinstance(b, (list, tuple)) and len(b) >= 4:
+                return [float(v) for v in b[:4]]
+            if isinstance(b, dict):
+                if "x1" in b:
+                    return [float(b["x1"]), float(b["y1"]), float(b["x2"]), float(b["y2"])]
+                if "x" in b:
+                    return [float(b["x"]), float(b["y"]), float(b["x"] + b.get("width", 0)), float(b["y"] + b.get("height", 0))]
+        if "x1" in cand_or_box:
+            return [float(cand_or_box["x1"]), float(cand_or_box["y1"]), float(cand_or_box["x2"]), float(cand_or_box["y2"])]
+        if "x" in cand_or_box:
+            return [float(cand_or_box["x"]), float(cand_or_box["y"]), float(cand_or_box["x"] + cand_or_box.get("width", 0)), float(cand_or_box["y"] + cand_or_box.get("height", 0))]
+    elif isinstance(cand_or_box, (list, tuple)) and len(cand_or_box) >= 4:
+        return [float(v) for v in cand_or_box[:4]]
+    return [0.0, 0.0, 0.0, 0.0]
+
+
 def cluster_plate_candidates(
     candidates: List[Dict[str, Any]],
     iou_threshold: float = 0.40,
@@ -107,12 +129,12 @@ def cluster_plate_candidates(
     clusters: List[List[Dict[str, Any]]] = []
 
     for cand in sorted_cands:
-        box = cand.get("bbox") or cand.get("box") or [0, 0, 0, 0]
+        box = _normalize_box(cand)
         assigned = False
 
         for cl in clusters:
             # Compare with the primary/anchor candidate of the cluster
-            anchor_box = cl[0].get("bbox") or cl[0].get("box")
+            anchor_box = _normalize_box(cl[0])
             iou = compute_iou(box, anchor_box)
             dist_ratio = compute_center_distance_ratio(box, anchor_box)
 
@@ -146,10 +168,11 @@ def cluster_plate_candidates(
         total_weight = sum(weights)
         norm_weights = [w / total_weight for w in weights]
 
-        fused_x1 = sum(w * (c.get("bbox") or c.get("box"))[0] for w, c in zip(norm_weights, cl))
-        fused_y1 = sum(w * (c.get("bbox") or c.get("box"))[1] for w, c in zip(norm_weights, cl))
-        fused_x2 = sum(w * (c.get("bbox") or c.get("box"))[2] for w, c in zip(norm_weights, cl))
-        fused_y2 = sum(w * (c.get("bbox") or c.get("box"))[3] for w, c in zip(norm_weights, cl))
+        boxes = [_normalize_box(c) for c in cl]
+        fused_x1 = sum(w * b[0] for w, b in zip(norm_weights, boxes))
+        fused_y1 = sum(w * b[1] for w, b in zip(norm_weights, boxes))
+        fused_x2 = sum(w * b[2] for w, b in zip(norm_weights, boxes))
+        fused_y2 = sum(w * b[3] for w, b in zip(norm_weights, boxes))
 
         # Best candidate (highest source reliability * confidence)
         best_cand = max(
