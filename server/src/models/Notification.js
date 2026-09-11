@@ -75,6 +75,9 @@ const notificationSchema = new mongoose.Schema(
         'INVESTIGATION_RESULT_SUBMITTED',
         'INVESTIGATION_RESULT_FORWARDED',
         'INVESTIGATION_RESOLVED',
+        // GIS Gap Analysis types
+        'GAP_ANALYSIS_REPORT',
+        'GAP_ANALYSIS_STATUS_CHANGED',
       ],
       required: true,
     },

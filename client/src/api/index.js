@@ -30,6 +30,9 @@ export const cameraAPI = {
     apiClient.get(`/cameras/bulk/import/${importId}/report`, { responseType: 'blob' }),
   cancelBulkImport: (importId) =>
     apiClient.post(`/cameras/bulk/import/${importId}/cancel`),
+  startStream: (id) => apiClient.post(`/cameras/${id}/stream/start`),
+  stopStream: (id) => apiClient.post(`/cameras/${id}/stream/stop`),
+  getAnprStatus: (id) => apiClient.get(`/cameras/${id}/anpr/status`),
 };
 
 export const alertAPI = {
@@ -210,6 +213,14 @@ export const gisAPI = {
   createIncident: (data) => apiClient.post('/gis/incidents', data),
   updateIncidentStatus: (id, data) => apiClient.patch(`/gis/incidents/${id}/status`, data),
   deleteIncident: (id) => apiClient.delete(`/gis/incidents/${id}`),
+};
+
+export const gapAnalysisAPI = {
+  analyze: (data) => apiClient.post('/gap-analysis/analyze', data),
+  getAll: (params) => apiClient.get('/gap-analysis', { params }),
+  getById: (id) => apiClient.get(`/gap-analysis/${id}`),
+  send: (id, data) => apiClient.post(`/gap-analysis/${id}/send`, data),
+  updateStatus: (id, data) => apiClient.patch(`/gap-analysis/${id}/status`, data),
 };
 
 export const investigationAPI = {

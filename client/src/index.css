@@ -383,6 +383,15 @@ body {
   color: #fbbf24 !important;
 }
 
+.theme-light .cctv-player-container .text-red-400,
+.theme-light .cctv-player-container .text-red-500,
+.theme-light .cctv-player-container .text-rose-400,
+.theme-light .cctv-dark-scope .text-red-400,
+.theme-light .cctv-dark-scope .text-red-500,
+.theme-light .cctv-dark-scope .text-rose-400 {
+  color: #f87171 !important;
+}
+
 /* Maintain dark glass & transparent gradients over video in light mode */
 .theme-light .cctv-player-container [class*="bg-black/"],
 .theme-light .cctv-dark-scope [class*="bg-black/"] {
@@ -399,6 +408,20 @@ body {
 .theme-light .cctv-dark-scope [class*="bg-white/"]:not(button:hover) {
   background-color: rgba(255, 255, 255, 0.12) !important;
   color: #ffffff !important;
+}
+
+.theme-light .cctv-player-container [class*="bg-amber-500/"],
+.theme-light .cctv-dark-scope [class*="bg-amber-500/"] {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.theme-light .cctv-player-container [class*="bg-red-500/"],
+.theme-light .cctv-dark-scope [class*="bg-red-500/"] {
+  background-color: rgba(239, 68, 68, 0.18) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
 }
 
 .theme-light .cctv-player-container [class*="bg-emerald-950"],

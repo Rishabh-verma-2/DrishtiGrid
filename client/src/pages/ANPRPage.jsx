@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { anprAPI, alertAPI } from '../api';
 import { useThemeStore } from '../store/themeStore';
@@ -15,6 +16,7 @@ import WatchlistModal from '../components/anpr/WatchlistModal';
 import VideoUploadZone from '../components/anpr/VideoUploadZone';
 import VideoAnalysisResults from '../components/anpr/VideoAnalysisResults';
 import DetectionsExplorer from '../components/anpr/DetectionsExplorer';
+import LiveANPRWorkspace from '../components/anpr/LiveANPRWorkspace';
 
 const CATEGORY_COLORS = {
   STOLEN: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/30',
@@ -36,10 +38,27 @@ const PRIORITY_COLORS = {
 export default function ANPRPage() {
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
-  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlCamId = searchParams.get('cameraId') || searchParams.get('cam');
 
   // Persistent ANPR state across page & tab navigations
-  const { activeTab, setActiveTab, batchResults, setBatchResults, clearBatchResults } = useANPRStore();
+  const {
+    activeTab,
+    setActiveTab,
+    batchResults,
+    setBatchResults,
+    clearBatchResults,
+    selectedCameraId,
+    setSelectedCameraId,
+  } = useANPRStore();
+
+  useEffect(() => {
+    if (urlCamId) {
+      setSelectedCameraId(urlCamId);
+      setActiveTab('LIVE_STREAM');
+    }
+  }, [urlCamId, setSelectedCameraId, setActiveTab]);
 
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [filePreviews, setFilePreviews] = useState([]);
@@ -373,6 +392,27 @@ export default function ANPRPage() {
       {/* ─── Navigation Tabs ─── */}
       <div className={`border-b flex items-center gap-2 overflow-x-auto ${isLight ? 'border-slate-200' : 'border-white/10'}`}>
         <button
+          onClick={() => setActiveTab('LIVE_STREAM')}
+          className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
+            activeTab === 'LIVE_STREAM'
+              ? 'border-cyan-500 text-cyan-400 bg-cyan-500/5'
+              : 'border-transparent text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Activity className="w-4 h-4 text-cyan-400" />
+          <span>Live CCTV &amp; Continuous ANPR</span>
+          {selectedCameraId ? (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono font-bold">
+              {selectedCameraId}
+            </span>
+          ) : (
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">
+              LIVE
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab('SCANNER')}
           className={`px-4 py-3 text-xs font-bold border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
             activeTab === 'SCANNER'
@@ -443,6 +483,17 @@ export default function ANPRPage() {
           )}
         </button>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════
+          TAB 0: LIVE CCTV STREAM & CONTINUOUS ANPR WORKSPACE
+         ═══════════════════════════════════════════════════════════ */}
+      {activeTab === 'LIVE_STREAM' && (
+        <LiveANPRWorkspace
+          cameraId={selectedCameraId || urlCamId || 'cam01'}
+          onBackToGIS={() => navigate('/gis-map')}
+          isLight={isLight}
+        />
+      )}
 
       {/* ═══════════════════════════════════════════════════════════
           TAB 1: PLATE VERIFICATION & BATCH SCANNER

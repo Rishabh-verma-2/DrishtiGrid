@@ -36,6 +36,9 @@ import InfrastructureLayer from '../components/gis/InfrastructureLayer';
 import IncidentRadiusLayer from '../components/gis/IncidentRadiusLayer';
 import CoverageGridLayer from '../components/gis/CoverageGridLayer';
 import AdminHierarchyFilter from '../components/gis/AdminHierarchyFilter';
+import GISGapAnalysisModal from '../components/gis/GISGapAnalysisModal';
+import SendGapReportModal from '../components/gis/SendGapReportModal';
+import GapAnalysisMapLayer from '../components/gis/GapAnalysisMapLayer';
 import { hasPermission, isCameraInUserDepartment } from '../utils/permissions';
 
 import {
@@ -128,6 +131,7 @@ export default function GISMapPage() {
   const { socket } = useSocketStore();
   const isLight = theme === 'light';
   const userRole = String(user?.role || 'POLICE').toUpperCase();
+  const isAdmin = ['ADMIN', 'SUPERADMIN'].includes(userRole);
 
   // Language support (English / Gujarati)
   const [language, setLanguage] = useState('en');
@@ -187,6 +191,12 @@ export default function GISMapPage() {
   const [isCoverageModalOpen, setIsCoverageModalOpen] = useState(false);
   const [isSendReportModalOpen, setIsSendReportModalOpen] = useState(false);
   const [reportModalContext, setReportModalContext] = useState({});
+
+  // Authoritative GIS Gap Analysis State (Admin Only)
+  const [isGapAnalysisModalOpen, setIsGapAnalysisModalOpen] = useState(false);
+  const [isSendGapReportModalOpen, setIsSendGapReportModalOpen] = useState(false);
+  const [activeGapReport, setActiveGapReport] = useState(null);
+  const [selectedReportForSend, setSelectedReportForSend] = useState(null);
 
   const [streamCamera, setStreamCamera] = useState(null);
   const [isDeptReportOpen, setIsDeptReportOpen] = useState(false);
@@ -811,24 +821,28 @@ export default function GISMapPage() {
             <span className="hidden lg:inline">{t.routeFinder}</span>
           </button>
 
-          {/* CCTV Coverage Gap Analysis */}
-          <button
-            onClick={() => {
-              setLayers((p) => ({ ...p, coverageGaps: !p.coverageGaps }));
-              setIsCoverageModalOpen(true);
-            }}
-            className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-              layers.coverageGaps
-                ? 'bg-amber-500 text-slate-950 font-black border-amber-400'
-                : isLight
-                ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
-                : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-400'
-            }`}
-            title="Coverage Gap Analysis"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{t.gapAnalysis}</span>
-          </button>
+          {/* Admin-Only CCTV Coverage Gap Analysis */}
+          {isAdmin && (
+            <button
+              onClick={() => {
+                setIsGapAnalysisModalOpen(true);
+              }}
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer shadow-xs ${
+                activeGapReport
+                  ? 'bg-cyan-500 text-slate-950 font-black border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.4)]'
+                  : isLight
+                  ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800'
+                  : 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/30 text-amber-400'
+              }`}
+              title="Surveillance Gap Analysis (Admin Only)"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span className="hidden lg:inline">{t.gapAnalysis}</span>
+              {activeGapReport && (
+                <span className="w-2 h-2 rounded-full bg-cyan-300 animate-ping" />
+              )}
+            </button>
+          )}
 
           {/* Area Intelligence Drawer Toggle */}
           <button
@@ -1015,6 +1029,33 @@ export default function GISMapPage() {
           </button>
         </div>
 
+        {/* Active GIS Gap Analysis Overlay Banner */}
+        {activeGapReport && (
+          <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-[#0d1222]/90 backdrop-blur-md border border-cyan-500/40 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] animate-in fade-in slide-in-from-top-2">
+            <ShieldAlert className="w-4 h-4 text-cyan-400 shrink-0" />
+            <div className="text-xs">
+              <span className="font-mono font-bold text-cyan-300">{activeGapReport.reportId}</span> ·{' '}
+              <span className="font-semibold">{activeGapReport.location?.name}</span> ·{' '}
+              <span>Score: <strong className="text-cyan-400 font-mono">{activeGapReport.summary?.coverageScore}/100</strong></span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsGapAnalysisModalOpen(true)}
+              className="ml-1 px-2.5 py-1 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all cursor-pointer shadow-xs"
+            >
+              Report Details
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveGapReport(null)}
+              className="p-1 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Close Gap Analysis Layer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         <MapContainer
           center={GUJARAT_CENTER}
           zoom={GUJARAT_DEFAULT_ZOOM}
@@ -1139,6 +1180,16 @@ export default function GISMapPage() {
             />
           )}
 
+          {/* Authoritative GIS Gap Analysis Layer (Admin Generated) */}
+          {activeGapReport && (
+            <GapAnalysisMapLayer
+              report={activeGapReport}
+              onOpenReport={() => setIsGapAnalysisModalOpen(true)}
+              onClear={() => setActiveGapReport(null)}
+              isLight={isLight}
+            />
+          )}
+
           {/* 8. CCTV Cameras Cluster Layer */}
           <CameraClusterLayer
             cameras={displayedCameras}
@@ -1148,8 +1199,15 @@ export default function GISMapPage() {
               navigate(`/footage-requests?requestCam=${cam.cameraId}`)
             }
             onOpenAnalyze={(cam) => {
-              toast(`Opening AI crowd analysis for ${cam.cameraId}...`);
-              navigate(`/crowd-detection?cam=${cam.cameraId}`);
+              if (!isCameraInUserDepartment(user, cam)) {
+                toast.error(
+                  `Access Restricted: Camera belongs to ${cam.departmentName || 'another department'}. Under state rules, submit a Footage Request to Admin.`,
+                  { duration: 5000 }
+                );
+                return;
+              }
+              toast.success(`Opening ANPR analysis for ${cam.name || cam.cameraId}...`);
+              navigate(`/anpr?cameraId=${encodeURIComponent(cam.cameraId)}`);
             }}
             onOpenAreaIntel={(cam) => {
               setSelectedArea(cam.district);
@@ -1175,6 +1233,77 @@ export default function GISMapPage() {
             isLight={isLight}
           />
         </MapContainer>
+
+        {/* Selected Camera Quick Action Floating Card */}
+        {selectedCamera && (
+          <div
+            className={`absolute top-20 right-6 z-[1000] backdrop-blur-md border rounded-2xl p-4 shadow-2xl transition-all max-w-sm w-full ${
+              isLight
+                ? 'bg-white/95 border-slate-200 text-slate-900'
+                : 'bg-[#0d121f]/95 border-white/10 text-white'
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-2.5">
+              <div>
+                <span className="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded bg-blue-500/15 text-blue-500 border border-blue-500/30">
+                  {selectedCamera.cameraId}
+                </span>
+                <h4 className="text-sm font-bold mt-1 leading-snug line-clamp-1">
+                  {selectedCamera.name || selectedCamera.cameraName || 'CCTV Unit'}
+                </h4>
+              </div>
+              <button
+                onClick={() => setSelectedCamera(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                title="Dismiss"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 text-xs mb-3.5">
+              <div className="flex justify-between">
+                <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Department:</span>
+                <span className="font-semibold">{selectedCamera.departmentName || selectedCamera.departmentCode || 'Police Dept'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className={isLight ? 'text-slate-500' : 'text-slate-400'}>Status:</span>
+                <span className={`font-semibold capitalize ${(selectedCamera.status || '').toLowerCase() === 'online' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  {selectedCamera.status || 'Offline'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleOpenStreamWithAccessCheck(selectedCamera)}
+                className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-600/25"
+              >
+                <Video className="w-3.5 h-3.5" />
+                View Details
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCameraInUserDepartment(user, selectedCamera)) {
+                    toast.error(
+                      `Access Restricted: Camera belongs to ${selectedCamera.departmentName || 'another department'}. Under state rules, submit a Footage Request to Admin.`,
+                      { duration: 5000 }
+                    );
+                    return;
+                  }
+                  toast.success(`Opening ANPR analysis for ${selectedCamera.name || selectedCamera.cameraId}...`);
+                  navigate(`/anpr?cameraId=${encodeURIComponent(selectedCamera.cameraId)}`);
+                }}
+                className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white transition-colors flex items-center justify-center gap-1.5 shadow-lg shadow-cyan-600/25"
+              >
+                <Activity className="w-3.5 h-3.5" />
+                ANPR Analyze
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Bottom Left Legend */}
         <div
@@ -1350,6 +1479,42 @@ export default function GISMapPage() {
             queryClient.invalidateQueries({ queryKey: ['cameras'] });
           }}
         />
+
+        {/* Authoritative GIS Gap Analysis Modal (Admin Only) */}
+        {isAdmin && (
+          <GISGapAnalysisModal
+            isOpen={isGapAnalysisModalOpen}
+            onClose={() => setIsGapAnalysisModalOpen(false)}
+            allCameras={cameras}
+            defaultDistrict={hierarchy.district !== 'all' ? hierarchy.district : 'Ahmedabad'}
+            onApplyAnalysisToMap={(report) => {
+              setActiveGapReport(report);
+              const [lng, lat] = report.location.coordinates;
+              setMapFlyTarget([lat, lng]);
+            }}
+            onOpenSendReport={(report) => {
+              setSelectedReportForSend(report);
+              setIsSendGapReportModalOpen(true);
+            }}
+            isLight={isLight}
+          />
+        )}
+
+        {/* Send Gap Analysis Report to Department Modal (Admin Only) */}
+        {isAdmin && (
+          <SendGapReportModal
+            isOpen={isSendGapReportModalOpen}
+            onClose={() => setIsSendGapReportModalOpen(false)}
+            report={selectedReportForSend}
+            onSuccess={() => {
+              queryClient.invalidateQueries(['gap-reports']);
+              if (activeGapReport && selectedReportForSend?.reportId === activeGapReport.reportId) {
+                setActiveGapReport((prev) => (prev ? { ...prev, status: 'SENT' } : null));
+              }
+            }}
+            isLight={isLight}
+          />
+        )}
       </div>
     </div>
   );

@@ -51,13 +51,37 @@ const initializeSocket = (io) => {
     }
 
     // ─── Camera Events ───────────────────────────────────────────
-    socket.on('camera:subscribe', (cameraId) => {
-      socket.join(`camera:${cameraId}`);
-      logger.debug(`${user.name} subscribed to camera: ${cameraId}`);
+    socket.on('camera:subscribe', async (cameraId) => {
+      try {
+        if (!cameraId) return;
+        const cameraRegistryProvider = require('../services/cameraRegistryProvider');
+        const { canUserAccessCamera } = require('../controllers/cameraController');
+
+        const cam = await cameraRegistryProvider.getCamera(String(cameraId));
+        if (!cam) {
+          return socket.emit('error', { code: 'CAMERA_NOT_FOUND', message: `Camera ${cameraId} not found` });
+        }
+
+        if (!canUserAccessCamera(user, cam)) {
+          logger.warn(`Unauthorized socket subscription rejected: ${user.name} (${user.role}) -> camera:${cam.cameraId}`);
+          return socket.emit('error', {
+            code: 'CAMERA_ACCESS_DENIED',
+            message: `You do not have authorization to monitor camera ${cam.cameraId}`,
+          });
+        }
+
+        socket.join(`camera:${cam.cameraId}`);
+        logger.debug(`${user.name} successfully subscribed to camera: ${cam.cameraId}`);
+      } catch (err) {
+        logger.error(`Error in camera:subscribe: ${err.message}`);
+      }
     });
 
     socket.on('camera:unsubscribe', (cameraId) => {
-      socket.leave(`camera:${cameraId}`);
+      if (cameraId) {
+        socket.leave(`camera:${cameraId}`);
+        logger.debug(`${user.name} left camera room: ${cameraId}`);
+      }
     });
 
     // ─── Alert Events ────────────────────────────────────────────

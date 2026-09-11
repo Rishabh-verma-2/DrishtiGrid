@@ -27,6 +27,7 @@ const deptReportRoutes = require('./routes/deptReports');
 const crowdRoutes = require('./routes/crowd');
 const gisRoutes = require('./routes/gis');
 const investigationRoutes = require('./routes/investigation');
+const gapAnalysisRoutes = require('./routes/gapAnalysis');
 
 const createApp = () => {
   const app = express();
@@ -120,6 +121,8 @@ const createApp = () => {
   app.use('/api/crowd', crowdRoutes);
   app.use('/api/gis', gisRoutes);
   app.use('/api/investigation', investigationRoutes);
+  app.use('/api/gap-analysis', gapAnalysisRoutes);
+  app.use('/api/gis/gap-analysis', gapAnalysisRoutes);
 
   // ─── Error Handling ───────────────────────────────────────────
   app.use(notFound);

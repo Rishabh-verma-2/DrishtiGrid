@@ -87,17 +87,92 @@ const getCameras = async (req, res) => {
   }
 };
 
+const cameraRegistryProvider = require('../services/cameraRegistryProvider');
+const streamSessionService = require('../services/streamSessionService');
+
 /**
- * @desc    Get single camera
+ * Authoritative Department Access Check
+ * - ADMIN / SUPERADMIN: Full access across all departments
+ * - Department users: Strict match on departmentCode / departmentName / departmentId
+ */
+const canUserAccessCamera = (user, camera) => {
+  if (!user || !camera) return false;
+  const role = String(user.role || '').toUpperCase();
+  if (role === 'ADMIN' || role === 'SUPERADMIN') return true;
+
+  // Sentinel public traffic grid cameras (cam01 - cam30) are accessible to all authenticated operators
+  const cid = String(camera.cameraId || camera.streamId || '').toLowerCase();
+  if (/^cam([0-2][0-9]|30)$/i.test(cid)) {
+    return true;
+  }
+
+  const camDeptCode = String(camera.departmentCode || '').toUpperCase();
+  const camDeptName = String(camera.departmentName || camera.department || '').toLowerCase();
+  const userDept = String(user.department || '').toLowerCase();
+
+  // Traffic user check
+  const isTrafficUser = role === 'TRAFFIC_POLICE' || userDept.includes('traffic');
+  const isTrafficCam = camDeptCode === 'TRAFFIC' || camDeptName.includes('traffic');
+  if (isTrafficUser && isTrafficCam) return true;
+  if (isTrafficUser && !isTrafficCam) return false;
+
+  // Police user check
+  const isPoliceUser = role === 'POLICE' || userDept.includes('police');
+  const isPoliceCam = (camDeptCode === 'POLICE' || camDeptName.includes('police')) && !camDeptName.includes('traffic');
+  if (isPoliceUser && isPoliceCam) return true;
+  if (isPoliceUser && isTrafficCam) return false;
+
+  // Direct ID check if available
+  if (user.departmentId && camera.departmentId && String(user.departmentId) === String(camera.departmentId)) {
+    return true;
+  }
+
+  // Name inclusion fallback
+  if (userDept && camDeptName) {
+    if (userDept.includes(camDeptName) || camDeptName.includes(userDept)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * @desc    Get single camera with authoritative department authorization & normalized metadata
  * @route   GET /api/cameras/:id
  */
 const getCamera = async (req, res) => {
   try {
-    const camera = await Camera.findById(req.params.id).populate('assignedTo', 'name email role');
+    const { id } = req.params;
+    const camera = await cameraRegistryProvider.getCamera(id);
     if (!camera) {
       return res.status(404).json({ success: false, message: 'Camera not found' });
     }
-    res.status(200).json({ success: true, data: camera });
+
+    // Authoritative server-side authorization check
+    if (!canUserAccessCamera(req.user, camera)) {
+      return res.status(403).json({
+        success: false,
+        code: 'CAMERA_ACCESS_DENIED',
+        message: `You do not have permission to analyze or access this camera. Camera belongs to ${camera.departmentName || camera.departmentCode || 'another department'}.`,
+      });
+    }
+
+    // Record audit log if requested for analysis
+    if (req.query.action === 'analyze') {
+      await SystemAuditLog.record({
+        req,
+        action: 'CAMERA_ANALYSIS_STARTED',
+        resource: 'Camera',
+        resourceId: camera.cameraId,
+        description: `User ${req.user.name} initiated ANPR camera analysis for ${camera.cameraId}`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: camera,
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -409,6 +484,118 @@ const getCameraStats = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Start or join a camera stream session with department authorization
+ * @route   POST /api/cameras/:id/stream/start
+ */
+const startCameraStream = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const camera = await cameraRegistryProvider.getCamera(id);
+    if (!camera) {
+      return res.status(404).json({ success: false, message: 'Camera not found' });
+    }
+
+    // Authoritative RBAC check
+    if (!canUserAccessCamera(req.user, camera)) {
+      return res.status(403).json({
+        success: false,
+        code: 'CAMERA_ACCESS_DENIED',
+        message: `You do not have permission to stream this camera. Camera belongs to ${camera.departmentName || camera.departmentCode || 'another department'}.`,
+      });
+    }
+
+    const session = await streamSessionService.startStreamSession(
+      camera.cameraId,
+      String(req.user._id || req.user.id || 'viewer')
+    );
+
+    // Audit logs for stream access and ANPR session
+    await SystemAuditLog.record({
+      req,
+      action: 'CAMERA_STREAM_ACCESSED',
+      resource: 'Camera',
+      resourceId: camera.cameraId,
+      description: `User ${req.user.name} accessed CCTV stream for camera ${camera.cameraId}`,
+    });
+
+    if (camera.sourceType === 'LIVE') {
+      await SystemAuditLog.record({
+        req,
+        action: 'ANPR_SESSION_STARTED',
+        resource: 'Camera',
+        resourceId: camera.cameraId,
+        description: `Continuous ANPR session initiated on camera ${camera.cameraId}`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: session,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Stop or leave a camera stream session
+ * @route   POST /api/cameras/:id/stream/stop
+ */
+const stopCameraStream = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const camera = await cameraRegistryProvider.getCamera(id);
+    const cid = camera ? camera.cameraId : id;
+
+    const result = await streamSessionService.stopStreamSession(
+      cid,
+      String(req.user._id || req.user.id || 'viewer')
+    );
+
+    if (camera) {
+      await SystemAuditLog.record({
+        req,
+        action: 'ANPR_SESSION_STOPPED',
+        resource: 'Camera',
+        resourceId: cid,
+        description: `User ${req.user.name} stopped CCTV stream / ANPR session on camera ${cid}`,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * @desc    Get active ANPR session status for a camera
+ * @route   GET /api/cameras/:id/anpr/status
+ */
+const getCameraAnprStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const session = streamSessionService.getSession(id);
+    const continuousAnprService = require('../services/continuousAnprService');
+    const isActive = continuousAnprService.isCameraActive(id);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        cameraId: id,
+        session: session || null,
+        anprActive: isActive,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCameras,
   getCamera,
@@ -417,4 +604,8 @@ module.exports = {
   deleteCamera,
   updateHeartbeat,
   getCameraStats,
+  startCameraStream,
+  stopCameraStream,
+  getCameraAnprStatus,
+  canUserAccessCamera,
 };

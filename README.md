@@ -29,6 +29,10 @@
    - [10. 🧠 Crowd Detection & Scene Object Inventory](#10--crowd-detection--scene-object-inventory)
    - [11. 📤 Bulk Camera Onboarding & GIS Registry Import](#11--bulk-camera-onboarding--gis-registry-import)
    - [12. 🏢 Department Escalation & Offline Camera Ticketing](#12--department-escalation--offline-camera-ticketing)
+   - [13. 🔍 GIS Gap Analysis & Strategic Infrastructure Planning](#13--gis-gap-analysis--strategic-infrastructure-planning-admin-only)
+   - [14. 🎥 GIS Camera → Continuous ANPR & Sentinel 30 Municipal Streams](#14--gis-camera--continuous-anpr--sentinel-30-municipal-streams)
+   - [15. ⚡ Real-Time Continuous Vehicle Tracking & 60 FPS Motion Interpolation](#15--real-time-continuous-vehicle-tracking--60-fps-motion-interpolation)
+   - [16. 🏛️ Institutional Command Center Design System](#16-️-institutional-command-center-design-system-de-vibe-coded)
 4. [Project Directory Structure](#-project-directory-structure)
 5. [Quick Start Guide (One-Click Setup & Launch)](#-quick-start-guide)
 6. [API Reference Overview](#-api-reference-overview)
@@ -260,44 +264,106 @@ A production-grade, government-spec spreadsheet ingestion engine enabling author
 - **Full Light & Dark Mode Accessibility**:
   - High-contrast government light mode (`theme-light`) and tactical dark mode (`theme-dark`) with first-class color contrast across all dialogs, tables, and buttons.
 
+### 13. 🔍 GIS Gap Analysis & Strategic Infrastructure Planning (Admin Only)
+An automated spatial intelligence and surveillance blind-spot optimization engine engineered for Gujarat State Police Headquarters and Municipal Smart Cities.
+
+- **Spatial Coverage & Blind-Spot Modeling**:
+  - Automatically calculates circular and hexagonal coverage footprints (150m, 300m, 500m optical radii) across all registered camera nodes.
+  - Computes spatial density, blind spots, and unmonitored intersections across Gujarat's 33 administrative districts.
+- **Hexagonal Grid Partitioning & Risk Scoring**:
+  - Divides administrative jurisdictions into hexagonal analysis cells, scoring each on camera density, crime incidents, and critical infrastructure proximity.
+  - Classifies deficiency levels: `CRITICAL` (score ≥ 80), `HIGH` (60–79), `MODERATE` (40–59), and `WELL_COVERED` (< 40).
+- **Strategic Camera Recommendation Placement**:
+  - Proposes precise GPS coordinates, recommended camera specifications (PTZ / Fixed / ANPR / 4K), installation priority, and rationale for addressing identified blind spots.
+- **Formal Gap Analysis Reports & Inter-Department Dispatch**:
+  - Generates official gap reports (`GapAnalysisReport`) with full lifecycle auditing: `PENDING_REVIEW` ➔ `UNDER_REVIEW` ➔ `APPROVED` ➔ `DISPATCHED_TO_DEPT` ➔ `REJECTED`.
+  - Dispatches formal requisitions directly to designated government departments (Home Department, Municipal Corporations, Roads & Buildings Department) via Socket.IO real-time notifications.
+- **Comprehensive Automated Test Suite**:
+  - 123-test regression suite (`node server/scripts/testGapAnalysis.js`) validating 100% test coverage across grid generation, spatial camera clustering, gap classification, and department lifecycle dispatch.
+
+### 14. 🎥 GIS Camera → Continuous ANPR & Sentinel 30 Municipal Streams
+Seamless end-to-end integration transitioning operational users directly from spatial GIS reconnaissance into real-time live video intelligence.
+
+- **Direct "Analyze" Spatial-to-ANPR Workflow**:
+  - Selecting any camera node on the Leaflet GIS Map displays an **Analyze** action.
+  - Instantly transitions the operator to the ANPR workspace with the selected camera automatically loaded into the primary surveillance viewport.
+- **Full Sentinel 30 Live Municipal Camera Integration**:
+  - Defaults directly to active municipal CCTV feeds (`cam01`–`cam30`) from Ahmedabad, Surat, Vadodara, Gandhinagar, Navsari, Mehsana, and Kutch, replacing dummy placeholder cameras.
+  - Dropdown camera switcher groups feeds into `🌟 Sentinel Live Cameras (30 Streams)` and `📍 GIS Nodal Cameras`.
+- **Hybrid Ingestion Pipeline (RTSP + Proxied HLS Fallback)**:
+  - Ingestion connects via authenticated low-latency TCP RTSP (`rtsp://${user}:${pass}@103.250.160.189:8554/stream/${streamId}`).
+  - Transparent local server HLS proxy fallback (`/api/stream/sentinel/:id/index.m3u8`) bypasses external cookie redirect walls.
+- **Reference-Counted Stream Sessions**:
+  - `StreamSessionService` tracks active client viewers per camera node (`viewerCount`).
+  - Spawns background continuous ANPR analysis only when active viewers are present, automatically terminating ffmpeg and AI ingestion pipelines after a 10-second grace period when the last viewer disconnects.
+- **Automated Workflow Verification**:
+  - 23-test automated workflow suite (`node server/scripts/testGisAnprWorkflow.js`) covering camera registry resolution, department authorization, IDOR prevention, stream session lifecycle, and deduplication.
+
+### 15. ⚡ Real-Time Continuous Vehicle Tracking & 60 FPS Motion Interpolation
+A clutter-free, high-precision live vehicle tracking HUD that tracks moving vehicles in real-time coordination with live CCTV footage.
+
+- **Dedicated Vehicle Tracking Marker (Clutter-Free HUD)**:
+  - Eliminates bulky full-vehicle bounding boxes, reticle borders, and background color blocks that previously obscured moving vehicles.
+  - **Vehicle Focal Pinpoint**: Illuminated pulsating beacon dot positioned directly on the vehicle's roof/hood with an animated sonar ping (`animate-ping`).
+  - **Precision Downward Needle**: Sharp pointer connecting the floating badge to the vehicle center.
+  - **Floating Tactical Capsule**: Displays category SVG icon, proper capitalized name (`CAR`, `BUS`, `TRUCK`, `RICKSHAW`, `BIKE`), vehicle color swatch dot, and license plate text or amber `PASSING` badge.
+- **60 FPS Client-Side Motion Interpolation Engine**:
+  - Driven by a high-performance `requestAnimationFrame` animation loop.
+  - The backend computes continuous velocity vectors $(v_x, v_y)$ in pixels/sec across successive frames.
+  - The client advances markers along their velocity vectors every animation frame and smoothly lerps (`lerpFactor = dt * 7.5`) towards incoming vision coordinates, eliminating coordinate freezing, jumping, and lag.
+  - Markers gracefully fade out when exiting video boundaries or if not seen for >3.5 seconds, ensuring zero "sticky" dead markers on empty pavement.
+- **Indian Vehicle Heuristics (Auto-Rickshaw Classification)**:
+  - Specialized classification heuristics for Indian traffic: accurately distinguishes three-wheeled Auto-Rickshaws (`Rickshaw`) using aspect ratio, bounding geometry, and characteristic yellow/green color signatures.
+- **Real-Time Passing Vehicle Telemetry**:
+  - Categorized 5-column breakdown: **Cars**, **Bikes**, **Rickshaws**, **Buses**, and **Trucks**.
+  - Displays `LIVE ON FEED` pulsing badge on cards for vehicles currently active on the live CCTV stream.
+  - Detections with obscured, dirty, or unreadable plates are categorized as passing vehicles (`isPassingVehicle: true`) without fabricating plate text.
+
+### 16. 🏛️ Institutional Command Center Design System (De-Vibe-Coded)
+Redesigned dashboard aesthetic replacing casual, "vibecoded" SaaS styling with an authoritative, disciplined Government of Gujarat Command Control Center visual language.
+
+- **State Security Seal Badge**:
+  - Replaced oversized neon-purple squircles with a structured, deep slate/navy institutional emblem featuring [`ShieldCheck`](file:///Users/rishabhverma/DrishtiGrid/client/src/pages/DashboardPage.jsx) with metallic gold accents.
+- **Government Clearance Status**:
+  - Replaced toy pills with official monospace clearance indicators (`CLEARANCE: LEVEL-5 (ADMIN)`) accompanied by an encrypted session beacon.
+- **High-Density Telemetry & Professional KPI Modules**:
+  - Compact, sharp card containers (`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900`) replacing puffy `rounded-3xl` layouts.
+  - Professional law-enforcement icons (`Camera`, `Activity`, `AlertCircle`, `UserCheck`, `Clock`, `FileCheck`).
+- **Tactical Action Buttons & Administrative Shortcuts**:
+  - Replaced candy-colored link blocks with disciplined government operations rows:
+    - GIS Surveillance Grid (`Layers`)
+    - Live CCTV Streams (`Video`)
+    - Evidence Requisition Desk (`FileText`)
+    - User & RBAC Management (`Users2`)
+    - System Infrastructure Health (`Server`)
+    - Crowd & Density Surveillance (`Users2` — replaced casual flame icon)
+    - Forensic Audit Trail (`FileSpreadsheet`)
+
 ---
 
 ## 📂 Project Directory Structure
 
-```
+```text
 DrishtiGrid/
-├── ai-service/                       # Python FastAPI AI Microservice (:8000)
-│   ├── app/
-│   │   ├── api/routes.py             # /health, /process, /ocr, /crowd, /crowd/reset endpoints
-│   │   ├── config/settings.py        # Model thresholds, GPU flags
-│   │   ├── detection/
-│   │   │   ├── yolo_detector.py      # 6-pass industry-grade LP detector (Soft-NMS, multi-scale, tiles)
-│   │   │   ├── crowd_detector.py     # High-accuracy crowd + object inventory engine
-│   │   │   ├── CROWD_DETECTION_IMPL.md # Crowd detection implementation reference
-│   │   │   └── vehicle_attributes.py # Vehicle color & type classification
-│   │   ├── enhancement/              # CLAHE & Zero-DCE neural low-light
-│   │   ├── ocr/paddle_ocr.py         # PaddleOCR extraction
-│   │   ├── pipeline/plate_pipeline.py # Orchestrated multi-stage pipeline
-│   │   ├── super_resolution/         # Real-ESRGAN upscaler
-│   │   └── validation/indian_plate.py # Indian regex & character repair
-│   ├── download_models.py            # AI model weight downloader
-│   ├── requirements.txt              # PyTorch, Ultralytics, PaddleOCR specs
-│   └── README.md                     # Dedicated AI microservice docs
-│
-├── client/                           # React 19 Frontend (Vite + Tailwind v4) (:5173)
+├── client/                           # React 18 + Vite Frontend (:5173)
 │   ├── src/
-│   │   ├── api/index.js              # Centralized API client (auth, cameras, anpr, alerts, crowd, gis)
+│   │   ├── api/                      # Axios client & route modules (anprApi.js, gisApi.js, cameraApi.js)
 │   │   ├── components/
 │   │   │   ├── anpr/
+│   │   │   │   ├── LiveANPRWorkspace.jsx    # Real-time continuous ANPR, Sentinel feeds, 60fps tracking HUD
 │   │   │   │   ├── MatchAlertModal.jsx      # Gujarat Police ICCC tactical intercept modal
 │   │   │   │   ├── WatchlistModal.jsx       # Add/Edit hotlist records
 │   │   │   │   ├── VideoUploadZone.jsx      # Video drag-and-drop & progress HUD
-│   │   │   │   ├── VideoAnalysisResults.jsx # Scrubber player & vehicle timeline cards
+│   │   │   │   └── VideoAnalysisResults.jsx # Scrubber player & vehicle timeline cards
 │   │   │   ├── cameras/              # CameraPlayer.jsx, CameraStreamModal.jsx, BulkImportModal.jsx, ReportToDeptModal.jsx
 │   │   │   ├── gis/                  # Gujarat GIS Command & Control Components
 │   │   │   │   ├── UnifiedSearchBar.jsx     # Omnibar autocomplete search (districts, cams, zones, infra)
 │   │   │   │   ├── AdminHierarchyFilter.jsx # 4-tier cascading administrative jurisdiction filter
 │   │   │   │   ├── ZoneManagerModal.jsx     # Full C&C operational geofence zone hub (create, edit, fly, delete)
+│   │   │   │   ├── GISGapAnalysisModal.jsx  # Hexagonal gap analysis & strategic placement planner
+│   │   │   │   ├── GapAnalysisMapLayer.jsx  # Interactive coverage deficiency & blind-spot map visualization
+│   │   │   │   ├── GapReportDetailModal.jsx # Formal gap report audit, diagnostics & risk matrices
+│   │   │   │   ├── SendGapReportModal.jsx   # Inter-department gap requisition dispatch modal
 │   │   │   │   ├── ZoneModal.jsx            # Geofence creation & rule definition modal
 │   │   │   │   ├── RouteCameraFinderModal.jsx # Corridor-based sequential camera discovery
 │   │   │   │   ├── CoverageGapModal.jsx     # Spatial coverage gap & blind spot analysis
@@ -310,14 +376,14 @@ DrishtiGrid/
 │   │   │   ├── layout/               # DashboardLayout.jsx (Bilingual Gov Navigation)
 │   │   │   └── notifications/        # NotificationCenter.jsx (High z-index stack)
 │   │   ├── pages/
-│   │   │   ├── ANPRPage.jsx          # ANPR 5-Tab Command Center
+│   │   │   ├── ANPRPage.jsx          # ANPR 5-Tab Command Center (Defaults to Live Sentinel cam01)
 │   │   │   ├── AlertsPage.jsx        # Security alert dispatch & triage
 │   │   │   ├── CameraMonitoringPage.jsx # Multi-layout live CCTV feeds
 │   │   │   ├── CameraManagementPage.jsx # Camera registry & Bulk Import launcher
 │   │   │   ├── CrowdDetectionPage.jsx   # YOLOv8 Crowd & People Density analyzer
 │   │   │   ├── GISMapPage.jsx        # Full-screen Gujarat Leaflet GIS Command & Control
 │   │   │   ├── FootageRequestsPage.jsx # Chain-of-custody ticketing
-│   │   │   └── DashboardPage.jsx     # Executive telemetry
+│   │   │   └── DashboardPage.jsx     # Executive telemetry (De-vibe-coded institutional command center)
 │   │   ├── store/
 │   │   │   ├── authStore.js          # Authentication & token store
 │   │   │   ├── anprStore.js          # Persistent batch cache & active tab state
@@ -328,6 +394,7 @@ DrishtiGrid/
 ├── server/                           # Node.js Express 5 Backend (:5001)
 │   ├── src/
 │   │   ├── controllers/
+│   │   │   ├── gapAnalysisController.js # Hexagonal gap analysis, reports & department dispatch
 │   │   │   ├── bulkCameraController.js# Excel spreadsheet validation & atomic 2-phase commit
 │   │   │   ├── deptReportController.js# Offline camera escalation ticketing
 │   │   │   ├── gisController.js      # GIS search, real OSM infra, zones, coverage, corridors
@@ -337,6 +404,7 @@ DrishtiGrid/
 │   │   │   └── crowdController.js    # Crowd analysis, alerts, stats, baseline reset
 │   │   ├── middleware/               # auth.js (JWT & RBAC), errorHandler.js
 │   │   ├── models/
+│   │   │   ├── GapAnalysisReport.js  # Strategic blind-spot audit reports & placement plans
 │   │   │   ├── ImportSession.js      # Temporary 2-hour TTL bulk validation sessions
 │   │   │   ├── OperationalZone.js    # Radial & polygon geofences with rule definitions
 │   │   │   ├── CriticalInfrastructure.js # Real Gujarat hospitals, police, fire, rail (OSM 2dsphere)
@@ -347,8 +415,12 @@ DrishtiGrid/
 │   │   │   ├── Alert.js              # Native incident alerts (ANPR + crowd_surge + geofence)
 │   │   │   ├── Camera.js             # Camera metadata & coordinates
 │   │   │   └── User.js               # Police/Admin user accounts
-│   │   ├── routes/                   # cameras.js, gis.js, anpr.js, alerts.js, stream.js, crowd.js, deptReports.js
+│   │   ├── routes/                   # cameras.js, gis.js, anpr.js, alerts.js, stream.js, crowd.js, deptReports.js, gapAnalysis.js
 │   │   ├── services/
+│   │   │   ├── gapAnalysisService.js # Spatial clustering, hexagonal grid math & risk matrices
+│   │   │   ├── continuousAnprService.js # Frame sampling, velocity tracking & consensus plate engine
+│   │   │   ├── streamSessionService.js # Reference-counted stream session lifecycle manager
+│   │   │   ├── cameraRegistryProvider.js # Universal camera resolver (DB + Sentinel 30 catalog)
 │   │   │   ├── bulkCameraService.js  # Excel generation, header aliasing, coordinate bounds & duplicate checking
 │   │   │   ├── videoService.js       # 1-FPS video pipeline & temporal deduplication
 │   │   │   ├── crowdDetectionService.js # Crowd AI bridge, alert creation, Socket.IO events
@@ -359,6 +431,8 @@ DrishtiGrid/
 │   │   └── utils/plateUtils.js       # Positional repair & Levenshtein matching
 │   └── scripts/
 │       ├── seed.js                   # Gujarat cameras & users seeder
+│       ├── testGapAnalysis.js        # 123-test automated regression suite for GIS Gap Analysis
+│       ├── testGisAnprWorkflow.js    # 23-test automated suite for GIS Camera → Continuous ANPR workflow
 │       ├── testBulkCameraImport.js   # 34-test automated verification suite for bulk onboarding
 │       └── fetchGujaratOsmData.js    # Live Overpass API pipeline ingesting 6,200+ real Gujarat facilities
 │
@@ -513,6 +587,24 @@ npm run fetch:osm
 | `DELETE`| `/api/gis/zones/:id` | Admin | Remove operational geofence zone |
 | `GET` | `/api/gis/incidents?district={d}` | Authenticated | Query active geo-located security & traffic incidents |
 | `GET` | `/api/gis/incident/:id/context` | Authenticated | Immediate incident impact radius & surrounding CCTV evidence |
+
+### 🔍 GIS Gap Analysis Endpoints (Admin Only)
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/gap-analysis/generate` | Admin | Trigger automated hexagonal gap analysis across specified district/jurisdiction |
+| `GET`  | `/api/gap-analysis` | Admin | Retrieve historical and active gap analysis reports |
+| `GET`  | `/api/gap-analysis/:id` | Admin | Fetch full report diagnostics, risk matrices, and strategic placement coordinates |
+| `PATCH`| `/api/gap-analysis/:id/status` | Admin | Update report lifecycle state (`UNDER_REVIEW`, `APPROVED`, `REJECTED`) |
+| `POST` | `/api/gap-analysis/:id/dispatch` | Admin | Dispatch formal requisition ticket to designated government department with Socket.IO alerts |
+
+### 🎥 Sentinel Live Streaming & Continuous ANPR Endpoints
+| Method | Route | Access | Description |
+|---|---|---|---|
+| `POST` | `/api/cameras/:id/stream/start` | Authenticated | Initialize reference-counted stream session and continuous ANPR pipeline |
+| `POST` | `/api/cameras/:id/stream/stop` | Authenticated | Decrement viewer counter and schedule idle pipeline termination |
+| `GET`  | `/api/stream/sentinel/:id/index.m3u8` | Authenticated | Proxied local HLS stream endpoint for Sentinel cameras (cam01–cam30) |
+| `GET`  | `/api/stream/sentinel/:id/:segment` | Authenticated | Proxied video transport segment (`.ts`) delivery |
+| `WS`   | `camera:subscribe` | Authenticated | Socket.IO room subscription for real-time `anpr:detection` and `anpr:track_update` |
 
 ### Crowd Detection Endpoints
 | Method | Route | Access | Description |

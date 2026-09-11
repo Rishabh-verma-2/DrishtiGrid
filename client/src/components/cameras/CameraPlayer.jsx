@@ -14,6 +14,7 @@ export default function CameraPlayer({
   aspectRatio = 'aspect-video',
   className = '',
   showControls = true,
+  children,
 }) {
   const videoRef = useRef(null);
   const containerRef = useRef(null);
@@ -540,6 +541,9 @@ export default function CameraPlayer({
 
       {/* Optical scanline sweep */}
       <div className="absolute inset-0 pointer-events-none opacity-20 [background:linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.03),rgba(0,255,0,0.01),rgba(0,0,255,0.03))] z-10" />
+
+      {/* Live AI Overlay (Vehicle Tracking Pins & Reticles) */}
+      {children}
 
       {/* Top Left: Camera Information */}
       <div className="absolute top-3 left-3 z-20 flex items-center gap-2 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/20 text-xs text-white shadow-lg osd-pill">

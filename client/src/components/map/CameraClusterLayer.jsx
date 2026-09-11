@@ -186,9 +186,9 @@ function createPopupContent(cam, user, isLight = false) {
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               LIVE VIEW
             </button>
-            <button type="button" class="cctv-btn-analyze" onclick="window.dispatchEvent(new CustomEvent('cctv:analyze', { detail: '${cam.cameraId}' }))" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnAnalyzeBg}; color: ${btnAnalyzeText}; border: 1px solid ${btnAnalyzeBorder};">
+            <button type="button" class="cctv-btn-analyze" onclick="window.location.href = '/anpr?cameraId=' + encodeURIComponent('${cam.cameraId}');" style="flex: 1; padding: 6px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; border-radius: 6px; background: ${btnAnalyzeBg}; color: ${btnAnalyzeText}; border: 1px solid ${btnAnalyzeBorder};">
               <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="m10 15 5-3-5-3v6Z"></path></svg>
-              ANALYZE
+              ANPR ANALYZE
             </button>
           </div>
         `

@@ -30,10 +30,12 @@ const saveCachedBatch = (batch) => {
 };
 
 export const useANPRStore = create((set, get) => ({
-  activeTab: 'SCANNER', // 'SCANNER' | 'VIDEO_SURVEILLANCE' | 'WATCHLIST' | 'INCIDENTS' | 'DETECTIONS'
+  activeTab: 'SCANNER', // 'SCANNER' | 'LIVE_STREAM' | 'VIDEO' | 'WATCHLIST' | 'INCIDENTS' | 'DETECTIONS'
   batchResults: loadCachedBatch(),
+  selectedCameraId: null,
 
   setActiveTab: (tab) => set({ activeTab: tab }),
+  setSelectedCameraId: (cameraId) => set({ selectedCameraId: cameraId }),
 
   setBatchResults: (batchResults) => {
     set({ batchResults });

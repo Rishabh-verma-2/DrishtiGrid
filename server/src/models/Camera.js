@@ -61,6 +61,12 @@ const cameraSchema = new mongoose.Schema(
     fieldOfView: Number,
     mountingHeight: Number,
     // Stream & Hardware
+    sourceType: {
+      type: String,
+      enum: ['LIVE', 'DUMMY', 'OFFLINE', 'MAINTENANCE'],
+      default: 'DUMMY',
+      index: true,
+    },
     streamId: String,
     streamType: String,
     streamStatus: String,
