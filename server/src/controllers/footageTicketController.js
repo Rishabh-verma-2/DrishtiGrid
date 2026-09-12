@@ -160,7 +160,7 @@ async function sendNotification({
       recipientRole,
       recipientUser,
       senderUser: senderUser?._id,
-      senderName: senderUser?.name || 'DrishtiGrid Authority',
+      senderName: senderUser?.name || 'Garud Authority',
       senderDepartment: senderUser?.department || '',
       title,
       message,
@@ -1779,7 +1779,7 @@ const generateEvidencePackage = async (req, res) => {
       issuedAt: new Date().toISOString(),
       governingStatute: 'Section 65B, Indian Evidence Act, 1872 / Bharatiya Sakshya Adhiniyam, 2023',
       jurisdiction: 'State of Gujarat, Republic of India',
-      issuingAuthority: 'DrishtiGrid Central Government Video Evidence Portal',
+      issuingAuthority: 'Garud Central Government Video Evidence Portal',
       caseDetails: {
         ticketId: ticket.ticketId,
         firNumber: ticket.firNumber || 'N/A',

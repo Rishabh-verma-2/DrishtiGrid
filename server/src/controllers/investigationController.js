@@ -102,7 +102,7 @@ async function dispatchInvestigationNotification({
       recipientRole,
       recipientUser,
       senderUser: senderUser?._id,
-      senderName: senderUser?.name || 'DrishtiGrid Authority',
+      senderName: senderUser?.name || 'Garud Authority',
       senderDepartment: senderUser?.department || '',
       title,
       message,

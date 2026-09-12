@@ -670,7 +670,7 @@ export default function GISMapPage() {
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs font-bold tracking-wide ${isLight ? 'text-slate-900' : 'text-slate-100'}`}>
-              DrishtiGrid GIS
+              Garud GIS
             </span>
             <div
               className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono border ${

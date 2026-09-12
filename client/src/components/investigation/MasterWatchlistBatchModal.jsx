@@ -74,7 +74,7 @@ export default function MasterWatchlistBatchModal({ isOpen, onClose, onSuccess }
   ]);
   const [priority, setPriority] = useState('CRITICAL');
   const [instructions, setInstructions] = useState(
-    'Activate statewide camera grid sweep and automated ANPR triggers. Report all positive detections and candidate matches directly through DrishtiGrid Evidence Console.'
+    'Activate statewide camera grid sweep and automated ANPR triggers. Report all positive detections and candidate matches directly through Garud Evidence Console.'
   );
   const [viewMode, setViewMode] = useState('FORM'); // 'FORM' or 'CIRCULAR_PREVIEW'
   const [includeAllCases, setIncludeAllCases] = useState(false);

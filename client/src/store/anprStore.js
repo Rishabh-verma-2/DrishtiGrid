@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 
-const SESSION_KEY = 'drishtigrid_anpr_batch_cache';
+const SESSION_KEY = 'garud_anpr_batch_cache';
+const LEGACY_SESSION_KEY = 'drishtigrid_anpr_batch_cache';
 
 // Helper to load initial cached batch from sessionStorage safely
 const loadCachedBatch = () => {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY) || sessionStorage.getItem(LEGACY_SESSION_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (err) {
     console.warn('Failed to load cached ANPR batch from sessionStorage:', err);

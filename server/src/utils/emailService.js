@@ -25,7 +25,7 @@ const getTransporter = () => {
       sendMail: async (options) => {
         logger.info(`[SIMULATED EMAIL DISPATCH] To: ${options.to} | Subject: ${options.subject} | Attachment: ${options.attachments?.[0]?.filename || 'None'}`);
         return {
-          messageId: `<simulated-${Date.now()}@drishtigrid.gujarat.gov.in>`,
+          messageId: `<simulated-${Date.now()}@garud.gujarat.gov.in>`,
           response: '250 Simulated Message Accepted for Delivery',
           accepted: Array.isArray(options.to) ? options.to : [options.to],
         };
@@ -38,7 +38,7 @@ const getTransporter = () => {
 
 const sendReportEmail = async ({ to, subject, html, attachments = [] }) => {
   const mailer = getTransporter();
-  const from = process.env.SMTP_FROM || '"DrishtiGrid State Surveillance" <surveillance.dispatch@gujarat.gov.in>';
+  const from = process.env.SMTP_FROM || '"Garud State Surveillance" <surveillance.dispatch@gujarat.gov.in>';
 
   return await mailer.sendMail({
     from,

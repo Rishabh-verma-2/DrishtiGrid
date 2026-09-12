@@ -340,7 +340,7 @@ export default function CrowdDetectionPage() {
         <div className="space-y-1 leading-relaxed">
           <p className={`font-bold ${isLight ? 'text-blue-950' : 'text-white'}`}>How the AI People Counting Works:</p>
           <p className={isLight ? 'text-blue-900/90 font-medium' : 'opacity-90'}>
-            DrishtiGrid uses a real-time YOLOv8 neural network trained on COCO person classes. Each person detected
+            Garud uses a real-time YOLOv8 neural network trained on COCO person classes. Each person detected
             in the image is assigned an individual ID, bounding box coordinates, and confidence score. The total count
             reflects the exact number of people detected above your selected confidence threshold, without artificial
             multipliers or synthetic fallbacks.

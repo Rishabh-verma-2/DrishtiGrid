@@ -220,7 +220,7 @@ export default function CCTVVideoPlayer({
       ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
       ctx.fillStyle = '#10b981';
       ctx.font = 'bold 14px monospace';
-      ctx.fillText(`DRISHTIGRID EVIDENCE · ${ticketId} · ${cameraId} · ${new Date().toISOString()} · SHA-256 VALIDATED`, 16, canvas.height - 15);
+      ctx.fillText(`GARUD EVIDENCE · ${ticketId} · ${cameraId} · ${new Date().toISOString()} · SHA-256 VALIDATED`, 16, canvas.height - 15);
 
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');

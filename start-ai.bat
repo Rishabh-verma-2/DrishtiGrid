@@ -1,7 +1,7 @@
 @echo off
-title DrishtiGrid - Python AI Service (:8000)
+title Garud - Python AI Service (:8000)
 echo ============================================================
-echo   DrishtiGrid - Python FastAPI AI Microservice (:8000)
+echo   Garud - Python FastAPI AI Microservice (:8000)
 echo   YOLO11 + Zero-DCE + Real-ESRGAN + PaddleOCR
 echo ============================================================
 echo.

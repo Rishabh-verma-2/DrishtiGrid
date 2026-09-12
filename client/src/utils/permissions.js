@@ -1,5 +1,5 @@
 /**
- * DrishtiGrid RBAC & Feature Permissions System
+ * Garud RBAC & Feature Permissions System
  * Conforming to Government Security Directives
  */
 

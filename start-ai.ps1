@@ -1,6 +1,6 @@
-# DrishtiGrid - Dedicated AI Microservice Launch Script
+# Garud - Dedicated AI Microservice Launch Script
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  DrishtiGrid - Python FastAPI AI Microservice (:8000)" -ForegroundColor Cyan
+Write-Host "  Garud - Python FastAPI AI Microservice (:8000)" -ForegroundColor Cyan
 Write-Host "  YOLOv8 + Zero-DCE + Real-ESRGAN + PaddleOCR" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""

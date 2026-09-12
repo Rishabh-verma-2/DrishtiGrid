@@ -65,7 +65,11 @@ const login = async (req, res) => {
     }
 
     const email = String(rawEmail).trim().toLowerCase();
-    const user = await User.findOne({ email }).select('+password +refreshToken');
+    const legacyEmail = email.replace('@garud.gov.in', '@drishtigrid.gov.in');
+    const garudEmail = email.replace('@drishtigrid.gov.in', '@garud.gov.in');
+    const user = await User.findOne({
+      email: { $in: [email, legacyEmail, garudEmail] },
+    }).select('+password +refreshToken');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials. Please check your email and password.' });

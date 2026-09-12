@@ -41,7 +41,7 @@ export default function CrowdFrameViewer({
     if (!src) return;
     const a = document.createElement('a');
     a.href = src;
-    a.download = `drishtigrid_crowd_count_${Date.now()}.jpg`;
+    a.download = `garud_crowd_count_${Date.now()}.jpg`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

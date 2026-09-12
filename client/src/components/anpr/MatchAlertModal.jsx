@@ -519,7 +519,7 @@ export default function MatchAlertModal({ match, onClose, onAcknowledge }) {
                 <p className="text-[11px] leading-relaxed">
                   {rec.description
                     ? rec.description
-                    : 'Target vehicle confirmed on active statutory hotlist. Do not initiate lone high-speed pursuit on unlit arterial roads. Alert nearest Sector PCR interceptor, close toll barrier / naka checkpoint, and maintain continuous visual tracking via DrishtiGrid CCTV network.'}
+                    : 'Target vehicle confirmed on active statutory hotlist. Do not initiate lone high-speed pursuit on unlit arterial roads. Alert nearest Sector PCR interceptor, close toll barrier / naka checkpoint, and maintain continuous visual tracking via Garud CCTV network.'}
                 </p>
               </div>
             </div>

@@ -12,7 +12,7 @@
     "test": "node scripts/testGisCapabilities.js"
   },
   "keywords": [],
-  "author": "DrishtiGrid Team",
+  "author": "Garud Team",
   "license": "ISC",
   "description": "Gujarat Government CCTV Surveillance & GIS Platform - Backend API",
   "dependencies": {

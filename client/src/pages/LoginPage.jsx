@@ -216,7 +216,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setForm({ email: 'admin@drishtigrid.gov.in', password: 'adminpass@123' });
+                  setForm({ email: 'admin@garud.gov.in', password: 'adminpass@123' });
                   setFieldErrors({});
                   if (error) clearError();
                 }}
@@ -232,7 +232,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setForm({ email: 'police@drishtigrid.gov.in', password: 'policepass@123' });
+                  setForm({ email: 'police@garud.gov.in', password: 'policepass@123' });
                   setFieldErrors({});
                   if (error) clearError();
                 }}
@@ -248,7 +248,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setForm({ email: 'traffic@drishtigrid.gov.in', password: 'trafficpass@123' });
+                  setForm({ email: 'traffic@garud.gov.in', password: 'trafficpass@123' });
                   setFieldErrors({});
                   if (error) clearError();
                 }}

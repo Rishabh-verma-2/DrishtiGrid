@@ -147,7 +147,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'DrishtiGrid_Camera_Registry_Template.xlsx');
+      link.setAttribute('download', 'Garud_Camera_Registry_Template.xlsx');
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -169,7 +169,7 @@ export default function BulkImportModal({ isOpen, onClose, onImportSuccess }) {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `DrishtiGrid_Import_Report_${importId}.xlsx`);
+      link.setAttribute('download', `Garud_Import_Report_${importId}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();

@@ -1,4 +1,4 @@
-# 🏛️ DrishtiGrid (દ્રષ્ટિગ્રીડ)
+# 🏛️ Garud (ગરુડ)
 ### *Gujarat State CCTV Surveillance, Geospatial GIS Command & AI-Powered Video Intelligence Platform*
 
 [![Node.js](https://img.shields.io/badge/Node.js-v20%2B-339933.svg?logo=node.js)](https://nodejs.org)
@@ -43,7 +43,7 @@
 
 ## 🏛️ Executive Summary
 
-**DrishtiGrid** is an enterprise Command & Control (C2) situational awareness and video intelligence platform engineered for the **Government of Gujarat Home Department**, State Police Headquarters, and Municipal Smart City Operations Centers (Netram ICCC).
+**Garud** is an enterprise Command & Control (C2) situational awareness and video intelligence platform engineered for the **Government of Gujarat Home Department**, State Police Headquarters, and Municipal Smart City Operations Centers (Netram ICCC).
 
 The platform unifies live CCTV video streaming, geospatial GIS telemetry, cryptographic evidence preservation, and **state-of-the-art Automatic Number Plate Recognition (ANPR)** with temporal vehicle tracking into a single, cohesive, bilingual (English/Gujarati) dashboard supporting authentic state portal themes in both Light and Dark modes.
 
@@ -67,7 +67,7 @@ The platform unifies live CCTV video streaming, geospatial GIS telemetry, crypto
                    ┌─────────────────────────────┘               └─────────────────────────────┐
                    ▼                                                                           ▼
       ┌───────────────────────────┐                                               ┌───────────────────────────┐
-      │   Python AI Microservice  │                                               │   DrishtiGrid Web Client  │
+      │   Python AI Microservice  │                                               │   Garud Web Client        │
       │   (:8000) FastAPI         │                                               │   React 19 + Tailwind v4  │
       │   - YOLOv8 Detection      │                                               └─────────────┬─────────────┘
       │   - Zero-DCE Enhancement  │                                                             │
@@ -642,7 +642,7 @@ EVIDENCE_ENCRYPTION_KEY=32_byte_hex_key_for_aes_256_gcm
 ```env
 VITE_API_URL=http://localhost:5001/api
 VITE_SOCKET_URL=http://localhost:5001
-VITE_APP_NAME=DrishtiGrid
+VITE_APP_NAME=Garud
 ```
 
 ---
@@ -651,7 +651,7 @@ VITE_APP_NAME=DrishtiGrid
 1. **Zero-DB Video Storage:** Live streams are parsed directly in the browser via WebRTC (WHEP) and hardware canvas decoding without consuming database storage.
 2. **1-FPS Temporal Video Processing:** Deep learning frame sampling at 1 frame per second with 30s vehicle tracking deduplication, consensus color extraction, and HTTP 206 byte-range playback.
 3. **Cryptographic Integrity:** Evidence files are sealed with SHA-256 digests and AES-256-GCM encryption for court-admissible chain of custody.
-4. **Resilient AI Pipeline:** Even if the Python deep learning server is offline, DrishtiGrid's built-in fallback simulation guarantees uninterrupted operation.
+4. **Resilient AI Pipeline:** Even if the Python deep learning server is offline, Garud's built-in fallback simulation guarantees uninterrupted operation.
 5. **Law Enforcement Realism:** Authentic Gujarat Police Netram ICCC design, BNS/IPC legal citations, tactical dispatch actions, and bilingual Gujarati/English interfaces in both Light and Dark modes.
 6. **Industry-Grade ANPR:** 6-pass multi-scale detection (direct + 1.25× + 1.75× + vehicle-cascade + 50%-overlap tiles + OCR-guided) with Soft-NMS and OCR confidence boosting — detects every visible plate in complex traffic junction scenes.
 7. **High-Accuracy Crowd Intelligence:** Gaussian Soft-NMS + 4-pass tiled inference + occlusion correction estimator + KDE heatmap — counts people in densely packed crowds and additionally provides a full 80-class COCO scene object inventory (cars, trucks, buses, bicycles, etc.).

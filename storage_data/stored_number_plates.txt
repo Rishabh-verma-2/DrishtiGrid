@@ -1,5 +1,5 @@
 # ===========================================================================
-# DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES
+# GARUD ANPR - REGISTERED VEHICLE NUMBER PLATES
 # Last Synchronized: 2026-09-12T06:50:19.531Z
 # Total Unique Plates: 22
 # ===========================================================================

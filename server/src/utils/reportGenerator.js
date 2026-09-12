@@ -27,7 +27,7 @@ const generatePDFReport = async ({
 
       // ── Header Banner ──
       doc.rect(40, 40, 515, 60).fill('#0f172a');
-      doc.fillColor('#38bdf8').fontSize(14).text('DRISHTIGRID GUJARAT STATE SURVEILLANCE', 55, 52, { bold: true });
+      doc.fillColor('#38bdf8').fontSize(14).text('GARUD GUJARAT STATE SURVEILLANCE', 55, 52, { bold: true });
       doc.fillColor('#94a3b8').fontSize(9).text('Departmental GIS Surveillance, Health Telemetry & Compliance Report', 55, 72);
       doc.fillColor('#f8fafc').fontSize(8).text(`GENERATED: ${new Date().toUTCString()}`, 360, 52, { align: 'right' });
       doc.text(`TIMEFRAME: ${timeframe.toUpperCase()}`, 360, 68, { align: 'right' });
@@ -204,7 +204,7 @@ const generatePDFReport = async ({
         { bold: true }
       );
       doc.fillColor('#64748b').fontSize(6.5).text(
-        'Generated in strict compliance with Section 65B of the Indian Evidence Act. Cryptographically certified by DrishtiGrid.\n' +
+        'Generated in strict compliance with Section 65B of the Indian Evidence Act. Cryptographically certified by Garud.\n' +
         'Unauthorized duplication or dissemination without approval from State Surveillance Directorate is strictly prohibited.\n' +
         `Audit Hash: SHA-256 Validated | Automated Dispatch Node: GJ-CMD-SRV-01 | Timestamp: ${new Date().toISOString()}`,
         48,
@@ -231,7 +231,7 @@ const generateExcelReport = async ({
   reportType = 'COVERAGE_GAP',
 }) => {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'DrishtiGrid Gujarat GIS Command';
+  workbook.creator = 'Garud Gujarat GIS Command';
   workbook.created = new Date();
 
   // ── Sheet 1: Executive Summary & Geospatial Density Metrics ──
@@ -368,7 +368,7 @@ const generateCSVReport = ({
   const lines = [];
 
   // 1. Executive Metadata & Spatial Density
-  lines.push('=== DRISHTIGRID GUJARAT STATE SURVEILLANCE AUDIT ===');
+  lines.push('=== GARUD GUJARAT STATE SURVEILLANCE AUDIT ===');
   lines.push(`Report Type,${reportType}`);
   lines.push(`Jurisdiction District,${district}`);
   lines.push(`Generated Timestamp,${new Date().toISOString()}`);

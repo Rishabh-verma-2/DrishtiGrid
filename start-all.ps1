@@ -1,6 +1,6 @@
-# DrishtiGrid - Master Launch Script for PowerShell
+# Garud - Master Launch Script for PowerShell
 Write-Host "============================================================" -ForegroundColor Cyan
-Write-Host "  DrishtiGrid - Gujarat Government CCTV Surveillance & ANPR" -ForegroundColor Cyan
+Write-Host "  Garud - Gujarat Government CCTV Surveillance & ANPR" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 

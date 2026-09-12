@@ -88,7 +88,7 @@ const resolveDepartmentUsers = async (departmentName) => {
 
   if (users && users.length > 0) return users;
 
-  // 4. Ultimate fallback: DrishtiGrid Administrator users so report is delivered to command authority
+  // 4. Ultimate fallback: Garud Administrator users so report is delivered to command authority
   return await User.find({ role: 'ADMIN', isActive: true }).select('_id name email department role');
 };
 
@@ -254,7 +254,7 @@ const createReport = async (req, res) => {
           sender:          req.user._id,
           senderName:      req.user.name,
           senderRole:      req.user.role,
-          senderDepartment: req.user.department || 'DrishtiGrid Administration',
+          senderDepartment: req.user.department || 'Garud Administration',
           message:         description,
           attachment:      attachments[0] || null,
         },
@@ -471,7 +471,7 @@ const replyToReport = async (req, res) => {
       const adminIds = admins.map((a) => a._id);
       await pushNotification({
         recipientUserIds: adminIds,
-        recipientDepartment: 'DrishtiGrid Administration',
+        recipientDepartment: 'Garud Administration',
         senderUser: req.user,
         type: 'DEPT_REPORT_REPLY',
         title: `💬 Department Reply on Report ${reportId}`,
@@ -557,7 +557,7 @@ const updateReportStatus = async (req, res) => {
       const admins = await User.find({ role: 'ADMIN', isActive: true }).select('_id');
       await pushNotification({
         recipientUserIds: admins.map((a) => a._id),
-        recipientDepartment: 'DrishtiGrid Administration',
+        recipientDepartment: 'Garud Administration',
         senderUser: req.user,
         type: 'DEPT_REPORT_STATUS_CHANGED',
         title: notifTitle,

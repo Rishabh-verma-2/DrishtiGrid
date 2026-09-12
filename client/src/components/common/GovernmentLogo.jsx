@@ -2,7 +2,7 @@ import React from 'react';
 import { Shield } from 'lucide-react';
 
 /**
- * Official Government Command Identity Logo for DrishtiGrid.
+ * Official Government Command Identity Logo for Garud.
  * Replaces the former vibe-coded neon gradient box with an authoritative,
  * high-precision state surveillance emblem.
  *
@@ -44,7 +44,7 @@ export default function GovernmentLogo({
       {/* Official Insignia Crest */}
       <div
         className={`${containerSize} flex items-center justify-center shrink-0 font-bold bg-blue-600 dark:bg-[#0f1d38] text-white border border-blue-700 dark:border-blue-500/40 shadow-xs relative overflow-hidden`}
-        title="Government of Gujarat · DrishtiGrid Command"
+        title="Government of Gujarat · Garud Command"
       >
         {/* Subtle geometric grid line accent (monochrome/blue) */}
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] opacity-10 [background-size:6px_6px] pointer-events-none" />
@@ -65,7 +65,7 @@ export default function GovernmentLogo({
                 isLarge ? 'text-2xl' : isSmall ? 'text-xs' : 'text-base'
               }`}
             >
-              DrishtiGrid
+              Garud
             </span>
             <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
               GOV

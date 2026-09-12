@@ -39,7 +39,7 @@ const upload = multer({
 const getTemplate = async (req, res) => {
   try {
     const buffer = await generateExcelTemplate();
-    const filename = `DrishtiGrid_Camera_Registry_Template.xlsx`;
+    const filename = `Garud_Camera_Registry_Template.xlsx`;
 
     res.setHeader(
       'Content-Type',
@@ -139,7 +139,7 @@ const downloadReport = async (req, res) => {
   try {
     const { importId } = req.params;
     const buffer = await generateImportReport(importId);
-    const filename = `DrishtiGrid_Import_Report_${importId}.xlsx`;
+    const filename = `Garud_Import_Report_${importId}.xlsx`;
 
     res.setHeader(
       'Content-Type',

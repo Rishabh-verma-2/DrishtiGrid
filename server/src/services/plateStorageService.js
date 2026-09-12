@@ -53,7 +53,7 @@ function updatePlainTextFile(plates) {
   try {
     const header = [
       "# ===========================================================================",
-      "# DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES",
+      "# GARUD ANPR - REGISTERED VEHICLE NUMBER PLATES",
       `# Last Synchronized: ${new Date().toISOString()}`,
       `# Total Unique Plates: ${plates.length}`,
       "# ===========================================================================",
@@ -235,7 +235,7 @@ function clearAllStoredPlates() {
     fs.writeFileSync(STORED_PLATES_JSON, JSON.stringify([], null, 2), "utf8");
     const header = [
       "# ===========================================================================",
-      "# DRISHTIGRID ANPR - REGISTERED VEHICLE NUMBER PLATES",
+      "# GARUD ANPR - REGISTERED VEHICLE NUMBER PLATES",
       `# Last Synchronized: ${new Date().toISOString()}`,
       "# Total Unique Plates: 0",
       "# ===========================================================================\n",

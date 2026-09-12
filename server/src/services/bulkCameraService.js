@@ -97,7 +97,7 @@ function generateImportId() {
 
 async function generateExcelTemplate() {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'DrishtiGrid - Government of Gujarat';
+  workbook.creator = 'Garud - Government of Gujarat';
   workbook.created = new Date();
 
   // Sheet 1: CAMERA_REGISTRY_TEMPLATE
@@ -373,7 +373,7 @@ async function generateExcelTemplate() {
       type: 'Enum',
       validValues: 'ONLINE, OFFLINE, MAINTENANCE, FAULT',
       example: 'ONLINE',
-      description: 'Initial operational status upon registration into DrishtiGrid.',
+      description: 'Initial operational status upon registration into Garud.',
     },
     {
       field: 'zone',
@@ -1010,7 +1010,7 @@ async function generateImportReport(importId) {
   }
 
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'DrishtiGrid Audit System';
+  workbook.creator = 'Garud Audit System';
   workbook.created = new Date();
 
   // Sheet 1: AUDIT_SUMMARY

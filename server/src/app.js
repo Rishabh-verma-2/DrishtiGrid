@@ -97,7 +97,7 @@ const createApp = () => {
   app.get('/api/health', (req, res) => {
     res.json({
       success: true,
-      message: 'DrishtiGrid API is running',
+      message: 'Garud API is running',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV,
     });

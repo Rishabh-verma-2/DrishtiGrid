@@ -339,7 +339,7 @@ function calculateMultiFactorCoverageScore({
       criticalAssets: assetCount,
     },
     estimatedCoverage: {
-      model: 'DrishtiGrid-Spatial-Coverage-v2',
+      model: 'Garud-Spatial-Coverage-v2',
       confidence: 'ESTIMATED_MODEL',
       recommendedAdditionalCameras,
       score: totalScore,

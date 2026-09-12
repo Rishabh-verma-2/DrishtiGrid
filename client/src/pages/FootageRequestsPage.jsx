@@ -2675,7 +2675,7 @@ export default function FootageRequestsPage() {
                   <div className="p-4 rounded-xl border bg-slate-50 dark:bg-white/3 border-slate-200 dark:border-white/10 text-xs leading-relaxed space-y-2">
                     <p className="font-bold text-[11px] uppercase tracking-wider text-slate-500">Official Officer Certification</p>
                     <p className="italic text-slate-600 dark:text-slate-300">
-                      "I hereby certify that the electronic optical video recording identified above was extracted from the authorized DrishtiGrid CCTV network operating under regular official custody. The optical and cryptographic verification methods confirm that no modification, tampering, deletion, or interception occurred throughout the evidentiary custody lifecycle."
+                      "I hereby certify that the electronic optical video recording identified above was extracted from the authorized Garud CCTV network operating under regular official custody. The optical and cryptographic verification methods confirm that no modification, tampering, deletion, or interception occurred throughout the evidentiary custody lifecycle."
                     </p>
                     <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-200 dark:border-white/10 text-[11px]">
                       <div>

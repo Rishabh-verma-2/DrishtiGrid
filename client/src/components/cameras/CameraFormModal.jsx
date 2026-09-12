@@ -283,7 +283,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
               <p className="text-xs text-slate-500">
                 {isEdit
                   ? 'Update camera configuration, GIS location, and AI rules in MongoDB'
-                  : 'Add a new camera node to the DrishtiGrid surveillance network'}
+                  : 'Add a new camera node to the Garud surveillance network'}
               </p>
             </div>
           </div>

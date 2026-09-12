@@ -18,7 +18,7 @@ export const useThemeStore = create(
       },
     }),
     {
-      name: 'drishtigrid-theme-pref',
+      name: 'garud-theme-pref',
       onRehydrateStorage: () => (state) => {
         if (state?.theme) {
           applyThemeClass(state.theme);
@@ -48,7 +48,7 @@ export function applyThemeClass(theme) {
 // Initial apply on load
 if (typeof window !== 'undefined') {
   try {
-    const stored = localStorage.getItem('drishtigrid-theme-pref');
+    const stored = localStorage.getItem('garud-theme-pref') || localStorage.getItem('drishtigrid-theme-pref');
     const isDark = stored?.includes('"dark"');
     applyThemeClass(isDark ? 'dark' : 'light');
   } catch (_) {

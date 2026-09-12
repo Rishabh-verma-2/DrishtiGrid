@@ -25,7 +25,7 @@ async function probeRtspStream(streamId) {
         `DESCRIBE ${rtspTarget} RTSP/1.0\r\n` +
         `CSeq: 1\r\n` +
         `Authorization: Basic ${auth}\r\n` +
-        `User-Agent: DrishtiGrid-RTSP-Client/1.0\r\n` +
+        `User-Agent: Garud-RTSP-Client/1.0\r\n` +
         `Accept: application/sdp\r\n\r\n`
       );
     });

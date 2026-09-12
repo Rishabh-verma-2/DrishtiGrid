@@ -1,7 +1,7 @@
 @echo off
-title DrishtiGrid - Master Launch Controller
+title Garud - Master Launch Controller
 echo ============================================================
-echo   DrishtiGrid - Gujarat Government CCTV Surveillance ^& ANPR
+echo   Garud - Gujarat Government CCTV Surveillance ^& ANPR
 echo ============================================================
 echo.
 
@@ -20,16 +20,16 @@ if exist "ai-service\.venv\Scripts\uvicorn.exe" (
 )
 
 :: 2. Launch Node.js Backend Server
-echo [2/3] Starting DrishtiGrid Node.js Express Backend on port 5001...
-start "DrishtiGrid - Backend Server (:5001)" cmd /k "cd server && npm run dev"
+echo [2/3] Starting Garud Node.js Express Backend on port 5001...
+start "Garud - Backend Server (:5001)" cmd /k "cd server && npm run dev"
 
 :: 3. Launch React Vite Frontend Client
-echo [3/3] Starting DrishtiGrid React Client on port 5173...
-start "DrishtiGrid - Client Frontend (:5173)" cmd /k "cd client && npm run dev"
+echo [3/3] Starting Garud React Client on port 5173...
+start "Garud - Client Frontend (:5173)" cmd /k "cd client && npm run dev"
 
 echo.
 echo ============================================================
-echo   All DrishtiGrid services launched!
+echo   All Garud services launched!
 echo   - Web Console:   http://localhost:5173
 echo   - Backend API:   http://localhost:5001/api
 echo   - AI Service:    http://localhost:8000/health

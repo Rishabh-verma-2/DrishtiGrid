@@ -50,7 +50,7 @@ async function reverseGeocode(lat, lng) {
         format: "json",
       },
       headers: {
-        "User-Agent": "DrishtiGrid-ANPR-System/1.0",
+        "User-Agent": "Garud-ANPR-System/1.0",
       },
       timeout: 5000,
     });
