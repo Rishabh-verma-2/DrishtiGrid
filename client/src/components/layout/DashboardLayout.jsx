@@ -15,6 +15,7 @@ import NotificationCenter from '../notifications/NotificationCenter';
 import { notificationAPI, footageTicketAPI, investigationAPI } from '../../api';
 import { hasPermission } from '../../utils/permissions';
 import toast from 'react-hot-toast';
+import ErrorBoundary from '../common/ErrorBoundary';
 
 const ALL_NAV_ITEMS = [
   { to: '/dashboard',           icon: LayoutDashboard, label: 'Dashboard',             labelGu: 'ડેશબોર્ડ',           roles: ['ADMIN', 'POLICE', 'TRAFFIC_POLICE'] },
@@ -40,6 +41,7 @@ export default function DashboardLayout() {
   const { isConnected, onlineUsers } = useSocketStore();
   const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Query unread count for notifications tab badge
   const { data: notifData } = useQuery({
@@ -517,7 +519,9 @@ export default function DashboardLayout() {
 
           {/* Page content */}
           <main className={`flex-1 overflow-y-auto custom-sidebar-scrollbar ${isLight ? 'bg-[#f4f6fa]' : 'bg-[#0a0d14]'}`}>
-            <Outlet />
+            <ErrorBoundary key={location.pathname}>
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </div>
 

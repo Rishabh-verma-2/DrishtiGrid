@@ -14,6 +14,7 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react';
 import { investigationAPI } from '../../api';
 import { useThemeStore } from '../../store/themeStore';

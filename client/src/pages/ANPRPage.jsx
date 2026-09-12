@@ -36,6 +36,7 @@ const PRIORITY_COLORS = {
 };
 
 export default function ANPRPage() {
+  const queryClient = useQueryClient();
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
   const navigate = useNavigate();
@@ -685,9 +686,9 @@ export default function ANPRPage() {
 
               {/* Per-Image Cards */}
               <div className="space-y-4">
-                {batchResults.results?.map((imgRes, i) => (
+                {batchResults.results?.map((imgRes, idx) => (
                   <div
-                    key={i}
+                    key={idx}
                     className={`rounded-2xl border p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
                       isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#141929] border-white/7'
                     }`}

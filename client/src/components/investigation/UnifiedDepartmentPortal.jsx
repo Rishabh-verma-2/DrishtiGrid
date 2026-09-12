@@ -5,7 +5,8 @@ import {
   FileText, Shield, AlertTriangle, Search, Filter, RefreshCw, Eye, CheckCircle2,
   Clock, XCircle, ChevronRight, User, Car, Building2, MapPin, Calendar,
   ArrowUpRight, AlertCircle, FileCheck, Layers, Send, Archive, Lock, Video,
-  Sparkles, ScanEye, ExternalLink, Download, ArrowRight, ShieldCheck, Check
+  Sparkles, ScanEye, ExternalLink, Download, ArrowRight, ShieldCheck, Check,
+  Camera, PlusCircle
 } from 'lucide-react';
 import { investigationAPI } from '../../api';
 import { useThemeStore } from '../../store/themeStore';

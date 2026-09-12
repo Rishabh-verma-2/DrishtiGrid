@@ -139,14 +139,14 @@ export default function DashboardPage() {
             className={`w-11 h-11 rounded-lg flex items-center justify-center font-bold border shadow-xs ${
               normalizedRole === 'ADMIN'
                 ? isLight
-                  ? 'bg-slate-900 text-amber-400 border-slate-700'
+                  ? 'bg-amber-50 text-amber-600 border-amber-200'
                   : 'bg-slate-950 text-amber-400 border-amber-500/30'
                 : normalizedRole === 'TRAFFIC_POLICE'
                 ? isLight
-                  ? 'bg-slate-900 text-emerald-400 border-slate-700'
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
                   : 'bg-slate-950 text-emerald-400 border-emerald-500/30'
                 : isLight
-                ? 'bg-slate-900 text-blue-400 border-slate-700'
+                ? 'bg-blue-50 text-blue-600 border-blue-200'
                 : 'bg-slate-950 text-blue-400 border-blue-500/30'
             }`}
           >
@@ -216,7 +216,7 @@ export default function DashboardPage() {
             onClick={() => navigate('/footage-requests')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer ${
               isLight
-                ? 'bg-slate-900 hover:bg-slate-800 text-white border border-slate-900'
+                ? 'bg-blue-600 hover:bg-blue-700 text-white border border-blue-600'
                 : 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500'
             }`}
           >
@@ -373,7 +373,7 @@ export default function DashboardPage() {
                         <td className="py-2.5 font-mono font-bold text-blue-600 dark:text-blue-400">
                           {t.ticketId}
                         </td>
-                        <td className="py-2.5 font-medium truncate max-w-[150px]">
+                        <td className={`py-2.5 font-medium truncate max-w-[150px] ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
                           {t.cameraId} · {t.locationName}
                         </td>
                         <td className="py-2.5 text-slate-500 truncate max-w-[140px]">
@@ -523,15 +523,23 @@ export default function DashboardPage() {
               <div className="space-y-2">
                 <button
                   onClick={() => navigate('/gis-map')}
-                  className="w-full flex items-center justify-between p-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all cursor-pointer text-left border border-slate-800"
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all cursor-pointer text-left ${
+                    isLight
+                      ? 'bg-slate-50/70 hover:bg-slate-100/90 border-slate-200 text-slate-800'
+                      : 'bg-slate-800/60 hover:bg-slate-800 border-slate-700 text-slate-200'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded bg-slate-800 flex items-center justify-center text-blue-400">
+                    <div className={`w-7 h-7 rounded flex items-center justify-center ${
+                      isLight
+                        ? 'bg-blue-50 border border-blue-200/80 text-blue-600'
+                        : 'bg-slate-800 text-blue-400'
+                    }`}>
                       <Layers className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="text-xs font-semibold">Launch Gujarat GIS Grid</p>
-                      <p className="text-[10px] text-slate-400">Spatial nodal surveillance map</p>
+                      <p className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Spatial nodal surveillance map</p>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-slate-400" />
