@@ -348,21 +348,23 @@ export default function DashboardLayout() {
         <aside
           className={`hidden lg:flex flex-col ${
             isLight ? 'bg-white border-r border-slate-200 shadow-sm' : 'bg-[#080c16] border-r border-white/5'
-          } transition-all duration-300 shrink-0 relative z-20
+          } transition-all duration-300 shrink-0 relative z-[1200]
             ${collapsed ? 'w-[70px]' : 'w-[260px]'}`}
         >
           {sidebarContent}
 
           {/* Collapse toggle */}
           <button
+            type="button"
             onClick={() => setCollapsed((p) => !p)}
-            className={`absolute -right-3 top-20 w-6 h-6 rounded-full flex items-center justify-center transition-all z-10 shadow-md ${
+            className={`absolute -right-3.5 top-5 w-7 h-7 rounded-full flex items-center justify-center transition-all z-[1250] shadow-md cursor-pointer ${
               isLight
-                ? 'bg-white border border-slate-300 text-slate-700 hover:bg-blue-600 hover:text-white'
-                : 'bg-[#1e2740] border border-white/10 text-slate-400 hover:text-slate-200 hover:bg-blue-500/20'
+                ? 'bg-white border border-slate-300 text-slate-700 hover:bg-blue-600 hover:text-white hover:border-blue-600 shadow-slate-300/80'
+                : 'bg-[#182238] border border-blue-500/40 text-slate-200 hover:text-white hover:bg-blue-600 hover:border-blue-500 shadow-black/50'
             }`}
+            title={collapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
           >
-            {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+            {collapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
           </button>
         </aside>
 

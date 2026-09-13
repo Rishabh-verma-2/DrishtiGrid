@@ -13,6 +13,7 @@ import {
   Car,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 export default function ZoneModal({
   isOpen,
@@ -161,22 +162,18 @@ export default function ZoneModal({
               <label className="text-[10px] font-mono uppercase text-slate-400 mb-1 block">
                 Zone Classification *
               </label>
-              <select
+              <ThemeDropdown
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-colors ${
-                  isLight
-                    ? 'bg-slate-50 border-slate-300 focus:border-indigo-500'
-                    : 'bg-black/30 border-white/10 focus:border-indigo-500 text-white'
-                }`}
-              >
-                <option value="EVENT">EVENT (Cultural / Festival)</option>
-                <option value="RESTRICTED">RESTRICTED (High Security)</option>
-                <option value="VIP">VIP CORRIDOR (Movement)</option>
-                <option value="EMERGENCY">EMERGENCY (Disaster / Riot)</option>
-                <option value="SURVEILLANCE">SURVEILLANCE (Active ANPR)</option>
-                <option value="OPERATIONAL">OPERATIONAL (General)</option>
-              </select>
+                options={[
+                  { value: 'EVENT', label: 'EVENT (Cultural / Festival)' },
+                  { value: 'RESTRICTED', label: 'RESTRICTED (High Security)' },
+                  { value: 'VIP', label: 'VIP CORRIDOR (Movement)' },
+                  { value: 'EMERGENCY', label: 'EMERGENCY (Disaster / Riot)' },
+                  { value: 'SURVEILLANCE', label: 'SURVEILLANCE (Active ANPR)' },
+                  { value: 'OPERATIONAL', label: 'OPERATIONAL (General)' },
+                ]}
+              />
             </div>
           </div>
 
@@ -186,20 +183,16 @@ export default function ZoneModal({
               <label className="text-[10px] font-mono uppercase text-slate-400 mb-1 block">
                 Threat / Severity Level
               </label>
-              <select
+              <ThemeDropdown
                 value={severity}
                 onChange={(e) => setSeverity(e.target.value)}
-                className={`w-full px-3 py-2 rounded-xl border text-xs outline-none transition-colors ${
-                  isLight
-                    ? 'bg-slate-50 border-slate-300 focus:border-indigo-500'
-                    : 'bg-black/30 border-white/10 focus:border-indigo-500 text-white'
-                }`}
-              >
-                <option value="low">LOW</option>
-                <option value="medium">MEDIUM</option>
-                <option value="high">HIGH</option>
-                <option value="critical">CRITICAL</option>
-              </select>
+                options={[
+                  { value: 'low', label: 'LOW' },
+                  { value: 'medium', label: 'MEDIUM' },
+                  { value: 'high', label: 'HIGH' },
+                  { value: 'critical', label: 'CRITICAL' },
+                ]}
+              />
             </div>
 
             <div>
@@ -207,18 +200,15 @@ export default function ZoneModal({
                 Zone Geometry Buffer
               </label>
               <div className="flex items-center gap-2">
-                <select
+                <ThemeDropdown
                   value={shapeType}
                   onChange={(e) => setShapeType(e.target.value)}
-                  className={`flex-1 px-3 py-2 rounded-xl border text-xs outline-none transition-colors ${
-                    isLight
-                      ? 'bg-slate-50 border-slate-300'
-                      : 'bg-black/30 border-white/10 text-white'
-                  }`}
-                >
-                  <option value="circle">Circular Radial</option>
-                  <option value="polygon">Polygon Envelope</option>
-                </select>
+                  options={[
+                    { value: 'circle', label: 'Circular Radial' },
+                    { value: 'polygon', label: 'Polygon Envelope' },
+                  ]}
+                  className="flex-1"
+                />
                 <input
                   type="number"
                   value={radiusMeters}

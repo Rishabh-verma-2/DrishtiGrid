@@ -14,6 +14,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 export default function SendReportModal({
   isOpen,
@@ -214,20 +215,16 @@ export default function SendReportModal({
               <label className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                 Handling Department Authority
               </label>
-              <select
+              <ThemeDropdown
                 value={departmentCode}
                 onChange={(e) => setDepartmentCode(e.target.value)}
-                className={`w-full p-2.5 rounded-xl border text-xs outline-none cursor-pointer ${
-                  isLight
-                    ? 'bg-white border-slate-300 text-slate-800'
-                    : 'bg-white/5 border-white/10 text-slate-200'
-                }`}
-              >
-                <option value="POLICE">Gujarat State Police Surveillance Branch</option>
-                <option value="TRAFFIC">Gujarat Traffic Police & Highway Patrol</option>
-                <option value="MUNICIPAL">Urban Development & Smart City Mission</option>
-                <option value="TRANSPORT">Gujarat Transport Department (RTO)</option>
-              </select>
+                options={[
+                  { value: 'POLICE', label: 'Gujarat State Police Surveillance Branch' },
+                  { value: 'TRAFFIC', label: 'Gujarat Traffic Police & Highway Patrol' },
+                  { value: 'MUNICIPAL', label: 'Urban Development & Smart City Mission' },
+                  { value: 'TRANSPORT', label: 'Gujarat Transport Department (RTO)' },
+                ]}
+              />
             </div>
 
             {/* Nodal Officer Info Card */}
@@ -268,39 +265,31 @@ export default function SendReportModal({
                 <label className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                   Evaluation Window
                 </label>
-                <select
+                <ThemeDropdown
                   value={timeframe}
                   onChange={(e) => setTimeframe(e.target.value)}
-                  className={`w-full p-2 rounded-xl border text-xs outline-none cursor-pointer ${
-                    isLight
-                      ? 'bg-white border-slate-300 text-slate-800'
-                      : 'bg-white/5 border-white/10 text-slate-200'
-                  }`}
-                >
-                  <option value="24h">Past 24 Hours</option>
-                  <option value="7d">Past 7 Days</option>
-                  <option value="30d">Past 30 Days</option>
-                  <option value="90d">Quarterly (90 Days)</option>
-                </select>
+                  options={[
+                    { value: '24h', label: 'Past 24 Hours' },
+                    { value: '7d', label: 'Past 7 Days' },
+                    { value: '30d', label: 'Past 30 Days' },
+                    { value: '90d', label: 'Quarterly (90 Days)' },
+                  ]}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label className={`text-[11px] font-bold uppercase tracking-wider ${isLight ? 'text-slate-700' : 'text-slate-400'}`}>
                   Report Format
                 </label>
-                <select
+                <ThemeDropdown
                   value={format}
                   onChange={(e) => setFormat(e.target.value)}
-                  className={`w-full p-2 rounded-xl border text-xs outline-none cursor-pointer ${
-                    isLight
-                      ? 'bg-white border-slate-300 text-slate-800'
-                      : 'bg-white/5 border-white/10 text-slate-200'
-                  }`}
-                >
-                  <option value="PDF">Official PDF Document</option>
-                  <option value="EXCEL">Excel Spreadsheet (.xlsx)</option>
-                  <option value="CSV">Tabular CSV File</option>
-                </select>
+                  options={[
+                    { value: 'PDF', label: 'Official PDF Document' },
+                    { value: 'EXCEL', label: 'Excel Spreadsheet (.xlsx)' },
+                    { value: 'CSV', label: 'Tabular CSV File' },
+                  ]}
+                />
               </div>
             </div>
 

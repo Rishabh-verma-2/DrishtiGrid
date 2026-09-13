@@ -9,6 +9,7 @@ import {
   Layers,
   ChevronDown,
 } from 'lucide-react';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 export default function AdminHierarchyFilter({
   cameras = [],
@@ -149,97 +150,59 @@ export default function AdminHierarchyFilter({
       {/* Cascading Selects */}
       <div className="flex flex-wrap items-center gap-2">
         {/* District */}
-        <div className="flex items-center gap-1.5">
-          <Map className="w-3 h-3 text-blue-400" />
-          <select
-            value={selectedDistrict}
-            onChange={(e) => handleDistrictChange(e.target.value)}
-            className={`px-2.5 py-1 rounded-lg border text-xs font-medium outline-none cursor-pointer ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-800'
-                : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
-          >
-            <option value="all">District (All Gujarat)</option>
-            {OFFICIAL_DISTRICTS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-        </div>
+        <ThemeDropdown
+          size="sm"
+          icon={Map}
+          value={selectedDistrict}
+          onChange={(e) => handleDistrictChange(e.target.value)}
+          options={[
+            { value: 'all', label: 'District (All Gujarat)' },
+            ...OFFICIAL_DISTRICTS.map((d) => ({ value: d, label: d })),
+          ]}
+          className="min-w-[170px]"
+        />
 
         {/* City / Municipality */}
-        <div className="flex items-center gap-1.5">
-          <Building className="w-3 h-3 text-purple-400" />
-          <select
-            value={selectedCity}
-            onChange={(e) => handleCityChange(e.target.value)}
-            disabled={selectedDistrict === 'all'}
-            className={`px-2.5 py-1 rounded-lg border text-xs font-medium outline-none cursor-pointer disabled:opacity-40 ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-800'
-                : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
-          >
-            <option value="all">City / Municipality</option>
-            {cities
-              .filter((c) => c !== 'all')
-              .map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-          </select>
-        </div>
+        <ThemeDropdown
+          size="sm"
+          icon={Building}
+          value={selectedCity}
+          onChange={(e) => handleCityChange(e.target.value)}
+          disabled={selectedDistrict === 'all'}
+          options={[
+            { value: 'all', label: 'City / Municipality' },
+            ...cities.filter((c) => c !== 'all').map((c) => ({ value: c, label: c })),
+          ]}
+          className="min-w-[155px]"
+        />
 
         {/* Zone */}
-        <div className="flex items-center gap-1.5">
-          <Compass className="w-3 h-3 text-cyan-400" />
-          <select
-            value={selectedZone}
-            onChange={(e) => handleZoneChange(e.target.value)}
-            disabled={selectedDistrict === 'all'}
-            className={`px-2.5 py-1 rounded-lg border text-xs font-medium outline-none cursor-pointer disabled:opacity-40 ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-800'
-                : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
-          >
-            <option value="all">Zone / Taluka</option>
-            {zones
-              .filter((z) => z !== 'all')
-              .map((z) => (
-                <option key={z} value={z}>
-                  {z}
-                </option>
-              ))}
-          </select>
-        </div>
+        <ThemeDropdown
+          size="sm"
+          icon={Compass}
+          value={selectedZone}
+          onChange={(e) => handleZoneChange(e.target.value)}
+          disabled={selectedDistrict === 'all'}
+          options={[
+            { value: 'all', label: 'Zone / Taluka' },
+            ...zones.filter((z) => z !== 'all').map((z) => ({ value: z, label: z })),
+          ]}
+          className="min-w-[140px]"
+        />
 
         {/* Police Station */}
-        <div className="flex items-center gap-1.5">
-          <Shield className="w-3 h-3 text-emerald-400" />
-          <select
-            value={selectedPoliceStation}
-            onChange={(e) => handleStationChange(e.target.value)}
-            disabled={selectedDistrict === 'all'}
-            className={`px-2.5 py-1 rounded-lg border text-xs font-medium outline-none cursor-pointer disabled:opacity-40 ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-800'
-                : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
-          >
-            <option value="all">Police Station</option>
-            {policeStations
-              .filter((p) => p !== 'all')
-              .map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-          </select>
-        </div>
+        <ThemeDropdown
+          size="sm"
+          icon={Shield}
+          value={selectedPoliceStation}
+          onChange={(e) => handleStationChange(e.target.value)}
+          disabled={selectedDistrict === 'all'}
+          options={[
+            { value: 'all', label: 'Police Station' },
+            ...policeStations.filter((p) => p !== 'all').map((p) => ({ value: p, label: p })),
+          ]}
+          className="min-w-[160px]"
+        />
 
         {isFiltered && onReset && (
           <button

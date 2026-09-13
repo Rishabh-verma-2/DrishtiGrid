@@ -2,14 +2,16 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cameraAPI } from '../api';
 import {
-  Camera, Search, Plus, MapPin, Filter, Edit2, Trash2,
-  Video, RefreshCw, CheckCircle2, AlertTriangle, XCircle,
-  Clock, Shield, Eye, ChevronLeft, ChevronRight, X, UploadCloud
+  Cctv, Search, Plus, MapPin, Filter, Edit3, Trash2,
+  Video, RefreshCw, Activity, WifiOff, Wrench, CheckCircle2, AlertTriangle,
+  Clock, Shield, Eye, ChevronLeft, ChevronRight, X, UploadCloud,
+  Radio, Layers, SlidersHorizontal, Hash, Play
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CameraFormModal from '../components/cameras/CameraFormModal';
 import CameraStreamModal from '../components/cameras/CameraStreamModal';
 import BulkImportModal from '../components/cameras/BulkImportModal';
+import ThemeDropdown from '../components/common/ThemeDropdown';
 import { useThemeStore } from '../store/themeStore';
 import useAuthStore from '../store/authStore';
 import { hasPermission } from '../utils/permissions';
@@ -153,7 +155,7 @@ export default function CameraManagementPage() {
       <div className="flex items-center justify-between flex-wrap gap-4 bg-[#141929] border border-white/8 p-5 rounded-2xl">
         <div className="flex items-center gap-3.5">
           <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-            <Camera className="w-6 h-6" />
+            <Cctv className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-100 tracking-tight">Camera Management</h1>
@@ -210,18 +212,21 @@ export default function CameraManagementPage() {
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Registered</p>
             <h3 className="text-2xl font-black text-slate-100 mt-1 font-mono">{stats.total}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
-            <Camera className="w-5 h-5" />
+          <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20" title="Registered Surveillance Nodes">
+            <Cctv className="w-5 h-5" />
           </div>
         </div>
 
         <div className="bg-[#141929] border border-white/8 rounded-2xl p-4 flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Online & Active</p>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <p className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">Online & Active</p>
+            </div>
             <h3 className="text-2xl font-black text-emerald-400 mt-1 font-mono">{stats.online}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Active Live Transmission">
+            <Activity className="w-5 h-5" />
           </div>
         </div>
 
@@ -230,8 +235,8 @@ export default function CameraManagementPage() {
             <p className="text-[11px] font-semibold text-rose-400 uppercase tracking-wider">Offline / Disconnected</p>
             <h3 className="text-2xl font-black text-rose-400 mt-1 font-mono">{stats.offline}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
-            <XCircle className="w-5 h-5" />
+          <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20" title="Node Disconnected">
+            <WifiOff className="w-5 h-5" />
           </div>
         </div>
 
@@ -240,8 +245,8 @@ export default function CameraManagementPage() {
             <p className="text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Maintenance / Fault</p>
             <h3 className="text-2xl font-black text-amber-400 mt-1 font-mono">{stats.maintenance}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <AlertTriangle className="w-5 h-5" />
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20" title="Maintenance / Diagnostic Mode">
+            <Wrench className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -260,51 +265,56 @@ export default function CameraManagementPage() {
             />
           </div>
 
-          {/* District */}
-          <select
+          {/* District Filter */}
+          <ThemeDropdown
             value={districtFilter}
             onChange={handleFilterChange(setDistrictFilter)}
-            className="bg-[#0f1422] border border-white/10 rounded-xl text-xs text-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 transition-colors"
-          >
-            {districts.map((d) => (
-              <option key={d} value={d}>{d === 'all' ? 'All Districts' : d}</option>
-            ))}
-          </select>
+            icon={MapPin}
+            options={districts.map((d) => ({
+              value: d,
+              label: d === 'all' ? 'All Districts' : d,
+            }))}
+            className="min-w-[140px]"
+          />
 
-          {/* Status */}
-          <select
+          {/* Status Filter */}
+          <ThemeDropdown
             value={statusFilter}
             onChange={handleFilterChange(setStatusFilter)}
-            className="bg-[#0f1422] border border-white/10 rounded-xl text-xs text-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 transition-colors"
-          >
-            <option value="all">All Statuses</option>
-            <option value="online">Online</option>
-            <option value="offline">Offline</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="fault">Fault</option>
-          </select>
+            icon={Activity}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'online', label: 'Online' },
+              { value: 'offline', label: 'Offline' },
+              { value: 'maintenance', label: 'Maintenance' },
+              { value: 'fault', label: 'Fault' },
+            ]}
+            className="min-w-[130px]"
+          />
 
-          {/* Zone */}
-          <select
+          {/* Zone Filter */}
+          <ThemeDropdown
             value={zoneFilter}
             onChange={handleFilterChange(setZoneFilter)}
-            className="bg-[#0f1422] border border-white/10 rounded-xl text-xs text-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 transition-colors"
-          >
-            {zones.map((z) => (
-              <option key={z} value={z}>{z === 'all' ? 'All Zones' : z}</option>
-            ))}
-          </select>
+            icon={Layers}
+            options={zones.map((z) => ({
+              value: z,
+              label: z === 'all' ? 'All Zones' : z,
+            }))}
+            className="min-w-[125px]"
+          />
 
-          {/* Type */}
-          <select
+          {/* Type Filter */}
+          <ThemeDropdown
             value={typeFilter}
             onChange={handleFilterChange(setTypeFilter)}
-            className="bg-[#0f1422] border border-white/10 rounded-xl text-xs text-slate-300 px-3 py-2.5 outline-none focus:border-blue-500 transition-colors"
-          >
-            {types.map((t) => (
-              <option key={t} value={t}>{t === 'all' ? 'All Types' : t}</option>
-            ))}
-          </select>
+            icon={SlidersHorizontal}
+            options={types.map((t) => ({
+              value: t,
+              label: t === 'all' ? 'All Types' : t,
+            }))}
+            className="min-w-[120px]"
+          />
 
           {(search || districtFilter !== 'all' || statusFilter !== 'all' || zoneFilter !== 'all' || typeFilter !== 'all') && (
             <button
@@ -335,13 +345,27 @@ export default function CameraManagementPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-white/8 bg-[#0f1422]/60">
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Camera ID</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Name & Placement</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">District / City</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Type</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Zone</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Feed Stream</th>
-                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><Hash className="w-3 h-3 text-blue-400" /> Camera ID</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><Cctv className="w-3.5 h-3.5 text-slate-400" /> Name &amp; Placement</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-slate-400" /> District / City</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><SlidersHorizontal className="w-3 h-3 text-slate-400" /> Type</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><Layers className="w-3 h-3 text-slate-400" /> Zone</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><Radio className="w-3 h-3 text-blue-400" /> Feed Stream</span>
+                </th>
+                <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span className="flex items-center gap-1.5"><Activity className="w-3 h-3 text-emerald-400" /> Status</span>
+                </th>
                 <th className="px-4 py-3.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -359,7 +383,7 @@ export default function CameraManagementPage() {
                 <tr>
                   <td colSpan={8} className="py-16 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <Camera className="w-8 h-8 text-slate-600 mb-1" />
+                      <Cctv className="w-8 h-8 text-slate-600 mb-1" />
                       <p className="text-sm font-semibold text-slate-300">No cameras found matching filters</p>
                       <p className="text-xs text-slate-500">Try adjusting your search criteria or register a new camera</p>
                     </div>
@@ -400,7 +424,8 @@ export default function CameraManagementPage() {
 
                       {/* Type */}
                       <td className="px-4 py-3.5 text-xs text-slate-400">
-                        <span className="px-2 py-0.5 rounded-md bg-white/4 border border-white/8 text-[11px] font-mono">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/4 border border-white/8 text-[11px] font-mono">
+                          <Cctv className="w-3 h-3 text-blue-400/80" />
                           {cam.type || 'Fixed'}
                         </span>
                       </td>
@@ -412,7 +437,10 @@ export default function CameraManagementPage() {
 
                       {/* Feed Stream */}
                       <td className="px-4 py-3.5 font-mono text-xs text-slate-400 whitespace-nowrap">
-                        <span className="text-slate-300 font-medium">{cam.streamId || 'cam01'}</span>
+                        <span className="inline-flex items-center gap-1.5 text-slate-300 font-medium">
+                          <Radio className="w-3 h-3 text-blue-400" />
+                          {cam.streamId || 'cam01'}
+                        </span>
                         <span className="text-[10px] text-slate-500 ml-1.5">({cam.streamType || 'HLS'})</span>
                       </td>
 
@@ -433,7 +461,7 @@ export default function CameraManagementPage() {
                             title="Preview Live Stream"
                             className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                           >
-                            <Video className="w-4 h-4" />
+                            <Play className="w-4 h-4 fill-current opacity-80 hover:opacity-100" />
                           </button>
 
                           {/* Edit Button */}
@@ -442,7 +470,7 @@ export default function CameraManagementPage() {
                             title="Edit Camera Details"
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit3 className="w-3.5 h-3.5" />
                             <span>Edit</span>
                           </button>
 
@@ -468,18 +496,21 @@ export default function CameraManagementPage() {
         <div className="p-4 border-t border-white/8 flex items-center justify-between flex-wrap gap-3 bg-[#0f1422]/60">
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-400">Rows per page:</span>
-            <select
-              value={pageSize}
+            <ThemeDropdown
+              size="sm"
+              value={String(pageSize)}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="bg-[#141929] border border-white/10 rounded-lg text-xs text-slate-300 px-2 py-1 outline-none focus:border-blue-500"
-            >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>{size}</option>
-              ))}
-            </select>
+              options={[
+                { value: '10', label: '10 rows' },
+                { value: '25', label: '25 rows' },
+                { value: '50', label: '50 rows' },
+                { value: '100', label: '100 rows' },
+              ]}
+              className="w-28"
+            />
           </div>
 
           <div className="flex items-center gap-3">

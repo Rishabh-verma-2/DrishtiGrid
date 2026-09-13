@@ -7,6 +7,7 @@ import {
   Download, RefreshCw, AlertTriangle, CheckCircle2, Shield, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 export default function DetectionsExplorer() {
   const { theme } = useThemeStore();
@@ -193,52 +194,52 @@ export default function DetectionsExplorer() {
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Match Status */}
-          <select
+          <ThemeDropdown
+            size="sm"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className={`px-3 py-2 text-xs rounded-xl border focus:outline-none ${
-              isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-[#0f1420] border-white/10 text-white'
-            }`}
-          >
-            <option value="ALL">All Match States</option>
-            <option value="MATCH_FOUND">Hotlist Match</option>
-            <option value="POSSIBLE_MATCH">Near Match</option>
-            <option value="NO_MATCH">No Match</option>
-          </select>
+            options={[
+              { value: 'ALL', label: 'All Match States' },
+              { value: 'MATCH_FOUND', label: 'Hotlist Match' },
+              { value: 'POSSIBLE_MATCH', label: 'Near Match' },
+              { value: 'NO_MATCH', label: 'No Match' },
+            ]}
+            className="min-w-[140px]"
+          />
 
           {/* Vehicle Color */}
-          <select
+          <ThemeDropdown
+            size="sm"
             value={colorFilter}
             onChange={(e) => setColorFilter(e.target.value)}
-            className={`px-3 py-2 text-xs rounded-xl border focus:outline-none ${
-              isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-[#0f1420] border-white/10 text-white'
-            }`}
-          >
-            <option value="ALL">All Vehicle Colors</option>
-            <option value="White">White</option>
-            <option value="Black">Black</option>
-            <option value="Silver / Gray">Silver / Gray</option>
-            <option value="Red">Red</option>
-            <option value="Blue">Blue</option>
-            <option value="Green">Green</option>
-            <option value="Yellow">Yellow</option>
-          </select>
+            options={[
+              { value: 'ALL', label: 'All Colors' },
+              { value: 'White', label: 'White' },
+              { value: 'Black', label: 'Black' },
+              { value: 'Silver / Gray', label: 'Silver / Gray' },
+              { value: 'Red', label: 'Red' },
+              { value: 'Blue', label: 'Blue' },
+              { value: 'Green', label: 'Green' },
+              { value: 'Yellow', label: 'Yellow' },
+            ]}
+            className="min-w-[130px]"
+          />
 
           {/* Vehicle Type */}
           {activeSubTab === 'ALL_EVENTS' && (
-            <select
+            <ThemeDropdown
+              size="sm"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className={`px-3 py-2 text-xs rounded-xl border focus:outline-none ${
-                isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-[#0f1420] border-white/10 text-white'
-              }`}
-            >
-              <option value="ALL">All Vehicle Types</option>
-              <option value="car">Car</option>
-              <option value="motorcycle">Motorcycle</option>
-              <option value="bus">Bus</option>
-              <option value="truck">Truck</option>
-            </select>
+              options={[
+                { value: 'ALL', label: 'All Vehicle Types' },
+                { value: 'car', label: 'Car' },
+                { value: 'motorcycle', label: 'Motorcycle' },
+                { value: 'bus', label: 'Bus' },
+                { value: 'truck', label: 'Truck' },
+              ]}
+              className="min-w-[140px]"
+            />
           )}
 
           <button

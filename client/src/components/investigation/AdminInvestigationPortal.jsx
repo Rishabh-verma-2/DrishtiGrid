@@ -371,46 +371,6 @@ export default function AdminInvestigationPortal({ user }) {
       {/* ────────────────── TAB 1: COMMAND OVERVIEW ────────────────── */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Section 23: 8-Stage Lifecycle Visualization */}
-          <div
-            className={`p-5 rounded-2xl border ${
-              isLight ? 'bg-white border-slate-200' : 'bg-[#0b101b] border-white/8'
-            }`}
-          >
-            <h3 className="text-xs font-mono font-bold uppercase text-slate-400 tracking-wider mb-4 flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-blue-500" />
-              Standardized 8-Stage Legal Surveillance Workflow
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-              {[
-                { stage: '1. Police Station', action: 'FIR Submission', icon: FileText, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '2. State Admin', action: 'Review & Verify', icon: Shield, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '3. Master Watchlist', action: 'Activate Case', icon: ShieldCheck, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '4. Departments', action: 'Investigation Dispatch', icon: Building2, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '5. AI / CCTV', action: 'Potential Match', icon: Search, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '6. Evidence', action: 'Investigation Result', icon: Camera, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '7. State Admin', action: 'Evidence Validation', icon: CheckCircle2, color: 'text-blue-600 dark:text-blue-400' },
-                { stage: '8. Police Station', action: 'Result Received', icon: Send, color: 'text-blue-600 dark:text-blue-400' },
-              ].map((step, idx) => {
-                const Icon = step.icon;
-                return (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl border border-white/5 bg-white/2 flex flex-col justify-between"
-                  >
-                    <div>
-                      <span className="text-[10px] font-mono text-slate-400 uppercase block font-bold">
-                        {step.stage}
-                      </span>
-                      <p className={`text-xs font-black mt-1 ${step.color}`}>{step.action}</p>
-                    </div>
-                    <Icon className={`w-4 h-4 mt-2 ${step.color} opacity-80`} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Quick Queue: Pending FIR Submissions Awaiting Admin Review */}
           <div
             className={`p-5 rounded-2xl border ${

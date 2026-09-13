@@ -14,6 +14,7 @@ import FirSubmissionModal from './FirSubmissionModal';
 import InvestigationSearchConsole from './InvestigationSearchConsole';
 import EvidenceSubmitModal from './EvidenceSubmitModal';
 import EvidenceViewerModal from './EvidenceViewerModal';
+import FirStatusTimelineModal, { STAGES } from './FirStatusTimelineModal';
 import toast from 'react-hot-toast';
 
 const PRIORITY_BADGES = {
@@ -55,6 +56,7 @@ export default function UnifiedDepartmentPortal({ user }) {
   const [selectedCaseForEvidence, setSelectedCaseForEvidence] = useState(null);
   const [selectedDetectionForEvidence, setSelectedDetectionForEvidence] = useState(null);
   const [activeEvidenceViewer, setActiveEvidenceViewer] = useState(null);
+  const [previewTimelineCase, setPreviewTimelineCase] = useState(null);
 
   // Filters for Inquiries
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -317,6 +319,48 @@ export default function UnifiedDepartmentPortal({ user }) {
       {/* ────────────────── TAB 1: INQUIRIES & CASE REGISTRY ────────────────── */}
       {activeTab === 'inquiries' && (
         <div className="space-y-4">
+          {/* Official 8-Stage Legal Surveillance Workflow Guide for Submitting Departments */}
+          <div
+            className={`p-4 rounded-2xl border ${
+              isLight ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#0b101b] border-white/8'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-blue-500" />
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Standardized 8-Stage Legal Surveillance Workflow (CCC Administrative Pipeline)
+                </h3>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-500 hidden sm:inline">
+                Gujarat Home Department · Command Protocol
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+              {STAGES.map((st) => {
+                const Icon = st.icon;
+                return (
+                  <div
+                    key={st.id}
+                    className={`p-2.5 rounded-xl border flex flex-col justify-between ${
+                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-white/2 border-white/5'
+                    }`}
+                  >
+                    <div>
+                      <span className="text-[9px] font-mono text-slate-400 uppercase font-bold block">
+                        Stage {st.id}
+                      </span>
+                      <p className="text-[11px] font-black text-blue-600 dark:text-blue-400 mt-0.5 leading-tight">
+                        {st.title.replace(/^\d+\.\s*/, '')}
+                      </p>
+                    </div>
+                    <Icon className="w-3.5 h-3.5 mt-2 text-blue-500 opacity-75" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Filters Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-1">
@@ -461,6 +505,20 @@ export default function UnifiedDepartmentPortal({ user }) {
                       isLight ? 'border-slate-200' : 'border-white/10'
                     }`}>
                       <button
+                        type="button"
+                        onClick={() => setPreviewTimelineCase(c)}
+                        className={`px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          isLight
+                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                            : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
+                        }`}
+                        title="Preview Case Docket & Status Timeline"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Timeline</span>
+                      </button>
+
+                      <button
                         onClick={() => handleLaunchSearch(c)}
                         className={`flex-1 px-3 py-2 rounded-xl text-xs font-bold border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           isLight
@@ -469,7 +527,7 @@ export default function UnifiedDepartmentPortal({ user }) {
                         }`}
                       >
                         <ScanEye className="w-3.5 h-3.5" />
-                        Scan Cameras
+                        Scan
                       </button>
 
                       <button
@@ -944,6 +1002,13 @@ export default function UnifiedDepartmentPortal({ user }) {
           </div>
         </div>
       )}
+
+      {/* ────────────────── DYNAMIC FIR STATUS TIMELINE & CASE PREVIEW ────────────────── */}
+      <FirStatusTimelineModal
+        caseItem={previewTimelineCase}
+        isOpen={Boolean(previewTimelineCase)}
+        onClose={() => setPreviewTimelineCase(null)}
+      />
     </div>
   );
 }

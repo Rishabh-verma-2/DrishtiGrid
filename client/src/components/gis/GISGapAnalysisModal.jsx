@@ -33,6 +33,7 @@ import {
   Info,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 import { gapAnalysisAPI, gisAPI, departmentAPI } from '../../api';
 
 // Custom Map Pins for Leaflet
@@ -523,18 +524,16 @@ export default function GISGapAnalysisModal({
                           : 'bg-white/5 border-white/10 text-white'
                       }`}
                     />
-                    <select
+                    <ThemeDropdown
+                      size="sm"
                       value={customRadiusUnit}
                       onChange={(e) => setCustomRadiusUnit(e.target.value)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                        isLight
-                          ? 'bg-slate-50 border-slate-300 text-slate-900'
-                          : 'bg-white/5 border-white/10 text-white'
-                      }`}
-                    >
-                      <option value="km">km</option>
-                      <option value="m">meters</option>
-                    </select>
+                      options={[
+                        { value: 'km', label: 'km' },
+                        { value: 'm', label: 'meters' },
+                      ]}
+                      className="w-24"
+                    />
                     <span className="text-[11px] text-slate-400">(Max 25 km)</span>
                   </div>
                 )}
@@ -558,62 +557,49 @@ export default function GISGapAnalysisModal({
                   {/* Camera Type */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-medium text-slate-400">Camera Type</label>
-                    <select
+                    <ThemeDropdown
+                      size="sm"
                       value={cameraType}
                       onChange={(e) => setCameraType(e.target.value)}
-                      className={`w-full px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium cursor-pointer ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-slate-800'
-                          : 'bg-slate-900 border-white/10 text-slate-200'
-                      }`}
-                    >
-                      <option value="all">All Types</option>
-                      <option value="Fixed">Fixed</option>
-                      <option value="PTZ">PTZ (Pan-Tilt-Zoom)</option>
-                      <option value="Dome">Dome</option>
-                      <option value="Bullet">Bullet</option>
-                      <option value="Thermal">Thermal</option>
-                    </select>
+                      options={[
+                        { value: 'all', label: 'All Types' },
+                        { value: 'Fixed', label: 'Fixed' },
+                        { value: 'PTZ', label: 'PTZ (Pan-Tilt-Zoom)' },
+                        { value: 'Dome', label: 'Dome' },
+                        { value: 'Bullet', label: 'Bullet' },
+                        { value: 'Thermal', label: 'Thermal' },
+                      ]}
+                    />
                   </div>
 
                   {/* Camera Status */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-medium text-slate-400">Camera Status</label>
-                    <select
+                    <ThemeDropdown
+                      size="sm"
                       value={cameraStatus}
                       onChange={(e) => setCameraStatus(e.target.value)}
-                      className={`w-full px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium cursor-pointer ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-slate-800'
-                          : 'bg-slate-900 border-white/10 text-slate-200'
-                      }`}
-                    >
-                      <option value="all">All Statuses</option>
-                      <option value="active">Active (Online)</option>
-                      <option value="inactive">Inactive (Offline)</option>
-                      <option value="maintenance">Maintenance</option>
-                    </select>
+                      options={[
+                        { value: 'all', label: 'All Statuses' },
+                        { value: 'active', label: 'Active (Online)' },
+                        { value: 'inactive', label: 'Inactive (Offline)' },
+                        { value: 'maintenance', label: 'Maintenance' },
+                      ]}
+                    />
                   </div>
 
                   {/* Department */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-medium text-slate-400">Department</label>
-                    <select
+                    <ThemeDropdown
+                      size="sm"
                       value={departmentCode}
                       onChange={(e) => setDepartmentCode(e.target.value)}
-                      className={`w-full px-2.5 py-1.5 rounded-xl text-xs border outline-none font-medium cursor-pointer ${
-                        isLight
-                          ? 'bg-white border-slate-300 text-slate-800'
-                          : 'bg-slate-900 border-white/10 text-slate-200'
-                      }`}
-                    >
-                      <option value="all">All Departments</option>
-                      {departments.map((d) => (
-                        <option key={d.code} value={d.code}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: 'all', label: 'All Departments' },
+                        ...departments.map((d) => ({ value: d.code, label: d.name })),
+                      ]}
+                    />
                   </div>
                 </div>
               </div>
@@ -980,21 +966,15 @@ export default function GISGapAnalysisModal({
 
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-slate-400">Switch Department:</span>
-                  <select
+                  <ThemeDropdown
+                    size="sm"
                     value={selectedDeptOverride}
                     onChange={(e) => setSelectedDeptOverride(e.target.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border outline-none cursor-pointer ${
-                      isLight
-                        ? 'bg-white border-slate-300 text-slate-800'
-                        : 'bg-slate-900 border-white/15 text-slate-200'
-                    }`}
-                  >
-                    {analysisReport.candidateDepartments.map((cd) => (
-                      <option key={cd.code} value={cd.code}>
-                        {cd.name} ({cd.code})
-                      </option>
-                    ))}
-                  </select>
+                    options={analysisReport.candidateDepartments.map((cd) => ({
+                      value: cd.code,
+                      label: `${cd.name} (${cd.code})`,
+                    }))}
+                  />
                 </div>
               </div>
             </div>

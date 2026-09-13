@@ -22,10 +22,12 @@ import {
   Printer,
   Download,
   ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import { investigationAPI } from '../../api';
 import useAuthStore from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
+import { FirStatusTimeline } from './FirStatusTimelineModal';
 import toast from 'react-hot-toast';
 
 const REQUEST_TYPES = [
@@ -932,6 +934,30 @@ export default function FirSubmissionModal({ isOpen, onClose, onCaseCreated }) {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Statutory Action Status Timeline */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <h5 className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+                    isLight ? 'text-slate-700' : 'text-slate-300'
+                  }`}>
+                    <Clock className="w-3.5 h-3.5 text-blue-500" />
+                    Statutory Surveillance Action Timeline (Live Preview)
+                  </h5>
+                  <span className={`text-[10px] font-mono ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Initiating Stage 1 of 8
+                  </span>
+                </div>
+                <FirStatusTimeline
+                  caseItem={{
+                    status: 'SUBMITTED',
+                    priority,
+                    firNumber,
+                    policeStation,
+                    requestType,
+                  }}
+                />
               </div>
             </div>
           )}

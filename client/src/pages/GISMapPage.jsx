@@ -36,6 +36,7 @@ import InfrastructureLayer from '../components/gis/InfrastructureLayer';
 import IncidentRadiusLayer from '../components/gis/IncidentRadiusLayer';
 import CoverageGridLayer from '../components/gis/CoverageGridLayer';
 import AdminHierarchyFilter from '../components/gis/AdminHierarchyFilter';
+import ThemeDropdown from '../components/common/ThemeDropdown';
 import GISGapAnalysisModal from '../components/gis/GISGapAnalysisModal';
 import SendGapReportModal from '../components/gis/SendGapReportModal';
 import GapAnalysisMapLayer from '../components/gis/GapAnalysisMapLayer';
@@ -703,7 +704,8 @@ export default function GISMapPage() {
           />
 
           {/* Inline Quick District Select */}
-          <select
+          <ThemeDropdown
+            size="sm"
             value={hierarchy.district}
             onChange={(e) => {
               const d = e.target.value;
@@ -720,18 +722,13 @@ export default function GISMapPage() {
                 setMapTargetBounds(GUJARAT_BOUNDS);
               }
             }}
-            className={`px-2.5 py-1.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer shrink-0 whitespace-nowrap transition-colors ${
-              isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
+            options={[
+              { value: 'all', label: 'District (All Gujarat)' },
+              ...OFFICIAL_DISTRICTS.map((d) => ({ value: d, label: d })),
+            ]}
+            className="min-w-[170px]"
             title="Filter by Gujarat District"
-          >
-            <option value="all">District (All Gujarat)</option>
-            {OFFICIAL_DISTRICTS.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+          />
 
           {/* Toggle Secondary Hierarchy Bar (City, Police Station) */}
           <button
@@ -860,17 +857,6 @@ export default function GISMapPage() {
             <span className="hidden lg:inline">{t.areaIntel}</span>
           </button>
 
-          {/* Language Switcher */}
-          <button
-            onClick={() => setLanguage((prev) => (prev === 'en' ? 'gu' : 'en'))}
-            className={`px-2 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer ${
-              isLight ? 'bg-slate-100 border-slate-300 text-slate-700' : 'bg-white/5 border-white/10 text-slate-300'
-            }`}
-            title="Switch Language / ભાષા બદલો"
-          >
-            <Globe className="w-3 h-3" />
-            <span className="font-mono text-[10px]">{language === 'en' ? 'ગુજ' : 'ENG'}</span>
-          </button>
 
           {/* Reset to Full Gujarat State View */}
           <button

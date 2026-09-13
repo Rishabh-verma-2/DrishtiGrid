@@ -32,6 +32,7 @@ import {
   Target,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 // 30 Sentinel Cameras Provided by Gujarat Sentinel CCTV Grid
 const DEFAULT_SENTINEL_FEEDS = [
@@ -829,32 +830,23 @@ export default function LiveANPRWorkspace({
           {renderStatusBadge()}
 
           {/* Camera Switcher Dropdown */}
-          <select
+          <ThemeDropdown
+            size="sm"
             value={camera?.cameraId || cameraId}
             onChange={(e) => setCameraId(e.target.value)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-semibold outline-none cursor-pointer max-w-[290px] truncate ${
-              isLight
-                ? 'bg-white border-slate-300 text-slate-800 shadow-xs'
-                : 'bg-white/5 border-white/10 text-slate-200'
-            }`}
-          >
-            <optgroup label="🌟 Sentinel Live Cameras (30 Streams)">
-              {sentinelFeeds.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id.toUpperCase()} — {c.name} ({c.district || 'Gujarat'})
-                </option>
-              ))}
-            </optgroup>
-            {dbCameras.length > 0 && (
-              <optgroup label="📍 GIS Nodal Cameras">
-                {dbCameras.map((c) => (
-                  <option key={c.cameraId} value={c.cameraId}>
-                    {c.cameraId} — {c.name?.slice(0, 26)}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </select>
+            options={[
+              ...sentinelFeeds.map((c) => ({
+                value: c.id,
+                label: `${c.id.toUpperCase()} — ${c.name} (${c.district || 'Gujarat'})`,
+              })),
+              ...dbCameras.map((c) => ({
+                value: c.cameraId,
+                label: `${c.cameraId} — ${c.name?.slice(0, 26)}`,
+              })),
+            ]}
+            className="w-[280px]"
+            dropdownClassName="w-[320px]"
+          />
         </div>
       </div>
 
@@ -1110,24 +1102,22 @@ export default function LiveANPRWorkspace({
                     }`}
                   />
                 </div>
-                <select
+                <ThemeDropdown
+                  size="sm"
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className={`px-2 py-1.5 rounded-xl border text-xs outline-none cursor-pointer ${
-                    isLight
-                      ? 'bg-white border-slate-300 text-slate-800'
-                      : 'bg-white/5 border-white/10 text-slate-300'
-                  }`}
-                >
-                  <option value="ALL">All Types</option>
-                  <option value="CAR">Car</option>
-                  <option value="BIKE">Bike</option>
-                  <option value="RICKSHAW">Rickshaw</option>
-                  <option value="BUS">Bus</option>
-                  <option value="TRUCK">Truck</option>
-                  <option value="READABLE">Plate Readable</option>
-                  <option value="OBSCURED">Obscured Plates</option>
-                </select>
+                  options={[
+                    { value: 'ALL', label: 'All Types' },
+                    { value: 'CAR', label: 'Car' },
+                    { value: 'BIKE', label: 'Bike' },
+                    { value: 'RICKSHAW', label: 'Rickshaw' },
+                    { value: 'BUS', label: 'Bus' },
+                    { value: 'TRUCK', label: 'Truck' },
+                    { value: 'READABLE', label: 'Plate Readable' },
+                    { value: 'OBSCURED', label: 'Obscured Plates' },
+                  ]}
+                  className="min-w-[130px]"
+                />
               </div>
               {/* Real-Time Passing Vehicle Telemetry & Counter */}
               <div

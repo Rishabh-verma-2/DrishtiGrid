@@ -91,6 +91,27 @@ body {
 }
 .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
 
+/* ─── Continuous Sliding Marquee for Government Subtitle ─── */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee-text {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+  animation: marquee-scroll 10s linear infinite;
+}
+
+.animate-marquee-text:hover {
+  animation-play-state: paused;
+}
+
 /* ─── Solid High-Contrast Typography (De-vibe-coded) ──── */
 .gradient-text {
   color: #0f172a;

@@ -9,6 +9,7 @@ import {
   MessageSquare, Paperclip, UserX,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 const STATUS_CONFIG = {
   Open:         { label: 'Open',          cls: 'bg-blue-500/15 text-blue-400 border-blue-500/25' },
@@ -250,19 +251,14 @@ export default function DeptReportThreadModal({ isOpen, onClose, reportId }) {
             {/* ── Status Control ── */}
             <div className={`mx-4 mt-3 flex items-center gap-3 shrink-0`}>
               <span className={`text-xs font-bold ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Update Status:</span>
-              <div className="relative">
-                <select
-                  value={report.status}
-                  onChange={(e) => handleStatusChange(e.target.value)}
-                  disabled={statusMutation.isPending || (isClosed && !isAdmin)}
-                  className={`text-xs px-3 py-1.5 pr-7 rounded-lg border outline-none appearance-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${inputCls}`}
-                >
-                  {statusOptions.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
-                <ChevronDown className={`w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
-              </div>
+              <ThemeDropdown
+                size="sm"
+                value={report.status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                disabled={statusMutation.isPending || (isClosed && !isAdmin)}
+                options={statusOptions.map((s) => ({ value: s, label: s }))}
+                className="min-w-[140px]"
+              />
               {statusMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />}
               {!isAdmin && (
                 <span className={`text-[11px] ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>

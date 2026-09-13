@@ -17,6 +17,7 @@ import VideoUploadZone from '../components/anpr/VideoUploadZone';
 import VideoAnalysisResults from '../components/anpr/VideoAnalysisResults';
 import DetectionsExplorer from '../components/anpr/DetectionsExplorer';
 import LiveANPRWorkspace from '../components/anpr/LiveANPRWorkspace';
+import ThemeDropdown from '../components/common/ThemeDropdown';
 
 const CATEGORY_COLORS = {
   STOLEN: 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/15 border-red-200 dark:border-red-500/30',
@@ -1460,33 +1461,33 @@ export default function ANPRPage() {
               </div>
 
               {/* Category Filter */}
-              <select
+              <ThemeDropdown
+                size="sm"
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className={`text-xs rounded-xl px-3 py-2 outline-none ${
-                  isLight ? 'bg-white border border-slate-300 text-slate-800' : 'bg-white/5 border border-white/10 text-slate-300'
-                }`}
-              >
-                <option value="ALL">All Categories</option>
-                <option value="STOLEN">Stolen</option>
-                <option value="WANTED">Wanted</option>
-                <option value="SUSPECT">Suspect</option>
-                <option value="VIP">VIP</option>
-                <option value="BLACKLISTED">Blacklisted</option>
-              </select>
+                options={[
+                  { value: 'ALL', label: 'All Categories' },
+                  { value: 'STOLEN', label: 'Stolen' },
+                  { value: 'WANTED', label: 'Wanted' },
+                  { value: 'SUSPECT', label: 'Suspect' },
+                  { value: 'VIP', label: 'VIP' },
+                  { value: 'BLACKLISTED', label: 'Blacklisted' },
+                ]}
+                className="min-w-[140px]"
+              />
 
               {/* Status Filter */}
-              <select
+              <ThemeDropdown
+                size="sm"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className={`text-xs rounded-xl px-3 py-2 outline-none ${
-                  isLight ? 'bg-white border border-slate-300 text-slate-800' : 'bg-white/5 border border-white/10 text-slate-300'
-                }`}
-              >
-                <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-              </select>
+                options={[
+                  { value: 'ALL', label: 'All Status' },
+                  { value: 'ACTIVE', label: 'Active' },
+                  { value: 'INACTIVE', label: 'Inactive' },
+                ]}
+                className="min-w-[120px]"
+              />
             </div>
 
             <button

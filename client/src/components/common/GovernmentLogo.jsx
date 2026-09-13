@@ -72,9 +72,16 @@ export default function GovernmentLogo({
             </span>
           </div>
 
-          <p className={`text-[10px] font-semibold truncate uppercase tracking-wider mt-0.5 ${deptColor}`}>
-            {department}
-          </p>
+          <div className="w-[165px] max-w-[170px] overflow-hidden relative mt-0.5" title={department}>
+            <div className="animate-marquee-text text-[10px] font-semibold uppercase tracking-wider">
+              <span className={`inline-block pr-8 ${deptColor}`}>
+                {department}
+              </span>
+              <span className={`inline-block pr-8 ${deptColor}`}>
+                {department}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cameraAPI } from '../../api';
 import {
-  X, Camera, MapPin, Video, Shield, Settings,
+  X, Cctv, MapPin, Video, Shield, Settings,
   Radio, Compass, Cpu, Check, AlertTriangle, Eye
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 export const GUJARAT_DISTRICTS = [
   { name: 'Ahmedabad', lat: 23.0225, lng: 72.5714 },
@@ -274,7 +275,7 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
         <div className="px-6 py-4 border-b border-white/8 flex items-center justify-between bg-[#141929]">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <Camera className="w-5 h-5" />
+              <Cctv className="w-5 h-5" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-100">
@@ -363,41 +364,29 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Camera Type</label>
-                  <select
+                  <ThemeDropdown
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    {CAMERA_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
+                    options={CAMERA_TYPES.map((t) => ({ value: t, label: t }))}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Surveillance Zone</label>
-                  <select
+                  <ThemeDropdown
                     value={formData.zone}
                     onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    {ZONES.map((z) => (
-                      <option key={z} value={z}>{z}</option>
-                    ))}
-                  </select>
+                    options={ZONES.map((z) => ({ value: z, label: z }))}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Status</label>
-                  <select
+                  <ThemeDropdown
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>{s.toUpperCase()}</option>
-                    ))}
-                  </select>
+                    options={STATUS_OPTIONS.map((s) => ({ value: s, label: s.toUpperCase() }))}
+                  />
                 </div>
               </div>
 
@@ -422,15 +411,11 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                     District <span className="text-rose-400">*</span>
                   </label>
-                  <select
+                  <ThemeDropdown
                     value={formData.district}
                     onChange={(e) => handleDistrictChange(e.target.value)}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    {GUJARAT_DISTRICTS.map((d) => (
-                      <option key={d.name} value={d.name}>{d.name}</option>
-                    ))}
-                  </select>
+                    options={GUJARAT_DISTRICTS.map((d) => ({ value: d.name, label: d.name }))}
+                  />
                 </div>
 
                 <div>
@@ -559,15 +544,15 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Stream Protocol</label>
-                  <select
+                  <ThemeDropdown
                     value={formData.streamType}
                     onChange={(e) => setFormData({ ...formData, streamType: e.target.value })}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="HLS">HLS (HTTP Live Streaming)</option>
-                    <option value="RTSP">RTSP (Real-Time Streaming Protocol)</option>
-                    <option value="WebRTC">WebRTC (Low Latency)</option>
-                  </select>
+                    options={[
+                      { value: 'HLS', label: 'HLS (HTTP Live Streaming)' },
+                      { value: 'RTSP', label: 'RTSP (Real-Time Streaming Protocol)' },
+                      { value: 'WebRTC', label: 'WebRTC (Low Latency)' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -596,15 +581,11 @@ export default function CameraFormModal({ camera = null, isOpen, onClose }) {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">Resolution</label>
-                  <select
+                  <ThemeDropdown
                     value={formData.resolution}
                     onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
-                    className="w-full bg-[#161c2e] border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
-                  >
-                    {RESOLUTIONS.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+                    options={RESOLUTIONS.map((r) => ({ value: r, label: r }))}
+                  />
                 </div>
               </div>
 

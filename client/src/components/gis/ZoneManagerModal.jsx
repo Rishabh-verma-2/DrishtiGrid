@@ -21,6 +21,7 @@ import {
   Maximize2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 const SEVERITY_CONFIG = {
   NORMAL: { label: 'Normal / Monitored', color: '#10b981', bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
@@ -491,18 +492,16 @@ export default function ZoneManagerModal({
                   <label className="block text-xs font-bold text-slate-300 mb-1">
                     Threat / Security Severity *
                   </label>
-                  <select
+                  <ThemeDropdown
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value)}
-                    className={`w-full px-3.5 py-2 rounded-xl border text-xs outline-none cursor-pointer ${
-                      isLight ? 'bg-slate-50 border-slate-300 text-slate-900' : 'bg-[#151c30] border-white/10 text-white'
-                    }`}
-                  >
-                    <option value="NORMAL">Normal / Green</option>
-                    <option value="MONITORED">Monitored / Blue</option>
-                    <option value="RESTRICTED">Restricted Entry / Amber</option>
-                    <option value="HIGH_SECURITY">High Security / Red</option>
-                  </select>
+                    options={[
+                      { value: 'NORMAL', label: 'Normal / Green' },
+                      { value: 'MONITORED', label: 'Monitored / Blue' },
+                      { value: 'RESTRICTED', label: 'Restricted Entry / Amber' },
+                      { value: 'HIGH_SECURITY', label: 'High Security / Red' },
+                    ]}
+                  />
                 </div>
               </div>
 

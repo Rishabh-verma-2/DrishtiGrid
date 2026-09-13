@@ -1,10 +1,12 @@
 # ===========================================================================
 # GARUD ANPR - REGISTERED VEHICLE NUMBER PLATES
-# Last Synchronized: 2026-09-12T06:50:19.531Z
-# Total Unique Plates: 22
+# Last Synchronized: 2026-09-13T03:29:41.041Z
+# Total Unique Plates: 24
 # ===========================================================================
 
 # --- CLEAN STRING PLATE LIST ---
+GJ08DG9292
+TN87C5106
 MH20DV2363
 JK08H0088
 TRFESMESCNIA
@@ -25,25 +27,27 @@ DL7CQ1939
 CHTA
 
 # --- DETAILED REGISTRY ENTRIES ---
-[#1] MH20DV2363 | Maroon | Unknown Model | Conf: 97% | Status: NO_MATCH | Time: 2026-09-12T06:50:19.494Z | Source: image.jpeg | Loc: Unknown Location
-[#2] JK08H0088 | Maroon | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-12T06:48:25.837Z | Source: image.jpeg | Loc: Unknown Location
-[#3] TRFESMESCNIA | Maroon | Unknown Model | Conf: 77% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.183Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
-[#4] ARREISSOKGS | Maroon | Unknown Model | Conf: 71% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.112Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
-[#5] MH02AS1204 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.040Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
-[#6] MH03DE1011 | Maroon | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:53:47.955Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
-[#7] MH81DE9612 | Red | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.783Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
-[#8] MH14JK7850 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.733Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
-[#9] MH12BC5678 | Maroon | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.691Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
-[#10] MH03MN2345 | Maroon | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.649Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
-[#11] MH01DN7000 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.323Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#12] MH03034753 | Maroon | Unknown Model | Conf: 81% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.257Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#13] MH04DM6709 | Maroon | Unknown Model | Conf: 86% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.196Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#14] MH03CF2234 | Maroon | Unknown Model | Conf: 84% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.141Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#15] MH01BG9810 | Blue | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.079Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#16] MH02AB4567 | Maroon | Unknown Model | Conf: 82% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.009Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#17] MH04DM6709 | Red | Unknown Model | Conf: 91% | Status: NO_MATCH | Time: 2026-09-11T08:52:02.954Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#18] MH03034753 | Maroon | Unknown Model | Conf: 88% | Status: NO_MATCH | Time: 2026-09-11T08:52:02.874Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
-[#19] MH20DV2363 | Maroon | Unknown Model | Conf: 97% | Status: NO_MATCH | Time: 2026-09-11T08:49:01.201Z | Source: image.jpeg | Loc: Unknown Location
-[#20] DL7CQ1939 | Red | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:47:01.627Z | Source: image.png | Loc: Unknown Location
-[#21] MH20DV2363 | Maroon | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:46:23.373Z | Source: road_scene.jpg | Loc: Unknown Location
-[#22] CHTA | Black | Unknown Model | Conf: 89% | Status: NO_MATCH | Time: 2026-09-11T08:30:16.737Z | Source: image.jpeg | Loc: Unknown Location
+[#1] GJ08DG9292 | Blue | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-13T03:29:41.015Z | Source: image.jpeg | Loc: Unknown Location
+[#2] TN87C5106 | Blue | Unknown Model | Conf: 78% | Status: NO_MATCH | Time: 2026-09-13T03:29:14.414Z | Source: image.jpeg | Loc: Unknown Location
+[#3] MH20DV2363 | Maroon | Unknown Model | Conf: 97% | Status: NO_MATCH | Time: 2026-09-12T06:50:19.494Z | Source: image.jpeg | Loc: Unknown Location
+[#4] JK08H0088 | Maroon | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-12T06:48:25.837Z | Source: image.jpeg | Loc: Unknown Location
+[#5] TRFESMESCNIA | Maroon | Unknown Model | Conf: 77% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.183Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
+[#6] ARREISSOKGS | Maroon | Unknown Model | Conf: 71% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.112Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
+[#7] MH02AS1204 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:53:48.040Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
+[#8] MH03DE1011 | Maroon | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:53:47.955Z | Source: Gemini_Generated_Image_n5wqejn5wqejn5wq.png | Loc: Unknown Location
+[#9] MH81DE9612 | Red | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.783Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
+[#10] MH14JK7850 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.733Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
+[#11] MH12BC5678 | Maroon | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.691Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
+[#12] MH03MN2345 | Maroon | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:52:28.649Z | Source: Gemini_Generated_Image_ox0kaeox0kaeox0k.png | Loc: Unknown Location
+[#13] MH01DN7000 | Red | Unknown Model | Conf: 95% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.323Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#14] MH03034753 | Maroon | Unknown Model | Conf: 81% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.257Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#15] MH04DM6709 | Maroon | Unknown Model | Conf: 86% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.196Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#16] MH03CF2234 | Maroon | Unknown Model | Conf: 84% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.141Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#17] MH01BG9810 | Blue | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.079Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#18] MH02AB4567 | Maroon | Unknown Model | Conf: 82% | Status: NO_MATCH | Time: 2026-09-11T08:52:03.009Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#19] MH04DM6709 | Red | Unknown Model | Conf: 91% | Status: NO_MATCH | Time: 2026-09-11T08:52:02.954Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#20] MH03034753 | Maroon | Unknown Model | Conf: 88% | Status: NO_MATCH | Time: 2026-09-11T08:52:02.874Z | Source: Gemini_Generated_Image_60k36860k36860k3.png | Loc: Unknown Location
+[#21] MH20DV2363 | Maroon | Unknown Model | Conf: 97% | Status: NO_MATCH | Time: 2026-09-11T08:49:01.201Z | Source: image.jpeg | Loc: Unknown Location
+[#22] DL7CQ1939 | Red | Unknown Model | Conf: 96% | Status: NO_MATCH | Time: 2026-09-11T08:47:01.627Z | Source: image.png | Loc: Unknown Location
+[#23] MH20DV2363 | Maroon | Unknown Model | Conf: 94% | Status: NO_MATCH | Time: 2026-09-11T08:46:23.373Z | Source: road_scene.jpg | Loc: Unknown Location
+[#24] CHTA | Black | Unknown Model | Conf: 89% | Status: NO_MATCH | Time: 2026-09-11T08:30:16.737Z | Source: image.jpeg | Loc: Unknown Location

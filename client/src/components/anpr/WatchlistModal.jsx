@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, ShieldPlus, Save } from 'lucide-react';
 import { useThemeStore } from '../../store/themeStore';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 const CATEGORIES = ['STOLEN', 'WANTED', 'SUSPECT', 'VIP', 'BLACKLISTED', 'FLEET', 'RESTRICTED', 'OTHER'];
 const PRIORITIES = ['HIGH', 'MEDIUM', 'LOW'];
@@ -156,21 +157,11 @@ export default function WatchlistModal({ record, isOpen, onClose, onSave }) {
               >
                 Threat Category
               </label>
-              <select
+              <ThemeDropdown
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold outline-none transition-all ${
-                  isLight
-                    ? 'bg-slate-50 border border-slate-300 text-slate-900 focus:bg-white focus:border-blue-600'
-                    : 'bg-[#161c2e] border border-white/10 text-white focus:border-blue-500'
-                }`}
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+              />
             </div>
 
             <div>
@@ -181,21 +172,11 @@ export default function WatchlistModal({ record, isOpen, onClose, onSave }) {
               >
                 Priority
               </label>
-              <select
+              <ThemeDropdown
                 value={form.priority}
                 onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold outline-none transition-all ${
-                  isLight
-                    ? 'bg-slate-50 border border-slate-300 text-slate-900 focus:bg-white focus:border-blue-600'
-                    : 'bg-[#161c2e] border border-white/10 text-white focus:border-blue-500'
-                }`}
-              >
-                {PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
+                options={PRIORITIES.map((p) => ({ value: p, label: p }))}
+              />
             </div>
           </div>
 
@@ -229,18 +210,14 @@ export default function WatchlistModal({ record, isOpen, onClose, onSave }) {
               >
                 Status
               </label>
-              <select
+              <ThemeDropdown
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold outline-none transition-all ${
-                  isLight
-                    ? 'bg-slate-50 border border-slate-300 text-slate-900 focus:bg-white focus:border-blue-600'
-                    : 'bg-[#161c2e] border border-white/10 text-white focus:border-blue-500'
-                }`}
-              >
-                <option value="ACTIVE">ACTIVE (Monitored)</option>
-                <option value="INACTIVE">INACTIVE (Dormant)</option>
-              </select>
+                options={[
+                  { value: 'ACTIVE', label: 'ACTIVE (Monitored)' },
+                  { value: 'INACTIVE', label: 'INACTIVE (Dormant)' },
+                ]}
+              />
             </div>
           </div>
 

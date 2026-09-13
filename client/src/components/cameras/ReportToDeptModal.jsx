@@ -10,6 +10,7 @@ import {
   AlertCircle, ShieldOff, Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ThemeDropdown from '../common/ThemeDropdown';
 
 const PRIORITIES = ['Low', 'Medium', 'High', 'Critical'];
 const CATEGORIES = [
@@ -307,19 +308,12 @@ export default function ReportToDeptModal({ isOpen, onClose, camera }) {
             {/* ─ Issue Category ─ */}
             <div className="space-y-1.5">
               <label className={`text-xs block ${labelCls}`}>Issue Category *</label>
-              <div className="relative">
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className={`w-full text-xs px-3 py-2.5 rounded-xl border outline-none appearance-none cursor-pointer ${inputCls}`}
-                >
-                  <option value="">Select issue category...</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <ChevronDown className={`w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${isLight ? 'text-slate-500' : 'text-slate-400'}`} />
-              </div>
+              <ThemeDropdown
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="Select issue category..."
+                options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+              />
             </div>
 
             {/* ─ Description ─ */}
